@@ -1,10 +1,9 @@
 # shuscribe/services/llm/providers/gemini_provider.py
 
-import json
 import logging
 import os
 import traceback
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, List, Optional, Tuple
 
 from google import genai
 from google.genai import types as genai_types
@@ -127,38 +126,38 @@ class GeminiProvider(LLMProvider):
                             # Structured content object
                             if item.type == "text":
                                 parts.append({"text": item.data})
-                            elif item.type == "image":
-                                # Handle image data
-                                # This would need appropriate conversion for Gemini API
-                                try:
-                                    import PIL.Image
-                                    # If it's a PIL Image
-                                    if isinstance(item.data, PIL.Image.Image):
-                                        parts.append(item.data)  # SDK should accept PIL images directly
-                                    # If it's a URL
-                                    elif isinstance(item.data, str) and (
-                                        item.data.startswith("http://") or item.data.startswith("https://")
-                                    ):
-                                        # Make sure we have requests
-                                        import requests
-                                        # Fetch the image
-                                        response = requests.get(item.data, stream=True)
-                                        response.raise_for_status()
-                                        # Convert to PIL Image
-                                        img = PIL.Image.open(response.raw)
-                                        parts.append(img)
-                                    else:
-                                        # Try to treat as inline data
-                                        parts.append({
-                                            "inline_data": {
-                                                "mime_type": item.mime_type or "image/jpeg",
-                                                "data": item.data
-                                            }
-                                        })
-                                except (ImportError, Exception) as e:
-                                    logger.warning(f"Failed to process image: {str(e)}")
-                                    # Fallback to text
-                                    parts.append({"text": f"[Image: {str(item.data)}]"})
+                            # elif item.type == "image":
+                            #     # Handle image data
+                            #     # This would need appropriate conversion for Gemini API
+                            #     try:
+                            #         import PIL.Image
+                            #         # If it's a PIL Image
+                            #         if isinstance(item.data, PIL.Image.Image):
+                            #             parts.append(item.data)  # SDK should accept PIL images directly
+                            #         # If it's a URL
+                            #         elif isinstance(item.data, str) and (
+                            #             item.data.startswith("http://") or item.data.startswith("https://")
+                            #         ):
+                            #             # Make sure we have requests
+                            #             import requests
+                            #             # Fetch the image
+                            #             response = requests.get(item.data, stream=True)
+                            #             response.raise_for_status()
+                            #             # Convert to PIL Image
+                            #             img = PIL.Image.open(response.raw)
+                            #             parts.append(img)
+                            #         else:
+                            #             # Try to treat as inline data
+                            #             parts.append({
+                            #                 "inline_data": {
+                            #                     "mime_type": item.mime_type or "image/jpeg",
+                            #                     "data": item.data
+                            #                 }
+                            #             })
+                            #     except (ImportError, Exception) as e:
+                            #         logger.warning(f"Failed to process image: {str(e)}")
+                            #         # Fallback to text
+                            #         parts.append({"text": f"[Image: {str(item.data)}]"})
                 else:
                     # Default to treating unknown content as text
                     parts.append({"text": str(msg.content)})

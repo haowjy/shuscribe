@@ -131,6 +131,7 @@ class AnthropicProvider(LLMProvider):
         if config.system_prompt:
             system_prompt += config.system_prompt
         
+        # Add a mock response schema if specified
         if config.response_schema:
             response_schema = config.response_schema.model_json_schema()
             response_schema_str = json.dumps(response_schema, indent=4, ensure_ascii=False)
@@ -167,6 +168,13 @@ class AnthropicProvider(LLMProvider):
                     "input_schema": tool.parameters,
                 })
             params["tools"] = tools
+        
+        # add reasoning if specified
+        if config.thinking_config and config.thinking_config.enabled:
+            params["thinking"] = {"type": "enabled", "budget_tokens": config.thinking_config.budget_tokens}
+            params["temperature"] = 1 # NOTE: TEMPERATURE IS NOT AVAILABLE FOR THINKING MODELS
+            del params["top_p"]
+            # params["betas"] = ["output-128k-2025-02-19"] # ?
             
         return params
     

@@ -97,74 +97,6 @@ class OpenAIProvider(LLMProvider):
             
         return openai_messages
     
-    async def _generate_internal(
-        self, 
-        messages: List[Message | str],
-        model: str,
-        config: Optional[GenerationConfig] = None
-    ) -> LLMResponse:
-        """
-        Generate a text completion response from OpenAI using the Responses API
-        """
-        try:
-            # Set default config if none provided
-            config = config or GenerationConfig()
-            
-            params = self._prepare_config(messages=messages, model=model, config=config)
-            
-            # Make the API call to the responses endpoint
-            response: OpenAIResponse = await self.client.responses.create(**params)
-            
-            # Extract response information (content from the output)
-            content = response.output_text
-                
-            # Create and return the LLMResponse
-            return LLMResponse(
-                text=content,
-                model=response.model,
-                usage={
-                    "prompt_tokens": response.usage.input_tokens if response.usage else 0,
-                    "completion_tokens": response.usage.output_tokens if response.usage else 0,
-                    "total_tokens": response.usage.total_tokens if response.usage else 0
-                },
-                raw_response=response,
-            )
-            
-        except Exception as e:
-            # Let the error propagate to be handled by the LLM session manager
-            logger.error(f"OpenAI Responses API error: {str(e)}")
-            raise self._handle_provider_error(e)
-    
-    async def _stream_generate(
-        self, 
-        messages: List[Message | str],
-        model: str,
-        config: Optional[GenerationConfig] = None
-    ) -> AsyncGenerator[str, None]:
-        """
-        Stream a text completion response from OpenAI using Responses API
-        """
-        # Set default config if none provided
-        config = config or GenerationConfig()
-        
-        params = self._prepare_config(messages=messages, model=model, config=config, stream=True)
-        
-        # Make the streaming API call using the responses endpoint
-        try:
-            # Create the stream - this returns a coroutine that needs to be awaited
-            stream: AsyncStream[OpenAIResponseStreamEvent] = await self.client.responses.create(**params)
-            
-            # Process the streamed chunks from the responses API
-            # https://platform.openai.com/docs/guides/streaming-responses?api-mode=responses
-            async for chunk in stream:
-                if chunk.type == "response.output_text.delta":
-                    yield chunk.delta
-                    
-        except Exception as e:
-            logger.error(f"OpenAI Responses API streaming error: {str(e)}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            raise self._handle_provider_error(e)
-    
     def _prepare_config(
         self,
         messages: List[Message | str],
@@ -242,7 +174,80 @@ class OpenAIProvider(LLMProvider):
                 }
             }
         
+        if config.thinking_config and config.thinking_config.enabled:
+            params["reasoning"] = {"effort": config.thinking_config.effort}
+            # NOTE: TEMPERATURE IS NOT AVAILABLE FOR THINKING MODELS
+            del params["temperature"]
+        
         return params
+    
+    async def _generate_internal(
+        self, 
+        messages: List[Message | str],
+        model: str,
+        config: Optional[GenerationConfig] = None
+    ) -> LLMResponse:
+        """
+        Generate a text completion response from OpenAI using the Responses API
+        """
+        try:
+            # Set default config if none provided
+            config = config or GenerationConfig()
+            
+            params = self._prepare_config(messages=messages, model=model, config=config)
+            
+            # Make the API call to the responses endpoint
+            response: OpenAIResponse = await self.client.responses.create(**params)
+            
+            # Extract response information (content from the output)
+            content = response.output_text
+                
+            # Create and return the LLMResponse
+            return LLMResponse(
+                text=content,
+                model=response.model,
+                usage={
+                    "prompt_tokens": response.usage.input_tokens if response.usage else 0,
+                    "completion_tokens": response.usage.output_tokens if response.usage else 0,
+                    "total_tokens": response.usage.total_tokens if response.usage else 0
+                },
+                raw_response=response,
+            )
+            
+        except Exception as e:
+            # Let the error propagate to be handled by the LLM session manager
+            logger.error(f"OpenAI Responses API error: {str(e)}")
+            raise self._handle_provider_error(e)
+    
+    async def _stream_generate(
+        self, 
+        messages: List[Message | str],
+        model: str,
+        config: Optional[GenerationConfig] = None
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream a text completion response from OpenAI using Responses API
+        """
+        # Set default config if none provided
+        config = config or GenerationConfig()
+        
+        params = self._prepare_config(messages=messages, model=model, config=config, stream=True)
+        
+        # Make the streaming API call using the responses endpoint
+        try:
+            # Create the stream - this returns a coroutine that needs to be awaited
+            stream: AsyncStream[OpenAIResponseStreamEvent] = await self.client.responses.create(**params)
+            
+            # Process the streamed chunks from the responses API
+            # https://platform.openai.com/docs/guides/streaming-responses?api-mode=responses
+            async for chunk in stream:
+                if chunk.type == "response.output_text.delta":
+                    yield chunk.delta
+                    
+        except Exception as e:
+            logger.error(f"OpenAI Responses API streaming error: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise self._handle_provider_error(e)
     
     
     def _handle_provider_error(self, exception: Exception) -> LLMProviderException:

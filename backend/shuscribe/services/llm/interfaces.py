@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Any, Type, AsyncGenerator, Union
+from typing import List, Dict, Literal, Optional, Any, Type, AsyncGenerator, Union
 from abc import ABC, abstractmethod
 
 from shuscribe.services.llm.errors import RetryConfig
@@ -56,10 +56,16 @@ class ToolDefinition(BaseModel):
     search_config: Optional[SearchToolConfig] = None
     code_execution_config: Optional[CodeExecutionToolConfig] = None
 
+class ThinkingConfig(BaseModel):
+    """Configuration for thinking"""
+    enabled: bool = False
+    budget_tokens: Optional[int] = 3200 # Anthropic Budget https://docs.anthropic.com/en/docs/about-claude/models/extended-thinking-models
+    effort: Optional[Literal["low", "medium", "high"]] = "low" # OpenAI Effort https://platform.openai.com/docs/guides/reasoning?api-mode=responses
+    
 # Enhanced generation config
 class GenerationConfig(BaseModel):
     """Provider-agnostic generation configuration"""
-    temperature: float = 0.7
+    temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = None
     top_p: float = 1.0
     system_prompt: Optional[str] = None
@@ -73,6 +79,7 @@ class GenerationConfig(BaseModel):
     stop_sequences: Optional[List[str]] = None
     retry_config: Optional[RetryConfig] = None
     context_id: Optional[str] = None  # Generic context/caching ID
+    thinking_config: Optional[ThinkingConfig] = None
 
 @dataclass
 class Capabilities:
