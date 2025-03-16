@@ -70,3 +70,4 @@ class GenerationResponse(BaseModel):
     task_id: Optional[str] = Field(None, description="Task ID for background processing")
     status: Optional[str] = Field(None, description="Status for background processing")
     tool_calls: Optional[List[Dict[str, Any]]] = Field(None, description="Tool calls in the response")
+    citations: Optional[List[Dict[str, Any]]] = Field(None, description="Citations in the response")

@@ -1,516 +1,340 @@
 # shuscribe/services/llm/providers/anthropic_provider.py
 
-import os
 import json
-from typing import Dict, List, Optional, AsyncIterator, Type, Union, Any, TypeVar
-import anthropic
-from pydantic import BaseModel
-import traceback
 import logging
+import os
+import traceback
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
+import anthropic
+from anthropic import AsyncAnthropic, AsyncStream
+from anthropic.types import MessageParam
+from anthropic.types.message import Message as AnthropicMessage
+from anthropic.types.raw_message_stream_event import RawMessageStreamEvent as AnthropicMessageStreamEvent
+from anthropic.types.raw_content_block_delta_event import RawContentBlockDeltaEvent as AnthropicContentBlockDeltaEvent
+from anthropic.types.text_delta import TextDelta as AnthropicTextDelta
+from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
+from shuscribe.services.llm.interfaces import MessageRole
 from shuscribe.services.llm.providers.provider import (
-    LLMProvider, Message, MessageRole, LLMResponse, GenerationConfig, 
-    FinishReason, ToolCall, ToolDefinition, TextContent,
-    ImageContent
+    LLMProvider,
+    LLMResponse,
+    Message,
+    GenerationConfig
 )
 
-T = TypeVar('T', bound=BaseModel)
+logger = logging.getLogger(__name__)
 
 class AnthropicProvider(LLMProvider):
-    """Anthropic Claude API provider implementation."""
+    """
+    Anthropic provider implementation using the official Anthropic Python client.
+    Uses async client exclusively for compatibility with the system architecture.
+    """
     
-    def _initialize_client(self, api_key: Optional[str] = None, **kwargs) -> Any:
-        """Initialize the Anthropic client."""
-        api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError("No Anthropic API key provided. Set ANTHROPIC_API_KEY environment variable or pass api_key.")
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialize the Anthropic provider with the given API key.
         
-        return anthropic.AsyncAnthropic(api_key=api_key, **kwargs)
+        Args:
+            api_key: Anthropic API key. If None, will try to use from environment.
+        """
+        super().__init__(api_key=api_key)
+    
+    def _initialize_client(self) -> AsyncAnthropic:
+        """Initialize the Anthropic client"""
+        # Use the provided API key or fall back to environment variable
+        api_key = self.api_key or os.environ.get("ANTHROPIC_API_KEY")
+        
+        if not api_key:
+            logger.warning("No Anthropic API key provided. Client will fail on API calls.")
+        
+        # Initialize the async client
+        return AsyncAnthropic(api_key=api_key)
     
     @property
-    def client(self) -> anthropic.AsyncAnthropic:
-        """Anthropic supports streaming."""
+    def client(self) -> AsyncAnthropic:
+        """Get the Anthropic client"""
+        if self._client is None:
+            raise ValueError("Client not initialized")
         return self._client
     
-    @property
-    def supports_structured_output(self) -> bool:
-        """Claude supports structured outputs through JSON format."""
-        return True
+    def capabilities(self) -> Dict[str, bool]:
+        """
+        Get the provider capabilities
+        """
+        return {
+            "streaming": True,
+            "structured_output": True, # Not a true structured output
+            "thinking": False,  # TODO: Claude supports a thinking process via system prompt
+            "tool_calling": False,  # TODO: Claude supports tools
+            "parallel_tool_calls": False,  # Not currently available
+            "citations": False,  # TODO: Claude can provide citations in its responses
+            "caching": False,  # TODO: Not yet implemented
+            "search": False,  # Not currently available
+        }
     
-    @property
-    def supports_multimodal_input(self) -> bool:
-        """Claude supports text and image inputs."""
-        return True
-    
-    @property
-    def supports_tool_use(self) -> bool:
-        """Claude supports function/tool calling."""
-        return True
-    
-    @property
-    def supports_parallel_tool_calls(self) -> bool:
-        """Claude supports parallel tool calling."""
-        return True
-    
-    @property
-    def supports_extended_thinking(self) -> bool:
-        """Claude supports extended thinking."""
-        return True
-    
-    @property
-    def supports_citations(self) -> bool:
-        """Claude supports citations."""
-        return True
-    
-    def _convert_role(self, role: MessageRole) -> str:
-        """Convert internal role to Anthropic role."""
-        if role == MessageRole.USER:
-            return "user"
-        elif role == MessageRole.ASSISTANT:
-            return "assistant"
-        elif role == MessageRole.FUNCTION:
-            return "assistant"  # Anthropic doesn't have a function role, use assistant
-        else:
-            # System role is handled separately in Anthropic
-            return "user"
-    
-    def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
-        """Convert internal message format to Anthropic format."""
+    def _map_to_anthropic_messages(self, messages: List[Message | str]) -> Tuple[List[MessageParam], str]:
+        """
+        Map our internal Message objects to Anthropic message format
+        """
         anthropic_messages = []
+        anthropic_system_message = []
         
-        for message in messages:
-            # Skip system messages as they're handled separately
-            if message.role == MessageRole.SYSTEM:
-                continue
+        for msg in messages:
+            if isinstance(msg, str):
+                # Convert string to user message
+                anthropic_messages.append({
+                    "role": "user",
+                    "content": msg
+                })
+            elif isinstance(msg, Message):
+                # Convert our Message object to Anthropic format
+                if msg.role == MessageRole.SYSTEM:
+                    # System messages are handled differently in Anthropic
+                    anthropic_system_message.append(msg.content)
+                    continue  # Will be handled separately as system parameter
                 
-            content = []
-            
-            for content_block in message.content:
-                if isinstance(content_block, TextContent):
-                    content.append({
-                        "type": "text",
-                        "text": content_block.text
-                    })
-                elif isinstance(content_block, ImageContent):
-                    # Handle image content for Claude
-                    import base64
-                    
-                    if isinstance(content_block.image_data, str):
-                        # Assume it's already a base64 string
-                        image_data = content_block.image_data
-                    else:
-                        # Convert bytes to base64
-                        image_data = base64.b64encode(content_block.image_data).decode('utf-8')
-                    
-                    content.append({
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": content_block.mime_type,
-                            "data": image_data
-                        }
-                    })
-            
-            anthropic_messages.append({
-                "role": self._convert_role(message.role),
-                "content": content
-            })
+                # Map role (Claude uses user/assistant/tool)
+                anthropic_messages.append({
+                    "role": msg.role.value,
+                    "content": msg.content
+                })
         
-        return anthropic_messages
+        return anthropic_messages, "\n".join(anthropic_system_message)
     
-    def _extract_system_prompt(self, messages: List[Message]) -> Optional[str]:
-        """Extract system prompt from messages if present."""
-        if messages and messages[0].role == MessageRole.SYSTEM:
-            # Extract text content from system message
-            return "".join([
-                block.text for block in messages[0].content 
-                if isinstance(block, TextContent)
-            ])
-        return None
-    
-    def _convert_tool_definitions(self, tools: List[ToolDefinition]) -> List[Dict[str, Any]]:
-        """Convert internal tool definitions to Anthropic's tool format."""
-        anthropic_tools = []
+    def _prepare_anthropic_params(
+        self,
+        messages: List[Message | str],
+        model: str,
+        config: Optional[GenerationConfig] = None,
+        stream: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Prepare parameters for Anthropic API calls, ensuring all required parameters
+        are included with appropriate defaults.
         
-        for tool in tools:
-            anthropic_tools.append({
-                "name": tool.name,
-                "description": tool.description,
-                "input_schema": tool.parameters_schema
-            })
+        Args:
+            messages: The messages to send
+            model: The model to use
+            config: Generation configuration
+            stream: Whether to enable streaming
             
-        return anthropic_tools
-    
-    def _build_request_params(self, 
-                             messages: List[Message], 
-                             model: str, 
-                             config: Optional[GenerationConfig] = None) -> Dict[str, Any]:
-        """Build Anthropic API request parameters."""
-        if not config:
-            config = GenerationConfig()
-            
-        # Convert messages and extract system prompt
-        anthropic_messages = self._convert_messages(messages)
-        system = self._extract_system_prompt(messages)
+        Returns:
+            Dictionary of parameters for the Anthropic API
+        """
+        # Set default config if none provided
+        config = config or GenerationConfig()
         
-        # Start building request parameters
-        request_params = {
+        # Map internal messages to Anthropic format
+        anthropic_messages, system_prompt = self._map_to_anthropic_messages(messages)
+        
+        # Extract system prompt from messages or use from config
+        if config.system_prompt:
+            system_prompt += config.system_prompt
+        
+        if config.response_schema:
+            response_schema = config.response_schema.model_json_schema()
+            response_schema_str = json.dumps(response_schema, indent=4, ensure_ascii=False)
+            system_prompt += f"\n\nThe response should be in the following JSON format: ```json\n{response_schema_str}\n```"
+            
+        # Prepare request parameters with appropriate defaults
+        params = {
             "model": model,
             "messages": anthropic_messages,
-            "max_tokens": config.max_tokens if config.max_tokens else 1024,
             "temperature": config.temperature,
             "top_p": config.top_p,
+            "max_tokens": config.max_tokens or 4096,  # Default to 4096 if not specified
         }
         
-        # Add system prompt if present
-        if system or config.system_prompt:
-            request_params["system"] = config.system_prompt or system
+        # Add streaming if requested
+        if stream:
+            params["stream"] = True
             
-        # Add stop sequences if provided
+        # Add system prompt if provided
+        if system_prompt:
+            params["system"] = system_prompt
+        
+        # Add stop sequences if specified
         if config.stop_sequences:
-            request_params["stop_sequences"] = config.stop_sequences
-            
-        # Configure tools if provided
+            params["stop_sequences"] = config.stop_sequences
+        
+        # Add tools if specified
         if config.tools:
-            request_params["tools"] = self._convert_tool_definitions(config.tools)
+            tools = []
+            for tool in config.tools:
+                tools.append({
+                    "name": tool.name,
+                    "description": tool.description,
+                    "input_schema": tool.parameters,
+                })
+            params["tools"] = tools
             
-            # Configure tool choice behavior
-            if not config.parallel_tool_calling:
-                request_params["tool_choice"] = {
-                    "type": "auto",
-                    "disable_parallel_tool_use": True
-                }
-                
-        # Configure extended thinking if enabled
-        if config.extended_thinking:
-            request_params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": config.extended_thinking_budget or 1024
-            }
-            
-        # Add any additional parameters from the config
-        if hasattr(config, 'additional_params'):
-            request_params.update(config.additional_params)
-            
-        return request_params
+        return params
     
-    def _process_response(self, response: Any) -> LLMResponse:
-        """Process an Anthropic response into our standard LLMResponse format."""
-        # Extract the text content
-        text = None
-        content_blocks = []
-        tool_calls = []
-        citations = []
-        
+    async def _generate_internal(
+        self, 
+        messages: List[Message | str],
+        model: str,
+        config: Optional[GenerationConfig] = None
+    ) -> LLMResponse:
+        """Generate a text completion response from Anthropic"""
         try:
-            if hasattr(response, 'content'):
-                # Handle content blocks
-                for block in response.content:
-                    try:
-                        # Case 1: TextBlock object from Anthropic API
-                        if hasattr(block, 'text'):
-                            block_text = block.text
-                            if text is None:
-                                text = block_text
-                            else:
-                                text += block_text
-                            content_blocks.append(TextContent(text=block_text))
-                        # Case 2: Dictionary-style block
-                        elif isinstance(block, dict):
-                            if block.get('type') == 'text':
-                                block_text = block.get('text', '')
-                                if text is None:
-                                    text = block_text
-                                else:
-                                    text += block_text
-                                content_blocks.append(TextContent(text=block_text))
-                                
-                                # Process citations
-                                if 'citations' in block:
-                                    for citation in block.get('citations', []):
-                                        citations.append({
-                                            'text': citation.get('cited_text', ''),
-                                            'source': citation.get('title', ''),
-                                            'metadata': {
-                                                'start_index': citation.get('start_index', 0),
-                                                'end_index': citation.get('end_index', 0)
-                                            }
-                                        })
-                        
-                            # Process tool calls
-                            elif block.get('type') == 'tool_use':
-                                tool_calls.append(ToolCall(
-                                    name=block.get('name', ''),
-                                    arguments=block.get('input', {}),
-                                    id=block.get('id')
-                                ))
-                    
-                    except Exception as block_error:
-                        logging.error(f"Error processing content block: {block_error}\n{traceback.format_exc()}")
-                        # Continue processing other blocks even if one fails
-                        continue
-
-            # Determine finish reason - moved outside the if block
-            finish_reason = None
-            if hasattr(response, 'stop_reason'):
-                if response.stop_reason == 'end_turn':
-                    finish_reason = FinishReason.COMPLETED
-                elif response.stop_reason == 'max_tokens':
-                    finish_reason = FinishReason.MAX_TOKENS
-                elif response.stop_reason == 'stop_sequence':
-                    finish_reason = FinishReason.STOP_SEQUENCE
-                elif response.stop_reason == 'tool_use':
-                    finish_reason = FinishReason.TOOL_CALLS
+            # Prepare parameters
+            params = self._prepare_anthropic_params(
+                messages=messages,
+                model=model,
+                config=config,
+                stream=False
+            )
             
-            # Extract usage information - moved outside the if block
-            usage = {}
-            if hasattr(response, 'usage'):
-                # Handle Usage object from Anthropic API - access attributes directly
-                try:
-                    input_tokens = getattr(response.usage, 'input_tokens', 0)
-                    output_tokens = getattr(response.usage, 'output_tokens', 0)
-                    usage = {
-                        'prompt_tokens': input_tokens,
-                        'completion_tokens': output_tokens,
-                        'total_tokens': input_tokens + output_tokens
-                    }
-                except Exception as usage_error:
-                    logging.error(f"Error processing usage info: {usage_error}")
-                    # Fallback to empty usage if processing fails
+            # Make the API call
+            response: AnthropicMessage = await self.client.messages.create(**params)
             
-            # Return response regardless of whether content exists
+            # Extract response information
+            content = ""
+            tool_calls = []
+            
+            for block in response.content:
+                if block.type == "text":
+                    content += block.text
+                elif block.type == "tool_use":
+                    # Extract tool use information from content blocks
+                    tool_calls.append({
+                        "id": block.id if hasattr(block, 'id') else f"tool_{len(tool_calls)}",
+                        "name": block.name,
+                        "input": block.input,
+                    })
+            
+            # Create and return the LLMResponse
             return LLMResponse(
-                text=text,
-                model=response.model if hasattr(response, 'model') else "",
-                usage=usage,
-                finish_reason=finish_reason,
-                tool_calls=tool_calls,
+                text=content,
+                model=response.model,
+                usage={
+                    "prompt_tokens": response.usage.input_tokens,
+                    "completion_tokens": response.usage.output_tokens,
+                    "total_tokens": response.usage.input_tokens + response.usage.output_tokens
+                },
                 raw_response=response,
-                citations=citations,
-                content_blocks=content_blocks
+                tool_calls=tool_calls if tool_calls else None
+            )
+            
+        except Exception as e:
+            # Let the error propagate to be handled by the LLM session manager
+            logger.error(f"Anthropic API error: {str(e)}")
+            raise self._handle_provider_error(e)
+    
+    async def _stream_generate(
+        self, 
+        messages: List[Message | str],
+        model: str,
+        config: Optional[GenerationConfig] = None
+    ) -> AsyncGenerator[str, None]:
+        """Stream a text completion response from Anthropic"""
+        try:
+            # Prepare parameters with streaming enabled
+            params = self._prepare_anthropic_params(
+                messages=messages,
+                model=model,
+                config=config,
+                stream=True
             )
                 
-        except Exception as e:
-            error_traceback = traceback.format_exc()
-            logging.error(f"Error in _process_response: {str(e)}\n{error_traceback}")
+            # Create the stream
+            stream: AsyncStream[AnthropicMessageStreamEvent] = await self.client.messages.create(**params)
             
-            return LLMResponse(
-                text=f"Error processing response: {str(e)}",
-                model="",
-                usage={},
-                finish_reason=FinishReason.ERROR,
-                raw_response={
-                    "error": str(e),
-                    "traceback": error_traceback,
-                    "original_response": response
-                }
-            )
-    
-    async def generate(
-        self, 
-        messages: List[Message],
-        model: str,
-        config: Optional[GenerationConfig] = None,
-        **kwargs
-    ) -> LLMResponse:
-        """Generate a response using Anthropic Claude."""
-        request_params = self._build_request_params(messages, model, config)
-        request_params.update(kwargs)
-        
-        try:
-            response = await self.client.messages.create(**request_params)
-            return self._process_response(response)
-            
-        except Exception as e:
-            # Capture the full error traceback
-            error_traceback = traceback.format_exc()
-            logging.error(f"Error in Anthropic generate: {str(e)}\n{error_traceback}")
-            
-            return LLMResponse(
-                text=f"Error: {str(e)}",
-                model=model,
-                usage={},
-                finish_reason=FinishReason.ERROR,
-                raw_response={
-                    "error": str(e),
-                    "traceback": error_traceback,
-                    "request_params": request_params  # Include request params for debugging
-                }
-            )
-    
-    async def generate_stream(
-        self, 
-        messages: List[Message],
-        model: str,
-        config: Optional[GenerationConfig] = None,
-        **kwargs
-    ) -> AsyncIterator[Union[str, LLMResponse]]:
-        """Generate a streaming response using Anthropic Claude."""
-        if not config:
-            config = GenerationConfig()
-            
-        # Set streaming to True
-        request_params = self._build_request_params(messages, model, config)
-        request_params["stream"] = True
-        request_params.update(kwargs)
-        
-        try:
-            stream = await self.client.messages.create(**request_params)
-            
-            # Initialize a partial response that we'll build up
-            partial_response = {
-                "model": model,
-                "content": [],
-                "stop_reason": None,
-                "usage": {"input_tokens": 0, "output_tokens": 0}
-            }
-            
-            current_text = ""
-            
+            # Process the streamed chunks
             async for chunk in stream:
-                # Update the partial response with this chunk's data
-                if hasattr(chunk, 'model'):
-                    partial_response["model"] = chunk.model
-                    
-                if hasattr(chunk, 'type') and chunk.type == 'content_block_start':
-                    # Start of a new content block
-                    if chunk.content_block.get('type') == 'text':
-                        current_text = ""
-                        
-                elif hasattr(chunk, 'type') and chunk.type == 'content_block_delta':
-                    # Content delta
-                    if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'text'):
-                        current_text += chunk.delta.text
-                        
-                        # Return just the text if stream is set to text mode
-                        if config.stream:
-                            yield chunk.delta.text
-                        
-                elif hasattr(chunk, 'type') and chunk.type == 'content_block_stop':
-                    # End of a content block
-                    if current_text:
-                        partial_response["content"].append({
-                            "type": "text",
-                            "text": current_text
-                        })
-                        
-                elif hasattr(chunk, 'type') and chunk.type == 'message_stop':
-                    # End of the message
-                    if hasattr(chunk, 'stop_reason'):
-                        partial_response["stop_reason"] = chunk.stop_reason
-                        
-                    if hasattr(chunk, 'usage'):
-                        partial_response["usage"] = chunk.usage
-                        
-                # If not in text-only stream mode, yield an LLMResponse for each chunk
-                if not config.stream:
-                    yield self._process_response(type('obj', (object,), partial_response))
+                if isinstance(chunk, AnthropicContentBlockDeltaEvent):
+                    if isinstance(chunk.delta, AnthropicTextDelta):
+                        yield chunk.delta.text
                     
         except Exception as e:
-            # Capture the full error traceback
-            error_traceback = traceback.format_exc()
-            logging.error(f"Error in Anthropic generate_stream: {str(e)}\n{error_traceback}")
+            logger.error(f"Anthropic API streaming error: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise self._handle_provider_error(e)
+        
+    def _handle_provider_error(self, exception: Exception) -> LLMProviderException:
+        """
+        Convert Anthropic-specific exceptions to our exception types
+        """
+        error_message = str(exception)
+        error_code = "anthropic_error"
+        category = ErrorCategory.UNKNOWN
+        retry_after = None
+        
+        if isinstance(exception, anthropic.RateLimitError):
+            category = ErrorCategory.RATE_LIMIT
+            error_code = "rate_limit_exceeded"
             
-            yield LLMResponse(
-                text=f"Error: {str(e)}",
-                model=model,
-                usage={},
-                finish_reason=FinishReason.ERROR,
-                raw_response={
-                    "error": str(e),
-                    "traceback": error_traceback,
-                    "request_params": request_params  # Include request params for debugging
-                }
-            )
+            # Try to extract retry-after from response property if it exists
+            if hasattr(exception, 'response') and hasattr(exception.response, 'headers'):
+                retry_header = exception.response.headers.get('retry-after')
+                if retry_header:
+                    try:
+                        retry_after = float(retry_header)
+                    except (ValueError, TypeError):
+                        retry_after = None
+        
+        elif isinstance(exception, anthropic.APIStatusError):
+            status_code = getattr(exception, 'status_code', None)
+            
+            if status_code:
+                if status_code == 400:
+                    category = ErrorCategory.INVALID_REQUEST
+                    error_code = "bad_request"
+                elif status_code == 401:
+                    category = ErrorCategory.AUTHENTICATION
+                    error_code = "unauthorized"
+                elif status_code == 403:
+                    category = ErrorCategory.AUTHENTICATION
+                    error_code = "forbidden"
+                elif status_code == 404:
+                    category = ErrorCategory.INVALID_REQUEST
+                    error_code = "not_found"
+                elif status_code == 429:
+                    category = ErrorCategory.RATE_LIMIT
+                    error_code = "rate_limit_exceeded"
+                    
+                    # Try to extract retry-after if available
+                    if hasattr(exception, 'response') and hasattr(exception.response, 'headers'):
+                        retry_header = exception.response.headers.get('retry-after')
+                        if retry_header:
+                            try:
+                                retry_after = float(retry_header)
+                            except (ValueError, TypeError):
+                                retry_after = None
+                elif status_code == 500:
+                    category = ErrorCategory.SERVICE_ERROR
+                    error_code = "internal_server_error"
+                elif status_code == 503:
+                    category = ErrorCategory.SERVICE_ERROR
+                    error_code = "service_unavailable" 
+                elif status_code == 529:
+                    category = ErrorCategory.SERVICE_ERROR
+                    error_code = "overloaded_error"
+                    
+        elif isinstance(exception, anthropic.APITimeoutError):
+            category = ErrorCategory.NETWORK_ERROR
+            error_code = "request_timeout"
+        
+        elif isinstance(exception, anthropic.APIConnectionError):
+            category = ErrorCategory.NETWORK_ERROR
+            error_code = "connection_error"
+            
+        return LLMProviderException(
+            message=error_message,
+            code=error_code,
+            category=category,
+            provider=self.__class__.__name__,
+            retry_after=retry_after,
+            raw_error=exception
+        )
     
-    async def parse(
-        self,
-        messages: List[Message],
-        model: str,
-        response_format: Type[BaseModel],
-        config: Optional[GenerationConfig] = None,
-        **kwargs
-    ) -> LLMResponse:
-        """Parse a response into a structured output using Anthropic Claude."""
-        if not config:
-            config = GenerationConfig()
-            
-        # For Claude, we'll use JSON mode by appending instructions
-        # to the system prompt or the last user message
-        
-        # First convert the expected schema to a JSON schema
-        schema_dict = {}
-        if hasattr(response_format, "__annotations__"):
-            # For Pydantic models
-            for field_name, field_type in response_format.__annotations__.items():
-                schema_dict[field_name] = str(field_type)
-        else:
-            # Use the raw type as a fallback
-            schema_dict = {"type": str(response_format)}
-            
-        schema_str = json.dumps(schema_dict, indent=2)
-        
-        # Create system prompt instruction for JSON output
-        json_instruction = f"You must respond with valid JSON that matches this schema: {schema_str}. Do not include explanations or other text outside the JSON."
-        
-        if config.system_prompt:
-            config.system_prompt += "\n\n" + json_instruction
-        else:
-            # Check if there's a system message we can append to
-            system_found = False
-            for i, message in enumerate(messages):
-                if message.role == MessageRole.SYSTEM:
-                    # Add JSON instruction to existing system message
-                    if isinstance(message.content[0], TextContent):
-                        message.content[0].text += "\n\n" + json_instruction
-                    elif isinstance(message.content, str):
-                            message.content += "\n\n" + json_instruction
-                    system_found = True
-                    break
-                    
-            if not system_found:
-                # Create a new system message with the JSON instruction
-                messages.insert(0, Message(
-                    role=MessageRole.SYSTEM,
-                    content=[TextContent(text=json_instruction)]
-                ))
-                
-        # Now generate the response
-        response = await self.generate(messages, model, config, **kwargs)
-        
-        # Try to parse the response as JSON
-        if response.text:
-            try:
-                # Find JSON in the response
-                import re
-                json_match = re.search(r'```json\s*([\s\S]*?)\s*```|^\s*({[\s\S]*}|\[[\s\S]*\])\s*$', response.text)
-                
-                if json_match:
-                    json_str = json_match.group(1) or json_match.group(2)
-                    parsed_json = json.loads(json_str)
-                    
-                    # Create a pydantic model instance if response_format is a pydantic model
-                    if hasattr(response_format, "model_validate"):
-                        response.parsed_response = response_format.model_validate(parsed_json)
-                    else:
-                        response.parsed_response = parsed_json
-                else:
-                    # Try parsing the whole response as JSON
-                    parsed_json = json.loads(response.text)
-                    
-                    # Create a pydantic model instance if response_format is a pydantic model
-                    if hasattr(response_format, "model_validate"):
-                        response.parsed_response = response_format.model_validate(parsed_json)
-                    else:
-                        response.parsed_response = parsed_json
-                        
-            except (json.JSONDecodeError, TypeError, ValueError) as e:
-                # JSON parsing failed
-                response.text += f"\n\nError parsing JSON: {str(e)}"
-                
-        return response
-    
+     
     async def close(self):
-        """Clean up resources."""
-        if self.client and hasattr(self.client, 'close') and callable(self.client.close):
-            await self.client.close()
+        """Close the client and release resources"""
+        # The Anthropic client doesn't have explicit close methods,
+        # but we can help garbage collection by removing references
+        self._client = None
+        
+        # Call parent close method to handle stream manager cleanup
+        await super().close()

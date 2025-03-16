@@ -1,376 +1,423 @@
 # shuscribe/services/llm/providers/gemini_provider.py
 
+import json
+import logging
 import os
-from typing import List, Optional, AsyncIterator, Union, Any, Type, TypeVar
-from google import genai
-import google.genai.types as genai_types
-from pydantic import BaseModel
+import traceback
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
+from google import genai
+from google.genai import types as genai_types
+
+from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
+from shuscribe.services.llm.interfaces import Capabilities, MessageRole, ToolDefinition, ToolType
 from shuscribe.services.llm.providers.provider import (
-    LLMProvider, Message, MessageRole, LLMResponse, GenerationConfig, 
-    FinishReason, ToolCall, ToolDefinition, TextContent,
-    ImageContent
+    LLMProvider, 
+    LLMResponse, 
+    Message,
+    GenerationConfig
 )
 
-T = TypeVar('T', bound=BaseModel)
+logger = logging.getLogger(__name__)
 
 class GeminiProvider(LLMProvider):
-    """Google Gemini API provider implementation."""
+    """
+    Google Gemini provider implementation using the new Google GenAI SDK.
+    Uses async methods exclusively for compatibility with the system architecture.
+    """
     
-    def _initialize_client(self, api_key: Optional[str] = None, **kwargs) -> Any:
-        """Initialize the Gemini Generative AI client."""
-        api_key = api_key or os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("No Gemini API key provided. Set GEMINI_API_KEY environment variable or pass api_key.")
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialize the Gemini provider with the given API key.
         
-        return genai.Client(api_key=api_key, **kwargs)
+        Args:
+            api_key: Google Gemini API key. If None, will try to use from environment.
+        """
+        super().__init__(api_key=api_key)
+    
+    def _initialize_client(self) -> Any:
+        """
+        Initialize the Gemini client and configure the API key
+        """
+        # Use the provided API key or fall back to environment variable
+        api_key = self.api_key or os.environ.get("GEMINI_API_KEY")
+        
+        if not api_key:
+            logger.warning("No Google Gemini API key provided. Client will fail on API calls.")
+        
+        # Create a client with the API key
+        return genai.Client(api_key=api_key)
     
     @property
     def client(self) -> genai.Client:
-        """Gemini supports streaming."""
+        """Get the Gemini client"""
+        if self._client is None:
+            raise ValueError("Client not initialized")
         return self._client
     
-    @property
-    def supports_structured_output(self) -> bool:
-        """Gemini supports structured outputs."""
-        return True
-    
-    @property
-    def supports_multimodal_input(self) -> bool:
-        """Gemini supports multimodal inputs including images, audio, and video."""
-        return True
-    
-    @property
-    def supports_tool_use(self) -> bool:
-        """Gemini supports function/tool calling."""
-        return True
-    
-    @property
-    def supports_parallel_tool_calls(self) -> bool:
-        """Gemini supports parallel tool calling."""
-        return True
-    
-    @property
-    def supports_search(self) -> bool:
-        """Gemini supports Google Search integration."""
-        return True
-    
-    def _convert_tool_definitions(self, tools: List[ToolDefinition]) -> genai_types.ToolListUnion:
-        """Convert internal tool definitions to Gemini's function format."""
-        return [
-            genai_types.Tool(
-                function_declarations=[
-                    genai_types.FunctionDeclaration(
-                        name=tool.name,
-                        description=tool.description,
-                        parameters=genai_types.Schema(
-                            type=genai_types.Type.OBJECT,
-                            properties=tool.parameters_schema.get("properties", {}),
-                            required=tool.parameters_schema.get("required", [])
-                        )
-                    )
-                ]
-            ) for tool in tools
-        ]
-    
-    def _convert_messages(self, messages: List[Message]) -> List[Any]:
-        """Convert internal message format to Gemini format."""
-        gemini_messages = []
-        
-        for message in messages:
-            content_parts = []
-            
-            for content_block in message.content:
-                if isinstance(content_block, TextContent):
-                    content_parts.append(content_block.text)
-                elif isinstance(content_block, ImageContent):
-                    # Handle image content
-                    # For Gemini, we need to convert to their image format
-                    from PIL import Image
-                    import base64
-                    import io
-                    
-                    if isinstance(content_block.image_data, str):
-                        # Assume it's a base64 string
-                        image_bytes = base64.b64decode(content_block.image_data)
-                        image = Image.open(io.BytesIO(image_bytes))
-                    else:
-                        # Assume it's bytes
-                        image = Image.open(io.BytesIO(content_block.image_data))
-                    
-                    content_parts.append(image)
-                
-                # Note: Handling for video and audio would be added here
-                # depending on Gemini's API requirements
-            
-            # Gemini handles roles differently in their chat API vs. direct generation
-            # For simplicity, we're just adding the content parts here
-            gemini_messages.extend(content_parts)
-        
-        return gemini_messages
-    
-    def _build_generation_config(self, config: Optional[GenerationConfig] = None) -> genai_types.GenerateContentConfig:
-        """Build Gemini generation config from our generic config."""
-        if not config:
-            config = GenerationConfig()
-            
-        gemini_config = genai_types.GenerateContentConfig(
-            temperature=config.temperature,
-            top_p=config.top_p,
-            top_k=config.top_k if config.top_k else None,
-            max_output_tokens=config.max_tokens if config.max_tokens else None,
-            stop_sequences=config.stop_sequences if config.stop_sequences else None,
-        )
-        
-        # Add system instructions if provided
-        if config.system_prompt:
-            gemini_config.system_instruction = config.system_prompt
-            
-        # Add tools/functions if provided
-        if config.tools:
-            gemini_config.tools = self._convert_tool_definitions(config.tools)
-            
-        # Configure structured output if requested
-        if config.response_format:
-            gemini_config.response_mime_type = 'application/json'
-            gemini_config.response_schema = config.response_format
-            
-        # Configure Google Search if enabled
-        if config.search_enabled:
-            gemini_config.tools = gemini_config.tools or []
-            gemini_config.tools.append(genai_types.Tool(
-                google_search=genai_types.GoogleSearch()
-            ))
-            
-        # Handle parallel tool calling configuration
-        if not config.parallel_tool_calling and config.tools:
-            gemini_config.automatic_function_calling = genai_types.AutomaticFunctionCallingConfig(
-                disable=False,  # Enable automatic function calling
-                maximum_remote_calls=10  # Default value
-            )
-        return gemini_config
-    
-    def _process_response(self, response: Any) -> LLMResponse:
-        """Process a Gemini response into our standard LLMResponse format."""
-        # Extract the text content
-        text = response.text if hasattr(response, 'text') else None
-        
-        # Determine finish reason
-        finish_reason = None
-        if hasattr(response, 'finish_reason'):
-            if response.finish_reason == 'stop':
-                finish_reason = FinishReason.COMPLETED
-            elif response.finish_reason == 'max_tokens':
-                finish_reason = FinishReason.MAX_TOKENS
-            elif response.finish_reason == 'safety':
-                finish_reason = FinishReason.ERROR
-            elif response.finish_reason == 'recitation':
-                finish_reason = FinishReason.ERROR
-            elif response.finish_reason == 'other':
-                finish_reason = FinishReason.ERROR
-                
-        # Extract tool calls if any
-        tool_calls = []
-        if hasattr(response, 'function_calls') and response.function_calls:
-            for fn_call in response.function_calls:
-                # Add check to ensure fn_call and fn_call.name are not None
-                if fn_call and hasattr(fn_call, 'name') and fn_call.name:
-                    tool_calls.append(ToolCall(
-                        name=fn_call.name,
-                        arguments=fn_call.args,
-                        id=fn_call.function_call_id if hasattr(fn_call, 'function_call_id') else None
-                    ))
-                
-        # Extract structured response if present
-        parsed_response = None
-        if hasattr(response, 'parsed') and response.parsed:
-            parsed_response = response.parsed
-            
-        # Extract usage information
-        usage = {}
-        if hasattr(response, 'usage'):
-            usage = {
-                'prompt_tokens': response.usage.prompt_token_count if hasattr(response.usage, 'prompt_token_count') else 0,
-                'completion_tokens': response.usage.candidates_token_count if hasattr(response.usage, 'candidates_token_count') else 0,
-                'total_tokens': (
-                    (response.usage.prompt_token_count if hasattr(response.usage, 'prompt_token_count') else 0) + 
-                    (response.usage.candidates_token_count if hasattr(response.usage, 'candidates_token_count') else 0)
-                )
-            }
-            
-        # Extract citations if present (Google Search results)
-        citations = []
-        if hasattr(response, 'grounding_metadata') and response.grounding_metadata:
-            if hasattr(response.grounding_metadata, 'search_results') and response.grounding_metadata.search_results:
-                for result in response.grounding_metadata.search_results:
-                    citations.append({
-                        'text': result.snippet if hasattr(result, 'snippet') else "",
-                        'source': result.url if hasattr(result, 'url') else "",
-                        'metadata': {
-                            'title': result.title if hasattr(result, 'title') else ""
-                        }
-                    })
-        
-        return LLMResponse(
-            text=text,
-            model=response.model if hasattr(response, 'model') else "",
-            usage=usage,
-            finish_reason=finish_reason,
-            tool_calls=tool_calls,
-            parsed_response=parsed_response,
-            raw_response=response,
-            citations=citations
+    def capabilities(self) -> Capabilities:
+        """
+        Get the provider capabilities
+        """
+        return Capabilities(
+            streaming=True,
+            structured_output=True,
+            thinking=False, # TODO: add thinking
+            tool_calling=True, # TODO: don't know if this works atm
+            parallel_tool_calls=True, # TODO: don't know if this works atm
+            citations=True, # TODO: don't know if this works atm
+            caching=True, # TODO: don't know if this works atm
+            search=True, # TODO: don't know if this works atm
         )
     
-    async def generate(
-        self, 
-        messages: List[Message],
-        model: str,
-        config: Optional[GenerationConfig] = None,
-        **kwargs
-    ) -> LLMResponse:
-        """Generate a response using Gemini."""
-        gemini_messages = self._convert_messages(messages)
-        gemini_config = self._build_generation_config(config)
+    def _prepare_content(self, messages: List[Message | str]) -> Tuple[Any, Optional[str]]:
+        """
+        Convert our messages to Gemini's format.
+        Returns a tuple of (contents, system_instruction) where:
+        - contents is properly formatted for the SDK's ContentListUnion | ContentListUnionDict types
+        - system_instruction is extracted from system messages
         
-        # Handle system message if present
-        system_instruction = None
-        if messages and messages[0].role == MessageRole.SYSTEM:
-            system_instruction = "".join([
-                block.text for block in messages[0].content 
-                if isinstance(block, TextContent)
-            ])
-            messages = messages[1:]  # Remove system message from regular messages
-            
+        The contents will be formatted as:
+        - A single string for simple text queries
+        - A dictionary with 'role' and 'parts' for a single message with role
+        - A list of dictionaries for multiple messages
+        """
+        system_messages = []
+        
+        # Special case for a single string message
+        if len(messages) == 1 and isinstance(messages[0], str):
+            return messages[0], None
+        
+        # Process messages into the format expected by the SDK
+        gemini_contents = []
+        
+        for msg in messages:
+            if isinstance(msg, str):
+                # For a simple string, create a user message
+                gemini_contents.append({
+                    "role": "user",
+                    "parts": [{"text": msg}]
+                })
+            elif isinstance(msg, Message):
+                # Handle system messages separately
+                if msg.role == MessageRole.SYSTEM:
+                    system_messages.append(msg.content)
+                    continue
+                    
+                # Map role (Gemini uses user/model)
+                gemini_role = "user"
+                if msg.role == MessageRole.ASSISTANT:
+                    gemini_role = "model"
+                elif msg.role == MessageRole.TOOL:
+                    gemini_role = "function"  # This may need adjustment
+                
+                # Process content based on type
+                parts = []
+                
+                if isinstance(msg.content, str):
+                    # Simple text content
+                    parts.append({"text": msg.content})
+                elif isinstance(msg.content, list):
+                    # List of content elements
+                    for item in msg.content:
+                        if isinstance(item, str):
+                            # Text content
+                            parts.append({"text": item})
+                        elif hasattr(item, 'type') and hasattr(item, 'data'):
+                            # Structured content object
+                            if item.type == "text":
+                                parts.append({"text": item.data})
+                            elif item.type == "image":
+                                # Handle image data
+                                # This would need appropriate conversion for Gemini API
+                                try:
+                                    import PIL.Image
+                                    # If it's a PIL Image
+                                    if isinstance(item.data, PIL.Image.Image):
+                                        parts.append(item.data)  # SDK should accept PIL images directly
+                                    # If it's a URL
+                                    elif isinstance(item.data, str) and (
+                                        item.data.startswith("http://") or item.data.startswith("https://")
+                                    ):
+                                        # Make sure we have requests
+                                        import requests
+                                        # Fetch the image
+                                        response = requests.get(item.data, stream=True)
+                                        response.raise_for_status()
+                                        # Convert to PIL Image
+                                        img = PIL.Image.open(response.raw)
+                                        parts.append(img)
+                                    else:
+                                        # Try to treat as inline data
+                                        parts.append({
+                                            "inline_data": {
+                                                "mime_type": item.mime_type or "image/jpeg",
+                                                "data": item.data
+                                            }
+                                        })
+                                except (ImportError, Exception) as e:
+                                    logger.warning(f"Failed to process image: {str(e)}")
+                                    # Fallback to text
+                                    parts.append({"text": f"[Image: {str(item.data)}]"})
+                else:
+                    # Default to treating unknown content as text
+                    parts.append({"text": str(msg.content)})
+                    
+                gemini_contents.append({
+                    "role": gemini_role,
+                    "parts": parts
+                })
+        
+        # Combine any system messages
+        system_instruction = "\n".join(system_messages) if system_messages else None
+        
+        # Handle the case where we have only one user message with a simple text part
+        if len(gemini_contents) == 1 and gemini_contents[0]["role"] == "user" and len(gemini_contents[0]["parts"]) == 1:
+            if isinstance(gemini_contents[0]["parts"][0], dict) and "text" in gemini_contents[0]["parts"][0]:
+                # The SDK can accept a simple string for a single user message
+                return gemini_contents[0]["parts"][0]["text"], system_instruction
+        
+        # Return the properly formatted content
+        return gemini_contents, system_instruction
+    
+    def _map_generic_tools_to_gemini(self, tools: List[ToolDefinition]) -> List[genai_types.Tool]:
+        """Map our generic tool definitions to Gemini-specific format"""
+        gemini_tools = []
+        
+        for tool in tools:
+            if tool.type == ToolType.FUNCTION:
+                # Map function tool
+                gemini_tools.append({
+                    "function_declarations": [{
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.parameters
+                    }]
+                })
+            elif tool.type == ToolType.SEARCH:
+                # Map search tool
+                gemini_tools.append({"google_search": {}})
+            elif tool.type == ToolType.CODE_EXECUTION:
+                # Map code execution tool
+                config = {}
+                if tool.code_execution_config:
+                    if tool.code_execution_config.timeout:
+                        config["timeout"] = tool.code_execution_config.timeout
+                gemini_tools.append({"code_execution": config})
+        
+        return gemini_tools
+    
+    def _prepare_config(self, config: GenerationConfig, system_instruction: Optional[str] = None) -> genai_types.GenerateContentConfig:
+        """
+        Convert our generic GenerationConfig to Gemini-specific parameters
+        """
+        gemini_config = genai_types.GenerateContentConfig()
+        
+        # Add system instruction if provided
         if system_instruction:
             gemini_config.system_instruction = system_instruction
             
-        try:
-            # Use the async client here
-            response = await self.client.aio.models.generate_content(
-                model=model,
-                contents=gemini_messages,
-                config=gemini_config,
-                **kwargs
-            )
+        # Add basic generation parameters
+        if config.temperature is not None:
+            gemini_config.temperature = config.temperature
+        if config.top_p is not None:
+            gemini_config.top_p = config.top_p
+        if config.top_k is not None:
+            gemini_config.top_k = config.top_k
+        if config.max_tokens is not None:
+            gemini_config.max_output_tokens = config.max_tokens
+        if config.stop_sequences:
+            gemini_config.stop_sequences = config.stop_sequences
             
-            return self._process_response(response)
+        # Add response schema for structured output
+        if config.response_schema:
+            gemini_config.response_mime_type = "application/json"
+            gemini_config.response_schema = config.response_schema
             
-        except Exception as e:
-            # Handle exceptions and convert to LLMResponse with error
-            return LLMResponse(
-                text=f"Error: {str(e)}",
-                model=model,
-                usage={},
-                finish_reason=FinishReason.ERROR,
-                raw_response={"error": str(e)}
-            )
+        # Handle context/caching ID
+        if config.context_id:
+            gemini_config.cached_content = config.context_id
+        
+        # TODO: add tools
+        # # Convert our generic tool definitions to Gemini-specific format
+        # if config.tools:
+        #     gemini_config.tools = self._map_generic_tools_to_gemini(config.tools)
+            
+        #     # Handle tool_choice if specified
+        #     if config.tool_choice:
+        #         gemini_config.tool_choice = config.tool_choice
+                
+        #     # Handle automatic function calling setting
+        #     if config.auto_function_calling is False:
+        #         gemini_config.automatic_function_calling = {"disable": True}
+        
+        # # Legacy/simple search flag support
+        # elif config.search:
+        #     gemini_config.tools = [{"google_search": {}}]
+        
+        return gemini_config
     
-    async def generate_stream(
+    async def _generate_internal(
         self, 
-        messages: List[Message],
+        messages: List[Message | str],
         model: str,
-        config: Optional[GenerationConfig] = None,
-        **kwargs
-    ) -> AsyncIterator[Union[str, LLMResponse]]:
-        """Generate a streaming response using Gemini."""
-        if not config:
-            config = GenerationConfig()
-            
-        gemini_messages = self._convert_messages(messages)
-        gemini_config = self._build_generation_config(config)
-        
-        try:
-            # Get the stream response
-            stream_response = await self.client.aio.models.generate_content_stream(
-                model=model,
-                contents=gemini_messages,
-                config=gemini_config,
-                **kwargs
-            )
-            
-            # Variables to accumulate the full response
-            accumulated_text = ""
-            finish_reason = None
-            tool_calls = []
-            
-            # Await the iterator before using it
-            async for chunk in await stream_response:
-                # Update accumulated text
-                if hasattr(chunk, 'text'):
-                    chunk_text = chunk.text or ""
-                    accumulated_text += chunk_text
-                    
-                    # If streaming as text, yield just the content
-                    if config.stream:
-                        yield chunk_text
-                        continue
-                
-                # Update finish reason if present
-                if hasattr(chunk, 'candidates') and chunk.candidates:
-                    candidate = chunk.candidates[0]
-                    if hasattr(candidate, 'finish_reason'):
-                        if candidate.finish_reason == 'STOP':
-                            finish_reason = FinishReason.COMPLETED
-                        elif candidate.finish_reason == 'MAX_TOKENS':
-                            finish_reason = FinishReason.MAX_TOKENS
-                        elif candidate.finish_reason in ('SAFETY', 'RECITATION', 'OTHER'):
-                            finish_reason = FinishReason.ERROR
-                
-                # Handle tool calls if present
-                if hasattr(chunk, 'function_calls') and chunk.function_calls:
-                    for fn_call in chunk.function_calls:
-                        if fn_call and hasattr(fn_call, 'name') and fn_call.name:
-                            tool_calls.append(ToolCall(
-                                name=fn_call.name,
-                                arguments=fn_call.args if fn_call.args else {},
-                                id=getattr(fn_call, 'function_call_id', None)
-                            ))
-                
-                # If not streaming as text, yield an LLMResponse for each chunk
-                if not config.stream:
-                    yield LLMResponse(
-                        text=accumulated_text,
-                        model=model,
-                        finish_reason=finish_reason,
-                        tool_calls=tool_calls.copy(),
-                        raw_response=chunk
-                    )
-                    
-        except Exception as e:
-            # Handle streaming errors
-            error_response = LLMResponse(
-                text=f"Error: {str(e)}",
-                model=model,
-                usage={},
-                finish_reason=FinishReason.ERROR,
-                raw_response={"error": str(e)}
-            )
-            
-            if config.stream:
-                yield str(e)
-            else:
-                yield error_response
-    
-    async def parse(
-        self,
-        messages: List[Message],
-        model: str,
-        response_format: Type[BaseModel],
-        config: Optional[GenerationConfig] = None,
-        **kwargs
+        config: Optional[GenerationConfig] = None
     ) -> LLMResponse:
-        """Parse a response into a structured output using Gemini."""
-        if not config:
-            config = GenerationConfig()
+        """
+        Generate a text completion response from Gemini
+        """
+        try:
+            # Set default config if none provided
+            config = config or GenerationConfig()
             
-        # Set response format in the config
-        config.response_format = response_format
+            # Prepare content and configuration
+            contents, system_instruction = self._prepare_content(messages)
+            gemini_config = self._prepare_config(config, system_instruction)
+            
+            # Make the async API call
+            response: genai_types.GenerateContentResponse = await self.client.aio.models.generate_content(
+                model=model,
+                contents=contents,
+                config=gemini_config
+            )
+            
+            # Extract text content
+            content = response.text
+            
+            # Extract tool calls if available
+            tool_calls = None
+            if (hasattr(response, 'candidates') and response.candidates and 
+                hasattr(response.candidates[0], 'content') and response.candidates[0].content):
+                
+                # Check for function calls in parts
+                if response.candidates[0].content.parts:
+                    for part in response.candidates[0].content.parts:
+                        if hasattr(part, 'function_call'):
+                            if tool_calls is None:
+                                tool_calls = []
+                            tool_calls.append({
+                                "name": part.function_call.name if part.function_call else None,
+                                "arguments": part.function_call.args if part.function_call else None,
+                            })
+            
+            # Extract usage information
+            usage = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0
+            }
+            
+            # Extract token usage if available
+            if response.usage_metadata:
+                usage["prompt_tokens"] = response.usage_metadata.prompt_token_count or 0
+                usage["completion_tokens"] = response.usage_metadata.candidates_token_count or 0
+                usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
+            
+            # Create and return the LLMResponse
+            return LLMResponse(
+                text=content or "",
+                model=model,
+                usage=usage,
+                raw_response=response,
+                tool_calls=tool_calls
+            )
+            
+        except Exception as e:
+            logger.error(f"Gemini API error: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise self._handle_provider_error(e)
+    
+    async def _stream_generate(
+        self, 
+        messages: List[Message | str],
+        model: str,
+        config: Optional[GenerationConfig] = None
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream a text completion response from Gemini
+        """
+        try:
+            # Set default config if none provided
+            config = config or GenerationConfig()
+            
+            # Prepare content and configuration
+            contents, system_instruction = self._prepare_content(messages)
+            gemini_config = self._prepare_config(config, system_instruction)
+            
+            # Make the streaming API call using the dedicated streaming method
+            async for chunk in await self.client.aio.models.generate_content_stream(
+                model=model,
+                contents=contents,
+                config=gemini_config
+            ): # type: ignore I'm getting a type error here... but it works???
+                # Extract and yield text from the chunk
+                if hasattr(chunk, 'text') and chunk.text:
+                    yield chunk.text
+                
+        except Exception as e:
+            logger.error(f"Gemini API streaming error: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise self._handle_provider_error(e)
+    
+    def _handle_provider_error(self, exception: Exception) -> LLMProviderException:
+        """
+        Convert provider-specific exceptions to our exception types
+        Must be implemented by each provider
+        """
+        error_message = str(exception)
+        error_code = "gemini_error"
+        category = ErrorCategory.UNKNOWN
+        retry_after = None
         
-        # Use the generate method with the updated config
-        return await self.generate(messages, model, config, **kwargs)
+        # TODO: handle specific errors better
+        
+        # Categorize based on error message content
+        if any(text in error_message.lower() for text in ["quota", "rate limit", "429"]):
+            category = ErrorCategory.RATE_LIMIT
+            error_code = "rate_limit_exceeded"
+            
+        elif any(text in error_message.lower() for text in ["unauthenticated", "unauthorized", "invalid api key", "401", "403"]):
+            category = ErrorCategory.AUTHENTICATION
+            error_code = "authentication_error"
+            
+        elif any(text in error_message.lower() for text in ["safety", "blocked", "harmful", "content filter"]):
+            category = ErrorCategory.CONTENT_FILTER
+            error_code = "content_filter_error"
+            
+        elif any(text in error_message.lower() for text in ["model not found", "invalid model", "not supported"]):
+            category = ErrorCategory.INVALID_REQUEST
+            error_code = "model_not_found"
+            
+        elif any(text in error_message.lower() for text in ["server error", "internal error", "500", "503", "service unavailable"]):
+            category = ErrorCategory.SERVICE_ERROR
+            error_code = "service_error"
+            
+        elif any(text in error_message.lower() for text in ["connection", "timeout", "network"]):
+            category = ErrorCategory.NETWORK_ERROR
+            error_code = "network_error"
+            
+        elif any(text in error_message.lower() for text in ["context length", "too long", "token limit"]):
+            category = ErrorCategory.CONTEXT_LENGTH
+            error_code = "context_length_error"
+        
+        # Extract retry-after information if present
+        # This would depend on the specific error response structure
+        return LLMProviderException(
+            message=error_message,
+            code=error_code,
+            category=category,
+            provider=self.__class__.__name__,
+            retry_after=retry_after,
+            raw_error=exception
+        )
     
     async def close(self):
-        """Clean up resources."""
-        # Gemini client doesn't require explicit cleanup
-        pass
+        """
+        Clean up resources
+        """
+        # The Gemini client doesn't have explicit close methods,
+        # but we can help garbage collection by removing references
+        self._client = None
+        
+        # Call parent close method to handle stream manager cleanup
+        await super().close()

@@ -1,274 +1,232 @@
 # shuscribe/services/llm/providers/provider.py
 
-from typing import Callable, Dict, List, Optional, AsyncIterator, Union, Any, Type, TypeVar
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from enum import Enum
-from pydantic import BaseModel, Field, field_validator
+from typing import AsyncGenerator, List, Dict, Any, Optional, TypeVar, Callable, Awaitable
+import asyncio
+import random
+import logging
 
-class MessageRole(str, Enum):
-    SYSTEM = "system"
-    USER = "user"
-    ASSISTANT = "assistant"
-    FUNCTION = "function"
-    TOOL = "tool"  # For tool responses
+from pydantic import BaseModel
 
-class MediaType(str, Enum):
-    """Types of media that can be included in messages."""
-    TEXT = "text"
-    IMAGE = "image"
-    AUDIO = "audio"
-    VIDEO = "video"
+from shuscribe.services.llm.interfaces import Capabilities, MessageRole, StreamingProvider, Message, GenerationConfig
+from shuscribe.services.llm.streaming import StreamManager, StreamSession
+from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException, RetryConfig
 
-class ToolCallStatus(str, Enum):
-    """Status of a tool call."""
-    REQUESTED = "requested"  # Tool call was requested by the model
-    EXECUTED = "executed"    # Tool was executed by the client
-    FAILED = "failed"        # Tool execution failed
+T = TypeVar('T')
+logger = logging.getLogger(__name__)
 
-class ContentBlock(BaseModel):
-    """Base class for different types of content."""
-    type: MediaType
-
-class TextContent(ContentBlock):
-    """Text content in a message."""
-    type: MediaType = MediaType.TEXT
-    text: str
-
-class ImageContent(ContentBlock):
-    """Image content in a message."""
-    type: MediaType = MediaType.IMAGE
-    image_data: Union[str, bytes]
-    mime_type: str
-
-class AudioContent(ContentBlock):
-    """Audio content in a message."""
-    type: MediaType = MediaType.AUDIO
-    audio_data: Union[str, bytes]
-    mime_type: str
-
-class VideoContent(ContentBlock):
-    """Video content in a message."""
-    type: MediaType = MediaType.VIDEO
-    video_data: Union[str, bytes]
-    mime_type: str
-
-class Message(BaseModel):
-    """A message in a conversation."""
-    role: MessageRole
-    content: Union[str, List[ContentBlock]]
-    name: Optional[str] = None
-    
-    @field_validator('content', mode='before')
-    def convert_string_to_text_content(cls, v):
-        """Convert string content to TextContent list before validation."""
-        if isinstance(v, str):
-            return [TextContent(type=MediaType.TEXT, text=v)]
-        elif isinstance(v, list):
-            # Handle case where content might be a list of strings
-            return [
-                TextContent(type=MediaType.TEXT, text=item) if isinstance(item, str) 
-                else item 
-                for item in v
-            ]
-        return v
-
-class ToolCall(BaseModel):
-    """Represents a tool/function call."""
-    name: str
-    arguments: Dict[str, Any]
-    id: Optional[str] = None
-    status: ToolCallStatus = ToolCallStatus.REQUESTED
-    result: Optional[Any] = None
-
-class ToolDefinition(BaseModel):
-    """Definition of a tool that can be called by the model."""
-    name: str
-    description: str
-    parameters_schema: Dict[str, Any]
-    function: Optional[Callable] = None
-
-class Citation(BaseModel):
-    """A citation for a piece of content."""
-    text: str
-    source: str
-    metadata: Optional[Dict[str, Any]] = None
-
-class FinishReason(str, Enum):
-    """Reasons why generation stopped."""
-    COMPLETED = "completed"        # Natural completion
-    MAX_TOKENS = "max_tokens"      # Reached token limit
-    STOP_SEQUENCE = "stop_sequence"  # Hit a stop sequence
-    TOOL_CALLS = "tool_calls"      # Model decided to call tools
-    ERROR = "error"                # Something went wrong
+class ProviderName(str, Enum):
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+    GEMINI = "gemini"
+    # OPENROUTER = "openrouter"
+    # GROQ = "groq"
+    # COHERE = "cohere"
 
 class LLMResponse(BaseModel):
-    """Response from an LLM."""
-    text: Optional[str] = None
-    model: str = ""
-    usage: Dict[str, int] = Field(default_factory=dict)
-    finish_reason: Optional[FinishReason] = None
-    tool_calls: List[ToolCall] = Field(default_factory=list)
-    parsed_response: Optional[Any] = None
-    raw_response: Optional[Any] = None
-    citations: List[Citation] = Field(default_factory=list)
-    content_blocks: List[ContentBlock] = Field(default_factory=list)
-        
-    @property
-    def has_tool_calls(self) -> bool:
-        """Check if the response includes tool calls."""
-        return bool(self.tool_calls)
-
-    def model_dump(self) -> dict:
-        """Custom serialization method."""
-        return {
-            "text": self.text,
-            "model": self.model,
-            "usage": self.usage,
-            "finish_reason": self.finish_reason,
-            "tool_calls": [tc.model_dump() for tc in self.tool_calls],
-            "parsed_response": self.parsed_response.model_dump() if self.parsed_response and hasattr(self.parsed_response, 'model_dump') else self.parsed_response,
-            "citations": [c.model_dump() for c in self.citations],
-            "content_blocks": [cb.model_dump() for cb in self.content_blocks]
-        }
-
-    def __str__(self) -> str:
-        """Custom string representation."""
-        if self.parsed_response is not None:
-            return str(self.parsed_response)
-        return self.text or ""
-
-class GenerationConfig(BaseModel):
-    """Configuration for text generation."""
-    temperature: float = 0.7
-    max_tokens: Optional[int] = None
-    top_p: float = 1.0
-    top_k: Optional[int] = None
-    frequency_penalty: float = 0.0
-    presence_penalty: float = 0.0
-    stop_sequences: List[str] = Field(default_factory=list)
-    tools: List[ToolDefinition] = Field(default_factory=list)
-    response_format: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None
-    system_prompt: Optional[str] = None
-    stream: bool = False
-    seed: Optional[int] = None
-    extended_thinking: bool = False
-    extended_thinking_budget: Optional[int] = None
-    search_enabled: bool = False
-    parallel_tool_calling: bool = True
-    additional_params: Dict[str, Any] = Field(default_factory=dict)
-
-class LLMProvider(ABC):
-    """Abstract base class for LLM providers."""
+    """Generic response model for any provider"""
+    text: str
+    model: str
+    usage: Dict[str, int]
+    raw_response: Any
     
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
-        """
-        Initialize the provider with an API key and additional options.
-        
-        Args:
-            api_key: The API key for the provider. If None, will attempt to use
-                    environment variables or other default authentication methods.
-            **kwargs: Additional provider-specific configuration options.
-        """
-        self._api_key = api_key
-        self._client = self._initialize_client(api_key, **kwargs)
+    # Generic fields for various provider capabilities
+    tool_calls: Optional[List[Dict[str, Any]]] = None
+    citations: Optional[List[Dict[str, Any]]] = None
+    media: Optional[List[Dict[str, Any]]] = None  # For generated images/videos
+    context_id: Optional[str] = None  # For caching/context management
+    
+class LLMProvider(StreamingProvider):
+    """Base provider with new streaming support"""
+    
+    def __init__(self, api_key: Optional[str] = None, retry_config: Optional[RetryConfig] = None):
+        self.api_key = api_key
+        self.stream_manager = StreamManager()
+        self.retry_config = retry_config or RetryConfig(enabled=False)
+        self._client = self._initialize_client()
     
     @property
     @abstractmethod
     def client(self) -> Any:
-        """Get the provider-specific client instance."""
+        """Get the provider-specific client instance.
+        TODO: implement this in the provider classes to return the actual client instance type
+        """
         return self._client
+
+    @abstractmethod
+    def capabilities(self) -> Capabilities:
+        """Get the provider capabilities"""
+        return Capabilities()
+    
     
     @abstractmethod
-    def _initialize_client(self, api_key: Optional[str] = None, **kwargs) -> Any:
+    def _initialize_client(self) -> Any:
+        """Initialize the provider client"""
+        pass
+    
+    async def _with_retry(
+        self, 
+        func: Callable[..., Awaitable[T]], 
+        *args, 
+        retry_config: Optional[RetryConfig] = None,
+        **kwargs
+    ) -> T:
         """
-        Initialize and return the provider-specific client.
+        Execute a function with retry logic
         
-        Each provider implementation must override this method to create
-        the appropriate client instance for their API.
+        Args:
+            func: Async function to execute
+            retry_config: Optional override for retry configuration
+            *args, **kwargs: Arguments to pass to the function
+            
+        Returns:
+            The function result
+            
+        Raises:
+            LLMProviderException: If all retries failed
+        """
+        config = retry_config or self.retry_config
+        
+        if not config.enabled:
+            # Retries disabled, just run once
+            return await func(*args, **kwargs)
+        
+        # Retries enabled
+        attempt = 0
+        last_exception = None
+        
+        while attempt <= config.max_retries:
+            try:
+                return await func(*args, **kwargs)
+            except Exception as e:
+                attempt += 1
+                # Convert to our exception type
+                if not isinstance(e, LLMProviderException):
+                    exception = self._handle_provider_error(e)
+                else:
+                    exception = e
+                
+                last_exception = exception
+                
+                # If not retryable or we've hit max retries, raise
+                if not exception.is_retryable() or attempt > config.max_retries:
+                    raise exception
+                
+                # Calculate backoff with jitter
+                delay = min(
+                    config.max_delay,
+                    config.min_delay * (config.backoff_factor ** (attempt - 1))
+                )
+                # Add jitter (±25%)
+                jitter = random.uniform(0.75, 1.25)
+                delay *= jitter
+                
+                # If provider gave specific retry-after, use that instead
+                if exception.retry_after is not None:
+                    delay = exception.retry_after
+                
+                logger.warning(
+                    f"Retrying {func.__name__} after error: {exception.message}. "
+                    f"Attempt {attempt}/{config.max_retries}. "
+                    f"Waiting {delay:.2f}s"
+                )
+                
+                await asyncio.sleep(delay)
+        
+        if last_exception:
+            raise last_exception
+        else:
+            # Should never get here, but just in case
+            raise LLMProviderException(
+                message="Maximum retries exceeded with no specific error",
+                code="max_retries_exceeded",
+                category=ErrorCategory.UNKNOWN,
+                provider=self.__class__.__name__
+            )
+    
+    @abstractmethod
+    def _handle_provider_error(self, exception: Exception) -> LLMProviderException:
+        """
+        Convert provider-specific exceptions to our exception types
+        Must be implemented by each provider
         """
         pass
     
-    @property
-    def supports_structured_output(self) -> bool:
-        """Whether this provider supports structured outputs."""
-        return False
-    
-    @property
-    def supports_multimodal_input(self) -> bool:
-        """Whether this provider supports multimodal inputs."""
-        return False
-    
-    @property
-    def supports_tool_use(self) -> bool:
-        """Whether this provider supports tool use."""
-        return False
-    
-    @property
-    def supports_parallel_tool_calls(self) -> bool:
-        """Whether this provider supports multiple tool calls in one response."""
-        return False
-    
-    @property
-    def supports_search(self) -> bool:
-        """Whether this provider supports search integration."""
-        return False
-    
-    @property
-    def supports_extended_thinking(self) -> bool:
-        """Whether this provider supports showing reasoning process."""
-        return False
-    
-    @property
-    def supports_citations(self) -> bool:
-        """Whether this provider supports citations."""
-        return False
-    
-    @abstractmethod
+    # Update generate method to use retry
     async def generate(
         self, 
-        messages: List[Message],
+        messages: List[Message | str],
         model: str,
-        config: Optional[GenerationConfig] = None,
-        **kwargs
+        config: Optional[GenerationConfig] = None
     ) -> LLMResponse:
-        """Generate a response synchronously."""
-        pass
+        """Generate a complete response with retry support"""
+        config = config or GenerationConfig()
+        retry_config = config.retry_config or self.retry_config
+        
+        t_messages = []
+        if isinstance(messages, list):
+            for item in messages:
+                if isinstance(item, str):
+                    t_messages.append(Message(role=MessageRole.USER, content=item))
+                else:
+                    t_messages.append(item)
+        
+        return await self._with_retry(
+            self._generate_internal,
+            messages=t_messages,
+            model=model,
+            config=config,
+            retry_config=retry_config
+        )
     
     @abstractmethod
-    async def generate_stream(
+    async def _generate_internal(
         self, 
-        messages: List[Message],
+        messages: List[Message | str],
         model: str,
-        config: Optional[GenerationConfig] = None,
-        **kwargs
-    ) -> AsyncIterator[Union[str, LLMResponse]]:
-        """Generate a streaming response."""
-        yield ""
-    
-    async def parse(
-        self,
-        messages: List[Message],
-        model: str,
-        response_format: Type[BaseModel],
-        config: Optional[GenerationConfig] = None,
-        **kwargs
+        config: Optional[GenerationConfig] = None
     ) -> LLMResponse:
-        """
-        Parse a response into a structured output.
-        Default implementation throws NotImplementedError.
-        Providers that support structured output should override this.
-        """
-        raise NotImplementedError(f"Provider {self.__class__.__name__} does not support structured output parsing")
-    
-    async def execute_tool_call(self, tool_call: ToolCall) -> Any:
-        """
-        Execute a tool call and return the result.
-        Default implementation throws NotImplementedError.
-        Providers that support tool use should override this.
-        """
-        raise NotImplementedError(f"Provider {self.__class__.__name__} does not support tool execution")
+        """Internal method for actual generation"""
+        pass
     
     @abstractmethod
-    async def close(self):
-        """Clean up resources."""
+    async def _stream_generate(
+        self, 
+        messages: List[Message | str],
+        model: str,
+        config: Optional[GenerationConfig] = None
+    ) -> AsyncGenerator[str, None]:
+        """Internal method to generate raw text chunks"""
         pass
+    
+    async def generate_stream(
+        self,
+        messages: List[Message | str],
+        model: str,
+        config: Optional[GenerationConfig] = None,
+        session_id: Optional[str] = None,
+        resume_text: Optional[str] = None
+    ) -> StreamSession:
+        """Create and return a streaming session"""
+        return await self.stream_manager.create_session(
+            provider=self,
+            messages=messages,
+            model=model,
+            config=config,
+            session_id=session_id,
+            resume_text=resume_text
+        )
+    
+    def get_stream_session(self, session_id: str) -> Optional[StreamSession]:
+        """Get an existing stream session by ID"""
+        return self.stream_manager.get_session(session_id)
+    
+    async def cleanup_stream_session(self, session_id: str) -> bool:
+        """Clean up a stream session"""
+        return await self.stream_manager.cleanup_session(session_id)
+    
+    async def close(self):
+        """Clean up resources"""
+        # Stop all active streaming sessions
+        await self.stream_manager.stop_all_sessions()
