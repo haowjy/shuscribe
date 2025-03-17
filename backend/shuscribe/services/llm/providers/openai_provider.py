@@ -11,12 +11,10 @@ from openai.types.responses.response import Response as OpenAIResponse
 from openai.types.responses.response_stream_event import ResponseStreamEvent as OpenAIResponseStreamEvent
 
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
-from shuscribe.services.llm.interfaces import Capabilities
+from shuscribe.schemas.llm import Message, GenerationConfig, Capabilities
 from shuscribe.services.llm.providers.provider import (
     LLMProvider, 
     LLMResponse, 
-    Message,
-    GenerationConfig
 )
 
 logger = logging.getLogger(__name__)

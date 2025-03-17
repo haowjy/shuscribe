@@ -9,12 +9,10 @@ from google import genai
 from google.genai import types as genai_types
 
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
-from shuscribe.services.llm.interfaces import Capabilities, MessageRole, ToolDefinition, ToolType
+from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig, ToolDefinition, ToolType, Capabilities
 from shuscribe.services.llm.providers.provider import (
     LLMProvider, 
-    LLMResponse, 
-    Message,
-    GenerationConfig
+    LLMResponse,
 )
 
 logger = logging.getLogger(__name__)

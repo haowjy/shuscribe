@@ -28,10 +28,11 @@ class StreamChunk(BaseModel):
     error: Optional[str] = None
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
-
+        
 class StreamSession:
     def __init__(self, session_id: Optional[str] = None):
         self.session_id = session_id or str(uuid.uuid4())
+        self.user_id = "anonymous"  # Default value, will be set during creation
         self.accumulated_text = ""
         self.tool_calls: List[Dict[str, Any]] = []
         self.error: Optional[str] = None
@@ -47,6 +48,7 @@ class StreamSession:
         self.messages: List[Message | str]
         self.config: GenerationConfig
         self._task: asyncio.Task
+        self._cancel_requested: bool = False
     
     async def start(self, provider: StreamingProvider, model: str,  messages: List[Message | str], config: Optional[GenerationConfig] = None) -> 'StreamSession':
         self.provider: StreamingProvider = provider

@@ -9,10 +9,10 @@ import logging
 
 from pydantic import BaseModel
 
-from shuscribe.services.llm.interfaces import Capabilities, MessageRole, StreamingProvider, Message, GenerationConfig
+from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig, Capabilities
 from shuscribe.services.llm.streaming import StreamManager, StreamSession
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException, RetryConfig
-
+from shuscribe.services.llm.interfaces import StreamingProvider
 T = TypeVar('T')
 logger = logging.getLogger(__name__)
 

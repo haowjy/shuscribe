@@ -14,12 +14,10 @@ from anthropic.types.raw_message_stream_event import RawMessageStreamEvent as An
 from anthropic.types.raw_content_block_delta_event import RawContentBlockDeltaEvent as AnthropicContentBlockDeltaEvent
 from anthropic.types.text_delta import TextDelta as AnthropicTextDelta
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
-from shuscribe.services.llm.interfaces import MessageRole
+from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig
 from shuscribe.services.llm.providers.provider import (
     LLMProvider,
     LLMResponse,
-    Message,
-    GenerationConfig
 )
 
 logger = logging.getLogger(__name__)

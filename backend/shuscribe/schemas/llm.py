@@ -1,73 +1,98 @@
 # shuscribe/schemas/llm.py
 
+from dataclasses import dataclass
+from enum import Enum
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Dict, Literal, Optional, Any, Type, Union
 
-class MessageSchema(BaseModel):
-    role: str = Field(..., description="Role of the message sender: 'system', 'user', or 'assistant'")
-    content: str = Field(..., description="Content of the message")
-    name: Optional[str] = Field(None, description="Optional name identifier for the message sender")
+from shuscribe.services.llm.errors import RetryConfig
 
-class ProviderConfig(BaseModel):
-    api_key: Optional[str] = Field(None, description="Provider API key")
-    organization_id: Optional[str] = Field(None, description="Optional organization ID")
+class ContentType(str, Enum):
+    TEXT = "text"
+    IMAGE = "image"
+    VIDEO = "video"
+    AUDIO = "audio"
+
+class Content(BaseModel):
+    """Represents multimodal content that can be used in messages"""
+    type: ContentType
+    data: Any
+    mime_type: Optional[str] = None
+
+class MessageRole(str, Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    TOOL = "tool"
+
+# Enhanced message to support multimodal content
+class Message(BaseModel):
+    role: MessageRole = Field(default=MessageRole.USER, description="The role of the message")
+    content: Union[str, Content, List[Union[str, Content]]] = Field(description="The content of the message")
+    name: Optional[str] = Field(default=None, description="The name of the message")
+
+# Generic tool configurations
+class SearchToolConfig(BaseModel):
+    """Configuration for search tools - applicable to any provider with search capability"""
+    enabled: bool = True
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "api_key": "sk-**********",
-                "organization_id": "org-**********"
-            }
-        }
+class CodeExecutionToolConfig(BaseModel):
+    """Configuration for code execution - applicable to any provider with code execution"""
+    enabled: bool = True
+    timeout: Optional[int] = None
+    allow_network_access: bool = False
 
-class GenerationRequest(BaseModel):
-    provider: str = Field(..., description="LLM provider (openai, anthropic, etc.)")
-    model: str = Field(..., description="Model name to use for generation")
-    messages: List[MessageSchema] = Field(..., description="List of messages for the conversation")
-    temperature: float = Field(0.7, description="Sampling temperature")
-    max_tokens: Optional[int] = Field(None, description="Maximum tokens to generate")
-    top_p: float = Field(1.0, description="Top-p sampling parameter")
-    frequency_penalty: float = Field(0.0, description="Frequency penalty parameter")
-    presence_penalty: float = Field(0.0, description="Presence penalty parameter")
-    stop: Optional[List[str]] = Field(None, description="List of stop sequences")
-    stream: bool = Field(False, description="Whether to stream the response")
-    background: bool = Field(False, description="Whether to process in background")
-    callback_url: Optional[str] = Field(None, description="Webhook URL for background processing")
-    provider_config: Optional[ProviderConfig] = Field(None, description="Provider-specific configuration")
-    
-    # Structured output options
-    response_format: Optional[Dict[str, Any]] = Field(None, description="Response format specification")
-    json_schema: Optional[Dict[str, Any]] = Field(None, description="JSON schema for structured output")
-    tools: Optional[List[Dict[str, Any]]] = Field(None, description="Tool definitions for function calling")
-    tool_choice: Optional[Union[str, Dict[str, Any]]] = Field(None, description="Tool choice specification")
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "provider": "openai",
-                "model": "gpt-4o",
-                "messages": [
-                    {"role": "user", "content": "Extract the name and age from this text: 'John is 25 years old.'"}
-                ],
-                "temperature": 0.7,
-                "response_format": {"type": "json_object"},
-                "json_schema": {
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string"},
-                        "age": {"type": "integer"}
-                    },
-                    "required": ["name", "age"]
-                }
-            }
-        }
+class ToolType(str, Enum):
+    FUNCTION = "function"
+    SEARCH = "search"
+    CODE_EXECUTION = "code_execution"
 
-class GenerationResponse(BaseModel):
-    text: Optional[str] = Field(None, description="Generated text (for non-streaming responses)")
-    model: Optional[str] = Field(None, description="Model used for generation")
-    usage: Optional[Dict[str, int]] = Field(None, description="Token usage statistics")
-    finish_reason: Optional[str] = Field(None, description="Reason for finishing generation")
-    task_id: Optional[str] = Field(None, description="Task ID for background processing")
-    status: Optional[str] = Field(None, description="Status for background processing")
-    tool_calls: Optional[List[Dict[str, Any]]] = Field(None, description="Tool calls in the response")
-    citations: Optional[List[Dict[str, Any]]] = Field(None, description="Citations in the response")
+class ToolDefinition(BaseModel):
+    """Generic tool definition that can be mapped to provider-specific formats"""
+    type: ToolType = ToolType.FUNCTION
+    name: Optional[str] = None
+    description: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
+    search_config: Optional[SearchToolConfig] = None
+    code_execution_config: Optional[CodeExecutionToolConfig] = None
+
+class ThinkingConfig(BaseModel):
+    """Configuration for thinking"""
+    enabled: bool = False
+    budget_tokens: Optional[int] = 3200 # Anthropic Budget https://docs.anthropic.com/en/docs/about-claude/models/extended-thinking-models
+    effort: Optional[Literal["low", "medium", "high"]] = "low" # OpenAI Effort https://platform.openai.com/docs/guides/reasoning?api-mode=responses
+    
+# Enhanced generation config
+class GenerationConfig(BaseModel):
+    """Provider-agnostic generation configuration"""
+    temperature: Optional[float] = 0.7
+    max_tokens: Optional[int] = None
+    system_prompt: Optional[str] = None
+    top_p: Optional[float] = 1.0
+    top_k: Optional[int] = 0
+    response_schema: Optional[Type[BaseModel]] = None # structured output
+    search: bool = False  # Simple flag for backward compatibility
+    parallel_tool_calling: bool = False
+    tools: Optional[List[ToolDefinition]] = None
+    tool_choice: Optional[str] = None
+    auto_function_calling: Optional[bool] = None  # Generic automatic function calling
+    stop_sequences: Optional[List[str]] = None
+    retry_config: Optional[RetryConfig] = None
+    context_id: Optional[str] = None  # Generic context/caching ID
+    thinking_config: Optional[ThinkingConfig] = None
+
+@dataclass
+class Capabilities:
+    streaming: bool = False
+    structured_output: bool = False
+    
+    thinking: bool = False
+    
+    tool_calling: bool = False
+    search: bool = False
+    parallel_tool_calls: bool = False
+    citations: bool = False
+    
+    caching: bool = False
+    code_execution: bool = False
+    multimodal: bool = False

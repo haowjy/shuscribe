@@ -17,7 +17,7 @@ class ErrorCategory(str, Enum):
 
 class RetryConfig(BaseModel):
     enabled: bool = Field(default=False, description="Whether retries are enabled")
-    max_retries: int = Field(default=3, description="Maximum number of retry attempts")
+    max_retries: int = Field(default=0, description="Maximum number of retry attempts")
     min_delay: float = Field(default=1.0, description="Minimum delay between retries in seconds")
     max_delay: float = Field(default=30.0, description="Maximum delay between retries in seconds")
     backoff_factor: float = Field(default=2.0, description="Exponential backoff multiplier")
