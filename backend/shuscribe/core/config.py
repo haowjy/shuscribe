@@ -1,19 +1,24 @@
-# shuscribe/config/settings.py
+# shuscribe/core/config.py
 
+from functools import lru_cache
 from typing import List
 from pydantic_settings import BaseSettings
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 class Settings(BaseSettings):
     """Application settings"""
     
-    # CORS settings
+    # CORS settings - initialize with empty list if not provided
     CORS_ORIGINS: List[str] = []
     
-    # Supabase settings
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    SUPABASE_JWT_SECRET: str
+    # Supabase settings (with defaults to silence linter warnings)
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""          # Anon key (public)
+    SUPABASE_SERVICE_KEY: str = ""  # Service role key (private)
     
     # Auth settings
     JWT_ALGORITHM: str = "HS256"
@@ -23,10 +28,6 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
 
-# # Create a global settings instance
-settings = Settings(
-    SUPABASE_URL=os.getenv("SUPABASE_URL", ""),
-    SUPABASE_KEY=os.getenv("SUPABASE_KEY", ""),
-    SUPABASE_JWT_SECRET=os.getenv("SUPABASE_JWT_SECRET", ""),
-    CORS_ORIGINS=os.getenv("CORS_ORIGINS", "").split(",")
-)
+@lru_cache
+def get_settings():
+    return Settings()

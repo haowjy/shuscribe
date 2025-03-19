@@ -7,7 +7,7 @@ import asyncio
 import random
 import logging
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig, Capabilities
 from shuscribe.services.llm.streaming import StreamManager, StreamSession
@@ -29,13 +29,19 @@ class LLMResponse(BaseModel):
     text: str
     model: str
     usage: Dict[str, int]
-    raw_response: Any
+    raw_response: Any = Field(..., exclude=True)
     
     # Generic fields for various provider capabilities
     tool_calls: Optional[List[Dict[str, Any]]] = None
     citations: Optional[List[Dict[str, Any]]] = None
     media: Optional[List[Dict[str, Any]]] = None  # For generated images/videos
     context_id: Optional[str] = None  # For caching/context management
+    class Config:
+        json_encoders = {
+            # Optionally, add custom JSON encoders if you decide to serialize other complex fields later
+            # Example: You can serialize complex objects by converting them to strings
+            # YourCustomType: lambda v: str(v),
+        }
     
 class LLMProvider(StreamingProvider):
     """Base provider with new streaming support"""

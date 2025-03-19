@@ -16,7 +16,7 @@ from shuscribe.services.llm.errors import LLMProviderException, ErrorCategory, R
 
 # Import user auth dependencies
 from shuscribe.auth.dependencies import get_current_user
-from shuscribe.schemas.auth import User
+from shuscribe.schemas.user import User
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -128,6 +128,8 @@ async def generate(
 ):
     """Generate a complete response from an LLM"""
     try:
+        logger.info(f"User {current_user.id} making LLM request with provider {request.provider}")
+
         config = build_generation_config(request)
         user_id = str(current_user.id)
         
@@ -136,7 +138,7 @@ async def generate(
             config.context_id = f"user_{user_id}"
         
         async with LLMSession.session_scope() as session:
-            return await session.generate(
+            resp = await session.generate(
                 provider_name=request.provider,
                 model=request.model,
                 messages=request.messages,
@@ -144,6 +146,8 @@ async def generate(
                 api_key=request.api_key,  # API key comes directly from request
                 user_id=user_id
             )
+            print(resp)
+            return resp
     except LLMProviderException as e:
         # Map provider exception categories to HTTP status codes
         status_code = 500

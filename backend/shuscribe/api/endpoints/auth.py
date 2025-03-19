@@ -1,150 +1,74 @@
 # shuscribe/api/endpoints/auth.py
 
-from datetime import datetime
-import uuid
-from fastapi import APIRouter, HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordRequestForm
-from typing import Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+import httpx
 
-from shuscribe.auth.client import supabase_auth
-from shuscribe.schemas.auth import User, UserCreate, UserUpdate, Token
-from shuscribe.auth.dependencies import get_current_user
-from shuscribe.services.auth import UserService, get_user_service
+from shuscribe.core.config import get_settings
+from shuscribe.schemas.user import User, UserUpdate
+from shuscribe.auth.dependencies import get_current_user, supabase_token_scheme
 
 router = APIRouter()
-
-@router.post("/signup", response_model=User)
-async def signup(user_create: UserCreate):  # Changed variable name here
-    try:
-        # Create user in Supabase
-        response = await supabase_auth.sign_up(
-            email=user_create.email,
-            password=user_create.password,
-            user_data={
-                "display_name": user_create.display_name,
-                "full_name": user_create.full_name,
-                "settings": {}
-            }
-        )
-        
-        # Check for errors
-        if "error" in response:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=response["error"]["message"]
-            )
-        
-        # Extract user from response - using a different variable name
-        user_data = response.get("user", {})  # This is now a new variable, not overwriting anything
-        
-        # Create User object
-        user = User(
-            id=user_data.get("id"),
-            email=user_data.get("email"),
-            created_at=user_data.get("created_at"),
-            display_name=user_data.get("user_metadata", {}).get("display_name"),
-            full_name=user_data.get("user_metadata", {}).get("full_name"),
-            settings=user_data.get("user_metadata", {}).get("settings", {})
-        )
-        
-        return user
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create user: {str(e)}"
-        )
-
-@router.post("/token", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    """Login and get access token"""
-    try:
-        # Sign in with Supabase
-        response = await supabase_auth.sign_in(
-            email=form_data.username,  # OAuth2 uses username field for email
-            password=form_data.password
-        )
-        
-        # Check for errors
-        if "error" in response:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        # Extract token
-        access_token = response.get("access_token")
-        
-        return Token(
-            access_token=access_token or "",
-            token_type="bearer"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication failed: {str(e)}",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
 @router.get("/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get information about the currently authenticated user"""
     return current_user
 
-@router.put("/me", response_model=User)
-async def update_current_user(
-    user_update: UserUpdate,
+@router.patch("/me", response_model=User)
+async def update_user_profile(
+    update_data: UserUpdate = Body(...),
     current_user: User = Depends(get_current_user),
-    user_service: UserService = Depends(get_user_service)
+    token: str = Depends(supabase_token_scheme)
 ):
-    """Update the current user's information"""
-    try:
-        # Update user fields
-        if user_update.display_name is not None:
-            current_user.display_name = user_update.display_name
+    """Update the current user's profile information"""
+    settings = get_settings()
+    
+    # Update user metadata in Supabase Auth
+    update_metadata = {}
+    
+    if update_data.display_name is not None:
+        update_metadata["display_name"] = update_data.display_name
+    
+    if update_data.full_name is not None:
+        update_metadata["full_name"] = update_data.full_name
+    
+    if update_data.settings is not None:
+        # Merge with existing settings rather than replacing
+        merged_settings = {**current_user.settings, **update_data.settings}
+        update_metadata["settings"] = merged_settings
+    
+    if update_metadata:
+        try:
+            # Use the standard user update endpoint
+            url = f"{settings.SUPABASE_URL}/auth/v1/user"
+            headers = {
+                "apikey": settings.SUPABASE_KEY,
+                "Authorization": f"Bearer {token}"
+            }
+            payload = {
+                "data": update_metadata  # Note: the key is "data" not "user_metadata"
+            }
             
-        if user_update.full_name is not None:
-            current_user.full_name = user_update.full_name
+            async with httpx.AsyncClient() as client:
+                response = await client.put(url, headers=headers, json=payload)
+                
+                if response.status_code >= 400:
+                    raise Exception(f"Supabase API error: {response.status_code} - {response.text}")
+                
+                user_data = response.json()
             
-        if user_update.settings is not None:
-            # Merge settings instead of replacing
-            current_user.settings.update(user_update.settings)
+            # Update the current user object with new data from the response
+            updated_user = current_user.copy(update={
+                "display_name": user_data.get("user_metadata", {}).get("display_name", current_user.display_name),
+                "full_name": user_data.get("user_metadata", {}).get("full_name", current_user.full_name),
+                "settings": user_data.get("user_metadata", {}).get("settings", current_user.settings)
+            })
             
-        # Save changes using the service
-        await user_service.save_user(current_user)
-        
-        return current_user
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to update user: {str(e)}"
-        )
-
-
-@router.post("/refresh", response_model=Token)
-async def refresh_access_token(refresh_token: str):
-    """Refresh an access token using a refresh token"""
-    try:
-        response = await supabase_auth.refresh_token(refresh_token)
-        
-        # Check for errors
-        if "error" in response:
+            return updated_user
+        except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token",
-                headers={"WWW-Authenticate": "Bearer"},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update user profile: {str(e)}"
             )
-        
-        # Extract new token
-        access_token = response.get("access_token", "")
-        
-        return Token(
-            access_token=access_token,
-            token_type="bearer"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token refresh failed: {str(e)}",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    
+    return current_user

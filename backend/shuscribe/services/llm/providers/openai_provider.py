@@ -2,7 +2,6 @@
 
 import logging
 import os
-from re import T
 import traceback
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
@@ -122,7 +121,7 @@ class OpenAIProvider(LLMProvider):
         
         # Add max_tokens if specified
         if config.max_tokens is not None:
-            params["max_tokens"] = config.max_tokens
+            params["max_output_tokens"] = config.max_tokens
             
         if stream:
             params["stream"] = True
@@ -199,7 +198,7 @@ class OpenAIProvider(LLMProvider):
             
             # Extract response information (content from the output)
             content = response.output_text
-                
+                            
             # Create and return the LLMResponse
             return LLMResponse(
                 text=content,

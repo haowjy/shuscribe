@@ -66,7 +66,8 @@ class ThinkingConfig(BaseModel):
 class GenerationConfig(BaseModel):
     """Provider-agnostic generation configuration"""
     temperature: Optional[float] = 0.7
-    max_tokens: Optional[int] = None
+    max_tokens: Optional[int] = None # OpenAI max_output_tokens?
+    
     system_prompt: Optional[str] = None
     top_p: Optional[float] = 1.0
     top_k: Optional[int] = 0
