@@ -1,4 +1,8 @@
-# /Users/jimmyyao/gitrepos/shuscribe/backend/shuscribe/main.py
+# shuscribe/main.py
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,18 +12,9 @@ from shuscribe.api.router import api_router
 from shuscribe.core.config import get_settings
 
 from dotenv import load_dotenv
-import os
 
 # Load environment variables at startup
 load_dotenv()
-
-# Debug environment variables
-print("===== ENVIRONMENT VARIABLES =====")
-print(f"SUPABASE_URL: {os.getenv('SUPABASE_URL')}")
-print(f"SUPABASE_KEY: {os.getenv('SUPABASE_KEY', 'FOUND BUT NOT SHOWN')[:5]}..." if os.getenv('SUPABASE_KEY') else "SUPABASE_KEY: NOT FOUND")
-print(f"SUPABASE_SERVICE_KEY: {'FOUND BUT NOT SHOWN' if os.getenv('SUPABASE_SERVICE_KEY') else 'NOT FOUND'}")
-print(f"CORS_ORIGINS: {os.getenv('CORS_ORIGINS')}")
-print("=================================")
 
 # Configure logging
 logging.basicConfig(

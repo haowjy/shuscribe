@@ -1,8 +1,8 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
-    "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/shuscribe/.venv/bin/python",
+    "python.analysis.extraPaths": ["${workspaceFolder}/backend/shuscribe"],
     "python.terminal.activateEnvironment": true,
-    "python.poetryPath": "poetry",
+    // "python.poetryPath": "poetry",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.typeCheckingMode": "basic"
 }

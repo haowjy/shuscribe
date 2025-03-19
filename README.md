@@ -1,12 +1,12 @@
 # ShuScribe
 
-AI-assisted wiki-tool
+AI tool for creating narrative wikis.
 
 ## Dev Set Up
 
 ### Backend
 
-#### Running the Backend (and Database)
+<!-- #### Running the Backend (and Database)
 
   ```bash
   # Start containers in foreground (see logs directly)
@@ -35,49 +35,35 @@ To just run the database:
 
   ```bash
   ./db_migrate.sh "migration message"
-  ``` -->
+  ``` --> -->
 
 #### Running fastapi without docker (local development)
 
-1. [Poetry Installation Guide](https://python-poetry.org/docs/#installing-with-pipx)
+1. [UV Installation Guide](https://docs.astral.sh/uv/getting-started/installation/)
 
-2. (Optional) Make sure that poetry creates a virtual environment in the backend directory to easily find it
 
-    ```bash
-    poetry config virtualenvs.in-project true
-    ```
-
-3. Navigate to the backend directory
+2. Navigate to the backend directory
   
     ```bash
-    cd backend
+    cd backend/shuscribe
     ```
 
-4. Install all dependencies including development ones
+3. Make sure all dependencies are installed
 
     ```bash
-    poetry install --with dev
+    uv sync
     ```
 
-5. Activate the virtual environment
+4. Run the FastAPI server
 
     ```bash
-    eval $(poetry env activate)
+    uvicorn main:app --reload
     ```
 
-6. Run the FastAPI server
-
     ```bash
-    uvicorn shuscribe.main:app --reload
-    ```
-
-7. Gracefully exit the virtual environment
-
-    ```bash
-    deactivate
+    uv run uvicorn main:app --reload
     ```
 
 ### Frontend
 
 1. !!TODO
-

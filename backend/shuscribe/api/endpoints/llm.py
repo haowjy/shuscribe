@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import StreamingResponse
-from typing import List, Literal, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field
+from typing import List, Literal, Optional, Dict, Any
+from pydantic import BaseModel
 import logging
 import json
 
@@ -138,7 +138,7 @@ async def generate(
             config.context_id = f"user_{user_id}"
         
         async with LLMSession.session_scope() as session:
-            resp = await session.generate(
+            return await session.generate(
                 provider_name=request.provider,
                 model=request.model,
                 messages=request.messages,
@@ -146,8 +146,7 @@ async def generate(
                 api_key=request.api_key,  # API key comes directly from request
                 user_id=user_id
             )
-            print(resp)
-            return resp
+            
     except LLMProviderException as e:
         # Map provider exception categories to HTTP status codes
         status_code = 500
