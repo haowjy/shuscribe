@@ -120,7 +120,7 @@ class LLMSession:
         finally:
             pass
         
-    async def generate(self, provider_name: ProviderName | str, model: str, messages: List[Message | str], 
+    async def generate(self, provider_name: Union[ProviderName, str], model: str, messages: List[Union[Message, str]], 
                        config: Optional[GenerationConfig] = None, api_key: Optional[str] = None, 
                        user_id: Optional[str] = None, **kwargs):
         """Generate a response using the specified provider and model with user tracking."""
@@ -141,7 +141,7 @@ class LLMSession:
         self, 
         provider_name: ProviderName, 
         model: str, 
-        messages: List[Message | str], 
+        messages: List[Union[Message, str]], 
         config: Optional[GenerationConfig] = None, 
         api_key: Optional[str] = None, 
         session_id: Optional[str] = None,
@@ -168,9 +168,9 @@ class LLMSession:
     
     async def generate_stream(
         self, 
-        provider_name: ProviderName | str,
+        provider_name: Union[ProviderName, str],
         model: str, 
-        messages: List[Message | str],
+        messages: List[Union[Message, str]],
         config: Optional[GenerationConfig] = None,
         api_key: Optional[str] = None,
         session_id: Optional[str] = None,
