@@ -54,52 +54,37 @@ class LLMSession:
         
     async def get_provider(self, provider_name: ProviderName | str, api_key: Optional[str] = None, user_id: Optional[str] = None) -> LLMProvider:
         """Get a provider instance with improved resource management and user isolation."""
-        # Use "default" as the key for default API key and "anonymous" as default user
         key_id = api_key if api_key else "default"
         user_id = user_id if user_id else "anonymous"
         
         if isinstance(provider_name, str):
             provider_name = ProviderName(provider_name)
         
-        # Mask the API key for logging - only show first and last 4 chars
         masked_key_id = key_id
         if api_key and len(api_key) > 8:
             masked_key_id = f"{api_key[:4]}...{api_key[-4:]}"
         
-        # Initialize user providers if needed
         if user_id not in self._user_providers:
             self._user_providers[user_id] = UserProviders(user_id=user_id)
         
-        # Get the user's providers
         user_providers = self._user_providers[user_id]
-        
-        # Check if provider instance already exists
         provider_instance = user_providers.get_provider(provider_name, key_id)
         if provider_instance:
-            # Update last used timestamp
             user_providers.update_last_used(provider_name, key_id)
             return provider_instance.provider
         
-        # Create new provider instance
         provider_class = self._provider_classes[provider_name]
         provider = provider_class(api_key=api_key)
-        
-        # Add to user providers
         user_providers.add_provider(provider_name, key_id, provider)
         logger.info(f"Created new {provider_name} provider instance for user {user_id} with key_id {masked_key_id}")
         
-        # Clean up idle providers and sessions occasionally
         await self._cleanup_idle_resources()
-        
         return provider
     
     async def _cleanup_idle_resources(self):
         """Clean up providers and streaming sessions that haven't been used recently."""
-        # Clean up idle providers
         for user_id, user_providers in list(self._user_providers.items()):
-            # Use longer timeout for anonymous user
             max_idle_time = self._max_idle_time * 3 if user_id == "anonymous" else self._max_idle_time
-            
             idle_providers = user_providers.get_idle_providers(max_idle_time)
             
             for provider_instance in idle_providers:
@@ -110,22 +95,17 @@ class LLMSession:
                     except Exception as e:
                         logger.warning(f"Error closing provider {provider_instance.provider_name} for user {user_id}: {str(e)}")
                 
-                # Remove from user providers
                 if provider_instance.provider_name in user_providers.providers:
                     if provider_instance.api_key_id in user_providers.providers[provider_instance.provider_name]:
                         del user_providers.providers[provider_instance.provider_name][provider_instance.api_key_id]
-                    
-                    # If no more providers of this type, clean up the dict
                     if not user_providers.providers[provider_instance.provider_name]:
                         del user_providers.providers[provider_instance.provider_name]
                 
                 logger.info(f"Cleaned up idle {provider_instance.provider_name} provider for user {user_id}")
             
-            # If user has no more providers, remove user entry
             if not user_providers.providers:
                 del self._user_providers[user_id]
         
-        # Clean up idle streaming sessions
         idle_sessions = self._sessions.get_idle_sessions(self._max_session_idle_time)
         for session_id in idle_sessions:
             await self._cleanup_streaming_session(session_id)
@@ -133,32 +113,22 @@ class LLMSession:
     @classmethod
     @asynccontextmanager
     async def session_scope(cls):
-        """
-        Context manager for using the LLM session.
-        Ensures proper cleanup of resources when session is done.
-        
-        Usage:
-            async with LLMSession.session_scope() as session:
-                provider = await session.get_provider("openai")
-        """
+        """Context manager for using the LLM session."""
         session = await cls.get_instance()
         try:
             yield session
         finally:
-            # Any cleanup needed when session is done
             pass
         
     async def generate(self, provider_name: ProviderName | str, model: str, messages: List[Message | str], 
-                     config: Optional[GenerationConfig] = None, api_key: Optional[str] = None, 
-                     user_id: Optional[str] = None, **kwargs):
+                       config: Optional[GenerationConfig] = None, api_key: Optional[str] = None, 
+                       user_id: Optional[str] = None, **kwargs):
         """Generate a response using the specified provider and model with user tracking."""
         if isinstance(provider_name, str):
             provider_name = ProviderName(provider_name)
         
-        # Add user_id parameter
         provider_instance = await self.get_provider(provider_name, api_key, user_id)
         
-        # Track the generation with user_id
         if config and user_id:
             if not config.context_id:
                 config.context_id = f"user_{user_id}"
@@ -179,24 +149,21 @@ class LLMSession:
         user_id: Optional[str] = None,
         **kwargs
     ) -> Tuple[str, StreamSession]:
-        """Create a new streaming session with user tracking."""
+        """Create a new streaming session with user tracking, optimized for SSE."""
         user_id = user_id if user_id else "anonymous"
         provider_instance = await self.get_provider(provider_name, api_key, user_id)
         
-        # Create a new streaming session
         session = StreamSession(session_id)
         if resume_text:
             session.accumulated_text = resume_text
-            
-        # Store user ID directly on the session object
+        
         session.user_id = user_id
-            
-        # Add to session registry
         self._sessions.add_session(session, user_id)
         
-        # Start the session
-        await session.start(provider_instance, model, messages, config)
+        # Start the streaming session in the background
+        await session.start(provider_instance, model, messages, config, **kwargs)
         
+        logger.info(f"Created streaming session {session.session_id} for user {user_id}")
         return session.session_id, session
     
     async def generate_stream(
@@ -211,17 +178,15 @@ class LLMSession:
         user_id: Optional[str] = None,
         **kwargs
     ) -> AsyncIterator[StreamChunk]:
-        """Generate a streaming response using the specified provider and model."""
+        """Generate a streaming response, compatible with SSE."""
         if isinstance(provider_name, str):
             provider_name = ProviderName(provider_name)
         
-        # Create a streaming session with user tracking
-        _, stream_session = await self.create_streaming_session(
-            provider_name, model, messages, config, 
-            api_key, session_id, resume_text, user_id, **kwargs
+        session_id, stream_session = await self.create_streaming_session(
+            provider_name, model, messages, config, api_key, session_id, resume_text, user_id, **kwargs
         )
         
-        # Yield text chunks from the streaming session
+        # Yield chunks as they arrive, suitable for SSE streaming
         async for chunk in stream_session:
             yield chunk
     
@@ -234,6 +199,7 @@ class LLMSession:
         session = self._sessions.get_session(session_id)
         if session and session.is_active:
             session.pause()
+            logger.info(f"Paused streaming session {session_id}")
             return True
         return False
     
@@ -242,6 +208,7 @@ class LLMSession:
         session = self._sessions.get_session(session_id)
         if session and session.status == StreamStatus.PAUSED:
             await session.resume()
+            logger.info(f"Resumed streaming session {session_id}")
             return True
         return False
     
@@ -250,6 +217,7 @@ class LLMSession:
         session = self._sessions.get_session(session_id)
         if session and session.is_active:
             await session.cancel()
+            logger.info(f"Cancelled streaming session {session_id}")
             return True
         return False
     
@@ -259,13 +227,10 @@ class LLMSession:
         if not session:
             return False
             
-        # Cancel if still active
         if session.is_active:
             await session.cancel()
             
-        # Remove from session registry
         self._sessions.remove_session(session_id)
-        
         user_id = getattr(session, 'user_id', 'anonymous')
         logger.info(f"Cleaned up streaming session {session_id} for user {user_id}")
         return True
@@ -281,7 +246,6 @@ class LLMSession:
         
         for session in sessions:
             if session.is_active:
-                # Convert to StreamSessionInfo and then to dict
                 session_info = StreamSessionInfo(
                     session_id=session.session_id,
                     user_id=user_id,
@@ -317,11 +281,9 @@ class LLMSession:
 
     async def close(self):
         """Close all provider clients and cancel all streaming sessions."""
-        # Cancel all streaming sessions
         for session_id in list(self._sessions.sessions.keys()):
             await self._cleanup_streaming_session(session_id)
             
-        # Close all providers
         for user_id, user_providers in self._user_providers.items():
             for provider_dict in user_providers.providers.values():
                 for provider_instance in provider_dict.values():

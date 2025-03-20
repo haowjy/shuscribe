@@ -13,14 +13,18 @@ from shuscribe.services.llm.interfaces import StreamingProvider, Message, Genera
 
 logger = logging.getLogger(__name__)
 
+# Define the StreamStatus enum
 class StreamStatus(str, Enum):
+    """Enum representing the possible states of a streaming session."""
     INITIALIZING = "initializing"
     ACTIVE = "active"
     PAUSED = "paused"
     COMPLETE = "complete"
     ERROR = "error"
 
+# Define the StreamChunk model
 class StreamChunk(BaseModel):
+    """Pydantic model representing a chunk of streamed data."""
     text: str
     accumulated_text: str = Field(default="")
     status: StreamStatus
@@ -28,163 +32,228 @@ class StreamChunk(BaseModel):
     error: Optional[str] = None
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
-        
+
+# Define the StreamSession class
 class StreamSession:
+    """
+    A class to manage a streaming session for LLM responses, supporting asynchronous iteration and SSE.
+    """
     def __init__(self, session_id: Optional[str] = None):
+        """
+        Initialize a new streaming session.
+
+        Args:
+            session_id (Optional[str]): A unique identifier for the session. If None, a UUID is generated.
+        """
         self.session_id = session_id or str(uuid.uuid4())
-        self.user_id = "anonymous"  # Default value, will be set during creation
-        self.accumulated_text = ""
-        self.tool_calls: List[Dict[str, Any]] = []
-        self.error: Optional[str] = None
-        self._queue: asyncio.Queue[StreamChunk] = asyncio.Queue()
-        self.created_at: float = time.time()
-        self.last_active: float = time.time()
-        self.metadata: Dict[str, Any] = {}
+        self.user_id = "anonymous"  # Default user ID, overridden during creation
+        self.accumulated_text = ""  # Accumulated text from all chunks
+        self.tool_calls: List[Dict[str, Any]] = []  # List of tool calls, if any
+        self.error: Optional[str] = None  # Error message, if any
+        self._queue: asyncio.Queue[StreamChunk] = asyncio.Queue()  # Queue for streaming chunks
+        self.created_at: float = time.time()  # Timestamp of session creation
+        self.last_active: float = time.time()  # Timestamp of last activity
+        self.metadata: Dict[str, Any] = {}  # Additional metadata
         
-        self.status: StreamStatus = StreamStatus.INITIALIZING
+        self.status: StreamStatus = StreamStatus.INITIALIZING  # Initial status
         
-        self.provider: StreamingProvider
-        self.model: str
-        self.messages: List[Message | str]
-        self.config: GenerationConfig
-        self._task: asyncio.Task
-        self._cancel_requested: bool = False
-    
-    async def start(self, provider: StreamingProvider, model: str,  messages: List[Message | str], config: Optional[GenerationConfig] = None) -> 'StreamSession':
-        self.provider: StreamingProvider = provider
-        self.model: str = model
-        self.messages: List[Message | str] = messages
-        self.config: GenerationConfig = config or GenerationConfig()
-        self.status: StreamStatus = StreamStatus.ACTIVE
-        self.last_active: float = time.time()
-        self._task: asyncio.Task = asyncio.create_task(self._run_stream())
+        # Streaming configuration
+        self.provider: Optional[StreamingProvider] = None
+        self.model: Optional[str] = None
+        self.messages: List[Message | str] = []
+        self.config: Optional[GenerationConfig] = None
+        self._task: Optional[asyncio.Task] = None  # Task running the stream
+        self._cancel_requested: bool = False  # Flag to indicate cancellation
+
+    async def start(
+        self,
+        provider: StreamingProvider,
+        model: str,
+        messages: List[Message | str],
+        config: Optional[GenerationConfig] = None,
+        **kwargs
+    ) -> 'StreamSession':
+        """
+        Start the streaming session with the given provider, model, messages, and configuration.
+
+        Args:
+            provider (StreamingProvider): The LLM provider instance.
+            model (str): The model to use for generation.
+            messages (List[Message | str]): The input messages for the stream.
+            config (Optional[GenerationConfig]): Configuration for generation. Defaults to None.
+
+        Returns:
+            StreamSession: The current instance for method chaining.
+        """
+        self.provider = provider
+        self.model = model
+        self.messages = messages
+        self.config = config or GenerationConfig()
+        self.status = StreamStatus.ACTIVE
+        self.last_active = time.time()
+        self._task = asyncio.create_task(self._run_stream())
         return self
-    
+
     async def _run_stream(self):
-        """Run the streaming process and handle each chunk."""
+        """
+        Core method to run the streaming process and populate the queue with chunks.
+        """
         try:
-            # Call the provider's internal streaming method
             if self.model is None:
                 raise ValueError("Model is not set")
             if self.provider is None:
                 raise ValueError("Provider is not set")
             
+            # Stream chunks from the provider
             async for chunk in self.provider._stream_generate(
                 messages=self.messages,
                 model=self.model,
-                config=self.config
+                config=self.config or GenerationConfig()
             ):
-                # Add the chunk to accumulated text
                 self.accumulated_text += chunk
                 self.last_active = time.time()
                 
-                # Create a StreamChunk and put it in the queue
-                await self._queue.put(StreamChunk(
+                # Create a StreamChunk and add it to the queue
+                stream_chunk = StreamChunk(
                     text=chunk,
                     accumulated_text=self.accumulated_text,
                     status=self.status,
                     session_id=self.session_id,
-                    tool_calls=self.tool_calls
-                ))
+                    tool_calls=self.tool_calls,
+                    metadata=self.metadata
+                )
+                await self._queue.put(stream_chunk)
                 
-                # Check if paused - wait until resumed
+                # Handle pausing
                 while self.status == StreamStatus.PAUSED:
                     await asyncio.sleep(0.1)
-                    
-                    # If canceled while paused, exit
-                    if self.status == StreamStatus.ERROR:
+                    if self._cancel_requested:
                         return
             
-            # Mark as complete when done
+            # Mark stream as complete and add final chunk
             self.status = StreamStatus.COMPLETE
-            
-            # Final empty chunk to signal completion
-            await self._queue.put(StreamChunk(
+            final_chunk = StreamChunk(
                 text="",
                 accumulated_text=self.accumulated_text,
                 status=StreamStatus.COMPLETE,
                 session_id=self.session_id,
-                tool_calls=self.tool_calls
-            ))
+                tool_calls=self.tool_calls,
+                metadata=self.metadata
+            )
+            await self._queue.put(final_chunk)
+            
+            # Optional: Save to database (placeholder)
+            try:
+                # TODO: Implement database module
+                from shuscribe.services.db.session import save_stream_result  # type: ignore
+                await save_stream_result(self.session_id, self.accumulated_text)
+            except ImportError:
+                logger.warning("Database module not implemented. Skipping save.")
             
         except Exception as e:
-            # Handle errors
-            error_msg = str(e)
-            logger.error(f"Stream error in session {self.session_id}: {error_msg}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            self.error = error_msg
+            self.error = str(e)
             self.status = StreamStatus.ERROR
-            
-            # Put error chunk in queue
-            await self._queue.put(StreamChunk(
+            logger.error(f"Stream error in session {self.session_id}: {self.error}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            error_chunk = StreamChunk(
                 text="",
                 accumulated_text=self.accumulated_text,
                 status=StreamStatus.ERROR,
                 session_id=self.session_id,
-                error=self.error
-            ))
-    
+                error=self.error,
+                tool_calls=self.tool_calls,
+                metadata=self.metadata
+            )
+            await self._queue.put(error_chunk)
+
     def __aiter__(self):
-        """Make the session directly iterable."""
+        """
+        Return the asynchronous iterator object.
+
+        Returns:
+            StreamSession: Self as the iterator.
+        """
         return self
-    
-    async def __anext__(self):
-        """Get the next chunk from the stream."""
+
+    async def __anext__(self) -> StreamChunk:
+        """
+        Retrieve the next chunk from the stream.
+
+        Returns:
+            StreamChunk: The next chunk of streamed data.
+
+        Raises:
+            StopAsyncIteration: When the stream is complete and no more chunks are available.
+        """
         if self.status == StreamStatus.COMPLETE and self._queue.empty():
             raise StopAsyncIteration
-            
-        # Wait for the next chunk from the queue
+        
         chunk = await self._queue.get()
         self.last_active = time.time()
         
-        # If this was the final chunk and queue is now empty, raise StopAsyncIteration
+        # If this is the final chunk and the queue is empty, stop iteration
         if chunk.status in (StreamStatus.COMPLETE, StreamStatus.ERROR) and self._queue.empty():
             raise StopAsyncIteration
-            
+        
         return chunk
-    
+
     def pause(self):
-        """Pause the stream."""
+        """Pause the stream if it is active."""
         if self.status == StreamStatus.ACTIVE:
             self.status = StreamStatus.PAUSED
             self.last_active = time.time()
-    
+
     async def resume(self):
         """Resume a paused stream."""
         if self.status == StreamStatus.PAUSED:
             self.status = StreamStatus.ACTIVE
             self.last_active = time.time()
-    
+
     async def cancel(self):
-        """Cancel the stream."""
+        """Cancel the stream and clean up resources."""
+        self._cancel_requested = True
         self.status = StreamStatus.ERROR
         self.error = "Stream canceled by user"
         self.last_active = time.time()
         
         if self._task and not self._task.done():
             self._task.cancel()
-            
             try:
                 await self._task
             except asyncio.CancelledError:
                 pass
-    
+
     @property
-    def is_active(self):
-        """Check if the stream is still active."""
-        return self.status == StreamStatus.ACTIVE or self.status == StreamStatus.PAUSED
-    
+    def is_active(self) -> bool:
+        """
+        Check if the stream is currently active or paused.
+
+        Returns:
+            bool: True if the stream is active or paused, False otherwise.
+        """
+        return self.status in (StreamStatus.ACTIVE, StreamStatus.PAUSED)
+
     @property
-    def is_complete(self):
-        """Check if the stream has completed."""
+    def is_complete(self) -> bool:
+        """
+        Check if the stream has completed.
+
+        Returns:
+            bool: True if the stream is complete, False otherwise.
+        """
         return self.status == StreamStatus.COMPLETE
-    
+
     @property
-    def has_error(self):
-        """Check if the stream encountered an error."""
+    def has_error(self) -> bool:
+        """
+        Check if the stream encountered an error.
+
+        Returns:
+            bool: True if the stream has an error, False otherwise.
+        """
         return self.status == StreamStatus.ERROR
 
-
+# StreamManager class (unchanged from your original code, included for completeness)
 class StreamManager:
     """Manages multiple streaming sessions."""
     
@@ -194,13 +263,14 @@ class StreamManager:
     
     async def create_session(
         self, 
-        provider: StreamingProvider,  # Changed to interface
+        provider: StreamingProvider, 
         messages: List[Message | str], 
         model: str, 
         config: Optional[GenerationConfig] = None,
         session_id: Optional[str] = None,
         resume_text: Optional[str] = None
     ) -> StreamSession:
+        """Create a new streaming session."""
         session = StreamSession(session_id)
         if resume_text:
             session.accumulated_text = resume_text
@@ -216,24 +286,19 @@ class StreamManager:
         """Remove a session when no longer needed."""
         if session_id in self._sessions:
             session = self._sessions[session_id]
-            
-            # Cancel if still running
-            if session.status in (StreamStatus.ACTIVE, StreamStatus.PAUSED):
+            if session.is_active:
                 await session.cancel()
-                
-            # Remove from sessions
             del self._sessions[session_id]
             return True
-            
         return False
     
     async def cleanup_completed_sessions(self, max_age_seconds: int = 3600):
         """Remove completed sessions older than max_age_seconds."""
-        # Implementation would track session creation time and clean up old ones
+        # Implementation could track session creation time and clean up old ones
         pass
     
     async def stop_all_sessions(self):
         """Stop all active sessions."""
         for session in self._sessions.values():
-            if session.status in (StreamStatus.ACTIVE, StreamStatus.PAUSED):
+            if session.is_active:
                 await session.cancel()

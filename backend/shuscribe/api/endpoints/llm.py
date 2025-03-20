@@ -1,17 +1,17 @@
 # shuscribe/api/endpoints/llm.py
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
-from fastapi.responses import StreamingResponse
+import asyncio
+from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List, Literal, Optional, Dict, Any
 from pydantic import BaseModel
 import logging
-import json
+from sse_starlette.sse import EventSourceResponse
 
 # Import existing models directly from the LLM service
 from shuscribe.services.llm.session import LLMSession
 from shuscribe.schemas.llm import Message, GenerationConfig, ThinkingConfig
 from shuscribe.services.llm.providers.provider import ProviderName, LLMResponse
-from shuscribe.services.llm.streaming import StreamStatus
+from shuscribe.services.llm.streaming import StreamChunk
 from shuscribe.services.llm.errors import LLMProviderException, ErrorCategory, RetryConfig
 
 # Import user auth dependencies
@@ -79,11 +79,6 @@ class StreamSessionInfo(BaseModel):
     created_at: float
     last_active: float
     user_id: str
-
-class CapabilitiesResponse(BaseModel):
-    """Response for capabilities endpoint"""
-    providers: Dict[str, Any]
-    models: Dict[str, List[str]]
 
 
 def build_generation_config(request: GenerateRequest) -> GenerationConfig:
@@ -176,145 +171,106 @@ async def generate(
             detail={"error": str(e), "code": "unexpected_error"}
         )
 
-@router.post("/generate_stream")
-async def generate_stream(
+
+@router.post("/streams", response_model=dict)
+async def create_stream(
     request: GenerateRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
-    Stream a response from an LLM
+    Create a new streaming session.
     
-    This endpoint sends a request to the specified LLM provider and streams
-    the response back chunk by chunk using a server-sent events stream.
+    Args:
+        request: Contains provider, model, messages, config, and optionally api_key.
+        current_user: Authenticated user from dependency.
+    
+    Returns:
+        dict: Contains the session_id for the created session.
     """
-    
-    config = build_generation_config(request)
-    
-    # Add user context to the request for tracking and billing
-    context_id = f"user_{current_user.id}"
-    if config.context_id:
-        context_id = f"{context_id}_{config.context_id}"
-    config.context_id = context_id
-    
-    async def stream_generator():
-        try:
-            async with LLMSession.session_scope() as session:
-                # Use generate_stream directly from the session
-                async for chunk in session.generate_stream(
-                    provider_name=request.provider,
-                    model=request.model,
-                    messages=request.messages,
-                    config=config,
-                    api_key=request.api_key
-                ):
-                    # Add user ID to the chunk for tracking
-                    chunk_data = chunk.model_dump()
-                    chunk_data["user_id"] = str(current_user.id)
-                    
-                    # Stream each chunk as JSON, encoded as bytes
-                    yield json.dumps(chunk_data).encode("utf-8") + b"\n"
-                    
-                    # If the stream is complete, break
-                    if chunk.status == StreamStatus.COMPLETE:
-                        break
-        except Exception as e:
-            # Handle errors in streaming
-            error_detail = {"error": str(e)}
-            if isinstance(e, LLMProviderException):
-                error_detail = {
-                    "error": e.message,
-                    "code": e.code,
-                    "category": str(e.category),
-                    "provider": e.provider,
-                    "retry_after": e.retry_after if hasattr(e, "retry_after") else None
-                }
-            
-            yield json.dumps({"error": error_detail, "status": "error", "user_id": str(current_user.id)}).encode("utf-8")
-    
-    # Return a streaming response
-    return StreamingResponse(
-        stream_generator(),
-        media_type="application/x-ndjson"
-    )
-
-
-@router.get("/streams", response_model=List[StreamSessionInfo])
-async def list_streams(current_user: User = Depends(get_current_user)):
-    """List all active streaming sessions for the current user"""
-    try:
-        user_id = str(current_user.id)
-        
-        async with LLMSession.session_scope() as session:
-            # Use the user-specific method
-            user_sessions = await session.get_user_streaming_sessions(user_id)
-            return user_sessions
-    except Exception as e:
-        logger.exception("Unexpected error in list_streams endpoint")
-        raise HTTPException(
-            status_code=500,
-            detail={"error": str(e)}
+    user_id = str(current_user.id)
+    async with LLMSession.session_scope() as session:
+        session_id, _ = await session.create_streaming_session(
+            provider_name=request.provider,
+            model=request.model,
+            messages=request.messages,
+            config=build_generation_config(request),
+            api_key=request.api_key,
+            user_id=user_id
         )
+        return {"session_id": session_id}
 
-@router.post("/stream/{action}/{session_id}")
-async def manage_stream(
-    action: str, 
+
+@router.get("/streams/{session_id}")
+async def get_stream(
     session_id: str,
-    background_tasks: BackgroundTasks,
+    request: Request,
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Manage an existing streaming session
-    
-    Actions:
-    - pause: Pause the stream
-    - resume: Resume a paused stream
-    - cancel: Cancel the stream
-    - cleanup: Clean up resources for the stream
-    """
-    if action not in ["pause", "resume", "cancel", "cleanup"]:
-        raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
-    
-    try:
-        user_id = str(current_user.id)
-        
-        async with LLMSession.session_scope() as session:
-            # Verify that the streaming session exists
-            stream_session = session.get_streaming_session(session_id)
-            if not stream_session:
-                raise HTTPException(status_code=404, detail=f"Stream session {session_id} not found")
-            
-            # Verify that the session belongs to the current user
-            if getattr(stream_session, 'user_id', None) != user_id:
-                raise HTTPException(status_code=403, detail="You do not have permission to manage this stream")
-            
-            result = False
-            
-            # Perform the requested action
-            if action == "pause":
-                result = await session.pause_streaming_session(session_id)
-            elif action == "resume":
-                result = await session.resume_streaming_session(session_id)
-            elif action == "cancel":
-                result = await session.cancel_streaming_session(session_id)
-            elif action == "cleanup":
-                # Add cleanup to background tasks to avoid blocking
-                background_tasks.add_task(session.cleanup_streaming_session, session_id)
-                result = True
-                
-            if not result and action != "cleanup":
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Failed to {action} stream session {session_id}"
-                )
-                
-            return {"success": True, "action": action, "session_id": session_id}
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        logger.exception(f"Unexpected error in manage_stream endpoint ({action})")
-        raise HTTPException(
-            status_code=500,
-            detail={"error": str(e)}
-        )
+    user_id = str(current_user.id)
+    async with LLMSession.session_scope() as session:
+        stream_session = session.get_streaming_session(session_id)
+        if not stream_session or stream_session.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Stream session not found or access denied")
 
+        async def sse_generator():
+            try:
+                # Send initial chunk with accumulated_text
+                initial_chunk = StreamChunk(
+                    text="",
+                    accumulated_text=stream_session.accumulated_text,
+                    status=stream_session.status,
+                    session_id=session_id
+                )
+                yield {"data": initial_chunk.model_dump_json()}
+
+                # Stream subsequent chunks without accumulated_text
+                async for chunk in stream_session:
+                    # Create a new chunk without accumulated_text for efficiency
+                    stream_chunk = StreamChunk(
+                        text=chunk.text,
+                        accumulated_text="",  # Omit or leave empty after initial chunk
+                        status=chunk.status,
+                        session_id=session_id,
+                        error=chunk.error
+                    )
+                    yield {"data": stream_chunk.model_dump_json()}
+                    if chunk.status in ("COMPLETE", "ERROR"):
+                        break
+            except asyncio.CancelledError:
+                pass  # Handle client disconnect
+
+        return EventSourceResponse(sse_generator())
+    
+@router.post("/streams/{session_id}/cancel")
+async def cancel_stream(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    user_id = str(current_user.id)
+    async with LLMSession.session_scope() as session:
+        stream_session = session.get_streaming_session(session_id)
+        if not stream_session or stream_session.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Stream session not found or access denied")
+        
+        await session.cancel_streaming_session(session_id)
+    return {"message": "Stream cancelled successfully"}
+
+# @router.post("/streams/{session_id}/full")
+# TODO: get the full response from the stream based on the session_id
+# async def full_stream(
+#     session_id: str,
+#     current_user: User = Depends(get_current_user)
+# ):
+#     user_id = str(current_user.id)
+#     async with LLMSession.session_scope() as session:
+#         stream_session = session.get_streaming_session(session_id)
+#         if not stream_session or stream_session.user_id != user_id:
+#             raise HTTPException(status_code=404, detail="Stream session not found or access denied")
+        
+#         async def sse_generator():
+#             try:
+#                 async for chunk in stream_session:
+#                     yield {"data": chunk.model_dump_json()}
+#             except asyncio.CancelledError:
+#                 pass
+#         return EventSourceResponse(sse_generator())
