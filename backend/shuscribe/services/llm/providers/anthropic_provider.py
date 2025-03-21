@@ -156,16 +156,16 @@ class AnthropicProvider(LLMProvider):
         if config.stop_sequences:
             params["stop_sequences"] = config.stop_sequences
         
-        # Add tools if specified
-        if config.tools:
-            tools = []
-            for tool in config.tools:
-                tools.append({
-                    "name": tool.name,
-                    "description": tool.description,
-                    "input_schema": tool.parameters,
-                })
-            params["tools"] = tools
+        # # Add tools if specified
+        # if config.tools:
+        #     tools = []
+        #     for tool in config.tools:
+        #         tools.append({
+        #             "name": tool.name,
+        #             "description": tool.description,
+        #             "input_schema": tool.parameters,
+        #         })
+        #     params["tools"] = tools
         
         # add reasoning if specified
         if config.thinking_config and config.thinking_config.enabled:

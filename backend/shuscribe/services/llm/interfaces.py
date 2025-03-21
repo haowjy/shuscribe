@@ -1,14 +1,14 @@
 # shuscribe/services/llm/interfaces.py
 
 from abc import ABC, abstractmethod
-from typing import List, AsyncGenerator
+from typing import AsyncGenerator, Sequence
 
 from shuscribe.schemas.llm import Message, GenerationConfig
 class StreamingProvider(ABC):
     @abstractmethod
     async def _stream_generate(
         self, 
-        messages: List[Message | str], 
+        messages: Sequence[Message | str], 
         model: str, 
         config: GenerationConfig
     ) -> AsyncGenerator[str, None]:

@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Optional, Union, Any
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from jinja2 import Environment
 import importlib.resources
 import logging
@@ -18,9 +18,8 @@ class PromptTemplateConfig(BaseModel):
     version: str = "1.0"
     author: Optional[str] = None
     system_prompt: Optional[str] = None
-    user: Optional[Union[str, List[str]]] = None
-    assistant: Optional[Union[str, List[str]]] = None
-    tool: Optional[Union[str, List[str]]] = None
+    prompt: Optional[str] = None
+    messages: Optional[List[Message | str]] = Field(default_factory=list)
 
 
 class PromptTemplate:
@@ -45,44 +44,29 @@ class PromptTemplate:
         except (FileNotFoundError, ModuleNotFoundError, ImportError) as e:
             raise ValueError(f"Prompt template '{name}' not found in package '{package}': {str(e)}")
     
-    def format(self, **kwargs) -> List[Union[Message, str]]:
-        messages = []
+    def format(self, **kwargs) -> List[Message]:
+        """Format the template with the given variables."""
+        formatted_messages = []
         
         # Add system message if present
         if self.config.system_prompt:
-            messages.append(Message(
+            formatted_messages.append(Message(
                 role=MessageRole.SYSTEM,
                 content=self._render_template(self.config.system_prompt, kwargs)
             ))
         
-        # Process all message types
-        user_messages = [self.config.user] if isinstance(self.config.user, str) else (self.config.user or [])
-        assistant_messages = [self.config.assistant] if isinstance(self.config.assistant, str) else (self.config.assistant or [])
-        tool_messages = [self.config.tool] if isinstance(self.config.tool, str) else (self.config.tool or [])
+        # Add any additional messages
+        if isinstance(self.config.messages, list):
+            formatted_messages.extend(self.config.messages)
+                
+        # Add user message with prompt if present
+        if self.config.prompt:
+            formatted_messages.append(Message(
+                role=MessageRole.USER,
+                content=self._render_template(self.config.prompt, kwargs)
+            ))
         
-        # Determine maximum turns and build conversation
-        max_turns = max(len(user_messages), len(assistant_messages), len(tool_messages))
-        
-        for i in range(max_turns):
-            if i < len(user_messages) and user_messages[i]:
-                messages.append(Message(
-                    role=MessageRole.USER,
-                    content=self._render_template(user_messages[i], kwargs)
-                ))
-            
-            if i < len(assistant_messages) and assistant_messages[i]:
-                messages.append(Message(
-                    role=MessageRole.ASSISTANT,
-                    content=self._render_template(assistant_messages[i], kwargs)
-                ))
-            
-            if i < len(tool_messages) and tool_messages[i]:
-                messages.append(Message(
-                    role=MessageRole.TOOL,
-                    content=self._render_template(tool_messages[i], kwargs)
-                ))
-        
-        return messages
+        return formatted_messages
     
     def _render_template(self, content: str, variables: Dict[str, Any]) -> str:
         template = self.env.from_string(content)

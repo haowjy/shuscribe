@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Dict, Optional, Any, Union
 from pydantic import BaseModel, Field
@@ -48,16 +49,32 @@ class WikiArticleType(str, Enum):
 # INPUTS
 #
 
-class Chapter(BaseModel):
-    id: str
-    title: Optional[str] = None
-    content: str
-    order: int
+class Promptable(BaseModel):
+    """Base class for all promptable objects"""
+    @abstractmethod
+    def to_prompt(self) -> str:
+        pass
+
+class Chapter(Promptable):
+    title: Optional[str] = Field(default=None, description="Title of the chapter")
+    id: int = Field(description="Unique self-incrementing identifier for the chapter")
+    content: str = Field(description="Content of the chapter")
+    
+    def to_prompt(self) -> str:
+        if self.title:
+            return f"### Chapter {self.id}: {self.title}\n\n<Chapter>\n{self.content}\n</Chapter>"
+        else:
+            return f"### Chapter {self.id}\n\n<Chapter>\n{self.content}\n</Chapter>"
     
     
-class ChapterSummary(BaseModel):
-    chapter_id: str
+class ChapterSummary(Promptable):
+    chapter_id: int
     summary: str
+    
+    def to_prompt(self) -> str:
+        return f"Chapter {self.chapter_id}: {self.summary}"
+    
+    
 
 # 
 # OUTPUT

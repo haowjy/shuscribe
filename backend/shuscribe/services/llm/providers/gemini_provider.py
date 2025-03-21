@@ -9,7 +9,7 @@ from google import genai
 from google.genai import types as genai_types
 
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
-from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig, ToolDefinition, ToolType, Capabilities
+from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig, Capabilities # ToolDefinition, ToolType, 
 from shuscribe.services.llm.providers.provider import (
     LLMProvider, 
     LLMResponse,
@@ -177,32 +177,32 @@ class GeminiProvider(LLMProvider):
         # Return the properly formatted content
         return gemini_contents, system_instruction
     
-    def _map_generic_tools_to_gemini(self, tools: List[ToolDefinition]) -> List[genai_types.Tool]:
-        """Map our generic tool definitions to Gemini-specific format"""
-        gemini_tools = []
+    # def _map_generic_tools_to_gemini(self, tools: List[ToolDefinition]) -> List[genai_types.Tool]:
+    #     """Map our generic tool definitions to Gemini-specific format"""
+    #     gemini_tools = []
         
-        for tool in tools:
-            if tool.type == ToolType.FUNCTION:
-                # Map function tool
-                gemini_tools.append({
-                    "function_declarations": [{
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": tool.parameters
-                    }]
-                })
-            elif tool.type == ToolType.SEARCH:
-                # Map search tool
-                gemini_tools.append({"google_search": {}})
-            elif tool.type == ToolType.CODE_EXECUTION:
-                # Map code execution tool
-                config = {}
-                if tool.code_execution_config:
-                    if tool.code_execution_config.timeout:
-                        config["timeout"] = tool.code_execution_config.timeout
-                gemini_tools.append({"code_execution": config})
+    #     for tool in tools:
+    #         if tool.type == ToolType.FUNCTION:
+    #             # Map function tool
+    #             gemini_tools.append({
+    #                 "function_declarations": [{
+    #                     "name": tool.name,
+    #                     "description": tool.description,
+    #                     "parameters": tool.parameters
+    #                 }]
+    #             })
+    #         elif tool.type == ToolType.SEARCH:
+    #             # Map search tool
+    #             gemini_tools.append({"google_search": {}})
+    #         elif tool.type == ToolType.CODE_EXECUTION:
+    #             # Map code execution tool
+    #             config = {}
+    #             if tool.code_execution_config:
+    #                 if tool.code_execution_config.timeout:
+    #                     config["timeout"] = tool.code_execution_config.timeout
+    #             gemini_tools.append({"code_execution": config})
         
-        return gemini_tools
+    #     return gemini_tools
     
     def _prepare_config(self, config: GenerationConfig, system_instruction: Optional[str] = None) -> genai_types.GenerateContentConfig:
         """

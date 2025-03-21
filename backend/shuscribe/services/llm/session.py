@@ -1,6 +1,6 @@
 # shuscribe/services/llm/session.py
 
-from typing import Dict, Optional, Any, List, AsyncIterator, Union, Tuple
+from typing import Dict, Optional, Any, List, AsyncIterator, Sequence, Union, Tuple
 import asyncio
 import logging
 import time
@@ -120,7 +120,7 @@ class LLMSession:
         finally:
             pass
         
-    async def generate(self, provider_name: Union[ProviderName, str], model: str, messages: List[Union[Message, str]], 
+    async def generate(self, provider_name: Union[ProviderName, str], model: str, messages: Sequence[Union[Message, str]], 
                        config: Optional[GenerationConfig] = None, api_key: Optional[str] = None, 
                        user_id: Optional[str] = None, **kwargs):
         """Generate a response using the specified provider and model with user tracking."""
@@ -141,7 +141,7 @@ class LLMSession:
         self, 
         provider_name: ProviderName, 
         model: str, 
-        messages: List[Union[Message, str]], 
+        messages: Sequence[Union[Message, str]], 
         config: Optional[GenerationConfig] = None, 
         api_key: Optional[str] = None, 
         session_id: Optional[str] = None,
@@ -170,7 +170,7 @@ class LLMSession:
         self, 
         provider_name: Union[ProviderName, str],
         model: str, 
-        messages: List[Union[Message, str]],
+        messages: Sequence[Union[Message, str]],
         config: Optional[GenerationConfig] = None,
         api_key: Optional[str] = None,
         session_id: Optional[str] = None,

@@ -4,7 +4,7 @@ import asyncio
 import time
 import traceback
 import uuid
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Sequence
 from enum import Enum
 from pydantic import BaseModel, Field
 import logging
@@ -60,7 +60,7 @@ class StreamSession:
         # Streaming configuration
         self.provider: Optional[StreamingProvider] = None
         self.model: Optional[str] = None
-        self.messages: List[Message | str] = []
+        self.messages: Sequence[Message | str] = []
         self.config: Optional[GenerationConfig] = None
         self._task: Optional[asyncio.Task] = None  # Task running the stream
         self._cancel_requested: bool = False  # Flag to indicate cancellation
@@ -69,7 +69,7 @@ class StreamSession:
         self,
         provider: StreamingProvider,
         model: str,
-        messages: List[Message | str],
+        messages: Sequence[Message | str],
         config: Optional[GenerationConfig] = None,
         **kwargs
     ) -> 'StreamSession':
@@ -264,7 +264,7 @@ class StreamManager:
     async def create_session(
         self, 
         provider: StreamingProvider, 
-        messages: List[Message | str], 
+        messages: Sequence[Message | str], 
         model: str, 
         config: Optional[GenerationConfig] = None,
         session_id: Optional[str] = None,

@@ -1,6 +1,6 @@
 # shuscribe/services/llm/pipeline/steps/chapter.py
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Sequence
 
 from shuscribe.services.llm.pipeline.base import PipelineContext
 from shuscribe.services.llm.pipeline.base_steps import EnhancedPipelineStep, StepResult
@@ -63,8 +63,12 @@ class ChapterSummaryStep(EnhancedPipelineStep):
         from shuscribe.services.llm.prompts.manager import PromptManager
         prompt_manager = PromptManager()
         messages = prompt_manager.chapter.summary(
-            chapter_content=current_chapter.content, 
-            previous_summaries=previous_summaries)
+            current_chapter=current_chapter, 
+            # last_chapter=previous_summaries[-1].summary if previous_summaries else None,
+            # story_metadata=context.data.get_typed(StoryMetadata).to_string(),
+            # reader_context=context.data.get_typed(ReaderContext).to_string(),
+            # focus_genre=context.data.get_typed(StoryMetadata).genre
+        )
         
         # Generate the summary
         response = await self.llm_session.generate(

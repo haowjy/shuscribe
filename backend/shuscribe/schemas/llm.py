@@ -29,7 +29,7 @@ class MessageRole(str, Enum):
 class Message(BaseModel):
     role: MessageRole = Field(default=MessageRole.USER, description="The role of the message")
     content: Union[str, Content, List[Union[str, Content]]] = Field(description="The content of the message")
-    name: Optional[str] = Field(default=None, description="The name of the message")
+    name: Optional[str] = Field(default=None, description="The name of the message") # OpenAI only, I think
 
 # Generic tool configurations
 class SearchToolConfig(BaseModel):
@@ -42,19 +42,19 @@ class CodeExecutionToolConfig(BaseModel):
     timeout: Optional[int] = None
     allow_network_access: bool = False
 
-class ToolType(str, Enum):
-    FUNCTION = "function"
-    SEARCH = "search"
-    CODE_EXECUTION = "code_execution"
+# class ToolType(str, Enum):
+#     FUNCTION = "function"
+#     SEARCH = "search"
+#     CODE_EXECUTION = "code_execution"
 
-class ToolDefinition(BaseModel):
-    """Generic tool definition that can be mapped to provider-specific formats"""
-    type: ToolType = ToolType.FUNCTION
-    name: Optional[str] = None
-    description: Optional[str] = None
-    parameters: Optional[Dict[str, Any]] = None
-    search_config: Optional[SearchToolConfig] = None
-    code_execution_config: Optional[CodeExecutionToolConfig] = None
+# class ToolDefinition(BaseModel):
+#     """Generic tool definition that can be mapped to provider-specific formats"""
+#     type: ToolType = ToolType.FUNCTION
+#     name: Optional[str] = None
+#     description: Optional[str] = None
+#     parameters: Optional[Dict[str, Any]] = None
+#     search_config: Optional[SearchToolConfig] = None
+#     code_execution_config: Optional[CodeExecutionToolConfig] = None
 
 class ThinkingConfig(BaseModel):
     """Configuration for thinking"""
@@ -74,7 +74,7 @@ class GenerationConfig(BaseModel):
     response_schema: Optional[Type[BaseModel]] = None # structured output
     search: bool = False  # Simple flag for backward compatibility
     parallel_tool_calling: bool = False
-    tools: Optional[List[ToolDefinition]] = None
+    # tools: Optional[List[ToolDefinition]] = None
     tool_choice: Optional[str] = None
     auto_function_calling: Optional[bool] = None  # Generic automatic function calling
     stop_sequences: Optional[List[str]] = None

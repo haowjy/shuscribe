@@ -130,22 +130,22 @@ class OpenAIProvider(LLMProvider):
         if config.system_prompt:
             params["input"].insert(0, {"role": "system", "content": config.system_prompt})
         
-        # Add tools if specified
-        if config.tools:
-            tools = []
-            for tool in config.tools:
-                tools.append({
-                    "type": "function",
-                    "function": {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": tool.parameters,
-                    }
-                })
-            params["tools"] = tools
+        # # Add tools if specified
+        # if config.tools:
+        #     tools = []
+        #     for tool in config.tools:
+        #         tools.append({
+        #             "type": "function",
+        #             "function": {
+        #                 "name": tool.name,
+        #                 "description": tool.description,
+        #                 "parameters": tool.parameters,
+        #             }
+        #         })
+        #     params["tools"] = tools
             
-            if config.tool_choice:
-                params["tool_choice"] = config.tool_choice
+        #     if config.tool_choice:
+        #         params["tool_choice"] = config.tool_choice
         
         # Add stop sequences if specified
         if config.stop_sequences:

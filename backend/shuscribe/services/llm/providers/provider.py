@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 from enum import Enum
-from typing import AsyncGenerator, List, Dict, Any, Optional, TypeVar, Callable, Awaitable
+from typing import AsyncGenerator, List, Dict, Any, Optional, Sequence, TypeVar, Callable, Awaitable
 import asyncio
 import random
 import logging
@@ -162,7 +162,7 @@ class LLMProvider(StreamingProvider):
     # Update generate method to use retry
     async def generate(
         self, 
-        messages: List[Message | str],
+        messages: Sequence[Message | str],
         model: str,
         config: Optional[GenerationConfig] = None
     ) -> LLMResponse:
