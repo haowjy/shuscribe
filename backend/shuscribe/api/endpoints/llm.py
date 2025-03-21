@@ -11,7 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 from shuscribe.services.llm.session import LLMSession
 from shuscribe.schemas.llm import Message, GenerationConfig, ThinkingConfig
 from shuscribe.services.llm.providers.provider import ProviderName, LLMResponse
-from shuscribe.services.llm.streaming import StreamChunk
+from shuscribe.services.llm.streaming import StreamChunk, StreamStatus
 from shuscribe.services.llm.errors import LLMProviderException, ErrorCategory, RetryConfig
 
 # Import user auth dependencies
@@ -223,18 +223,32 @@ async def get_stream(
                 )
                 yield {"data": initial_chunk.model_dump_json()}
 
-                # Stream subsequent chunks without accumulated_text
+                # Stream subsequent chunks
                 async for chunk in stream_session:
-                    # Create a new chunk without accumulated_text for efficiency
-                    stream_chunk = StreamChunk(
-                        text=chunk.text,
-                        accumulated_text="",  # Omit or leave empty after initial chunk
-                        status=chunk.status,
-                        session_id=session_id,
-                        error=chunk.error
-                    )
+                    # For the final chunk (COMPLETE or ERROR), include the accumulated_text
+                    if chunk.status in (StreamStatus.COMPLETE, StreamStatus.ERROR):
+                        stream_chunk = StreamChunk(
+                            text=chunk.text,
+                            accumulated_text=stream_session.accumulated_text,  # Include accumulated_text for final chunk
+                            status=chunk.status,
+                            session_id=session_id,
+                            error=chunk.error,
+                            tool_calls=chunk.tool_calls,
+                            metadata=chunk.metadata
+                        )
+                    else:
+                        # For intermediate chunks, omit accumulated_text for efficiency
+                        stream_chunk = StreamChunk(
+                            text=chunk.text, 
+                            accumulated_text="",  # Omit for non-final chunks
+                            status=chunk.status,
+                            session_id=session_id,
+                            error=chunk.error,
+                            tool_calls=chunk.tool_calls,
+                            metadata=chunk.metadata
+                        )
                     yield {"data": stream_chunk.model_dump_json()}
-                    if chunk.status in ("COMPLETE", "ERROR"):
+                    if chunk.status in (StreamStatus.COMPLETE, StreamStatus.ERROR):
                         break
             except asyncio.CancelledError:
                 pass  # Handle client disconnect

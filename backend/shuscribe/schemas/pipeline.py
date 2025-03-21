@@ -62,10 +62,26 @@ class Chapter(Promptable):
     
     def to_prompt(self) -> str:
         if self.title:
-            return f"### Chapter {self.id}: {self.title}\n\n<Chapter>\n{self.content}\n</Chapter>"
+            return f"### Chapter {self.id}: {self.title}\n<Content>\n{self.content}\n</Content>"
         else:
-            return f"### Chapter {self.id}\n\n<Chapter>\n{self.content}\n</Chapter>"
+            return f"### Chapter {self.id}\n<Content>\n{self.content}\n</Content>"
+
+class StoryMetadata(Promptable):
+    title: str
+    description: Optional[str] = None
+    author: Optional[str] = None
+    word_count: Optional[int] = None
+    genres: Optional[List[str]] = None
+    additional_tags: Optional[List[str]] = None
     
+    def to_prompt(self) -> str:
+        p = (
+            f"Title: {self.title}\n" +
+            (f"Genres: {self.genres}\n" if self.genres else "") +
+            (f"Additional Tags: {self.additional_tags}\n" if self.additional_tags else "") +
+            (f"Description: |\n{self.description}" if self.description else "")
+        )
+        return p
     
 class ChapterSummary(Promptable):
     chapter_id: int

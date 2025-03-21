@@ -4,7 +4,7 @@ from typing import List, Optional, Sequence, Union
 
 from shuscribe.schemas.llm import Message
 from shuscribe.services.llm.prompts.manager import PromptManager
-from shuscribe.schemas.pipeline import Chapter
+from shuscribe.schemas.pipeline import Chapter, StoryMetadata
 class PromptGroup:
     """Base class for domain-specific prompt groups"""
     
@@ -49,7 +49,7 @@ class ChapterPromptGroup(PromptGroup):
     def summary(self, 
                current_chapter: Chapter,
                last_chapter: Optional[Chapter] = None,
-               story_metadata: Optional[str] = None,
+               story_metadata: Optional[StoryMetadata] = None,
                reader_context: Optional[str] = None,
                focus_genre: Optional[str] = None) -> list[Message]:
         """Generate chapter summary prompt
@@ -85,7 +85,7 @@ class ChapterPromptGroup(PromptGroup):
         return self._get_template("summary").format(
             current_chapter=current_chapter.to_prompt(),
             last_chapter=last_chapter.to_prompt() if last_chapter else None,
-            story_metadata=story_metadata,
+            story_metadata=story_metadata.to_prompt() if story_metadata else None,
             reader_context=reader_context,
             focus_genre=focus_genre
         ) 

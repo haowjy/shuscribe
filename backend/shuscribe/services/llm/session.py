@@ -194,14 +194,14 @@ class LLMSession:
         """Get an existing streaming session by ID."""
         return self._sessions.get_session(session_id)
     
-    async def pause_streaming_session(self, session_id: str) -> bool:
-        """Pause a streaming session."""
-        session = self._sessions.get_session(session_id)
-        if session and session.is_active:
-            session.pause()
-            logger.info(f"Paused streaming session {session_id}")
-            return True
-        return False
+    # async def pause_streaming_session(self, session_id: str) -> bool:
+    #     """Pause a streaming session."""
+    #     session = self._sessions.get_session(session_id)
+    #     if session and session.is_active:
+    #         session.pause()
+    #         logger.info(f"Paused streaming session {session_id}")
+    #         return True
+    #     return False
     
     async def resume_streaming_session(self, session_id: str) -> bool:
         """Resume a paused streaming session."""

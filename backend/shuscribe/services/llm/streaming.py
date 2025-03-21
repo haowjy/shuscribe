@@ -116,19 +116,13 @@ class StreamSession:
                 # Create a StreamChunk and add it to the queue
                 stream_chunk = StreamChunk(
                     text=chunk,
-                    accumulated_text=self.accumulated_text,
+                    # accumulated_text=self.accumulated_text, # no accumulated text except for the final chunk
                     status=self.status,
                     session_id=self.session_id,
                     tool_calls=self.tool_calls,
                     metadata=self.metadata
                 )
                 await self._queue.put(stream_chunk)
-                
-                # Handle pausing
-                while self.status == StreamStatus.PAUSED:
-                    await asyncio.sleep(0.1)
-                    if self._cancel_requested:
-                        return
             
             # Mark stream as complete and add final chunk
             self.status = StreamStatus.COMPLETE
@@ -191,11 +185,14 @@ class StreamSession:
         chunk = await self._queue.get()
         self.last_active = time.time()
         
-        # If this is the final chunk and the queue is empty, stop iteration
-        if chunk.status in (StreamStatus.COMPLETE, StreamStatus.ERROR) and self._queue.empty():
-            raise StopAsyncIteration
+        # Return the chunk first
+        return_chunk = chunk
         
-        return chunk
+        # Then check if this was the final chunk - if so, mark for next iteration to stop
+        if chunk.status in (StreamStatus.COMPLETE, StreamStatus.ERROR) and self._queue.empty():
+            self.status = StreamStatus.COMPLETE
+        
+        return return_chunk
 
     def pause(self):
         """Pause the stream if it is active."""
