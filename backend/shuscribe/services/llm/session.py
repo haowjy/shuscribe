@@ -3,14 +3,15 @@
 from typing import Dict, Optional, Any, List, AsyncIterator, Sequence, Union, Tuple
 import asyncio
 import logging
-import time
 from contextlib import asynccontextmanager
-import uuid
 
 from shuscribe.services.llm.interfaces import GenerationConfig, Message
-from shuscribe.services.llm.providers.provider import LLMProvider, ProviderName
-from shuscribe.services.llm.streaming import StreamSession, StreamChunk, StreamStatus
+from shuscribe.services.llm.providers.provider import LLMProvider
+from shuscribe.services.llm.streaming import StreamSession
+
+from shuscribe.schemas.streaming import StreamChunk
 from shuscribe.schemas.session import UserProviders, SessionRegistry, StreamSessionInfo
+from shuscribe.schemas.provider import ProviderName
 
 logger = logging.getLogger(__name__)
 
@@ -203,14 +204,14 @@ class LLMSession:
     #         return True
     #     return False
     
-    async def resume_streaming_session(self, session_id: str) -> bool:
-        """Resume a paused streaming session."""
-        session = self._sessions.get_session(session_id)
-        if session and session.status == StreamStatus.PAUSED:
-            await session.resume()
-            logger.info(f"Resumed streaming session {session_id}")
-            return True
-        return False
+    # async def resume_streaming_session(self, session_id: str) -> bool:
+    #     """Resume a paused streaming session."""
+    #     session = self._sessions.get_session(session_id)
+    #     if session and session.status == StreamStatus.PAUSED:
+    #         await session.resume()
+    #         logger.info(f"Resumed streaming session {session_id}")
+    #         return True
+    #     return False
     
     async def cancel_streaming_session(self, session_id: str) -> bool:
         """Cancel a streaming session."""
@@ -256,7 +257,7 @@ class LLMSession:
                     created_at=session.created_at,
                     last_active=session.last_active
                 )
-                result.append(session_info.dict())
+                result.append(session_info.model_dump())
                 
         return result
         
@@ -276,7 +277,7 @@ class LLMSession:
                     created_at=session.created_at,
                     last_active=session.last_active
                 )
-                result.append(session_info.dict())
+                result.append(session_info.model_dump())
         return result
 
     async def close(self):

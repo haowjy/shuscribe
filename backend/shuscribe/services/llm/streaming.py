@@ -5,33 +5,12 @@ import time
 import traceback
 import uuid
 from typing import Dict, Any, Optional, List, Sequence
-from enum import Enum
-from pydantic import BaseModel, Field
 import logging
 
 from shuscribe.services.llm.interfaces import StreamingProvider, Message, GenerationConfig
+from shuscribe.schemas.streaming import StreamChunk, StreamEvent, StreamStatus
 
 logger = logging.getLogger(__name__)
-
-# Define the StreamStatus enum
-class StreamStatus(str, Enum):
-    """Enum representing the possible states of a streaming session."""
-    INITIALIZING = "initializing"
-    ACTIVE = "active"
-    PAUSED = "paused"
-    COMPLETE = "complete"
-    ERROR = "error"
-
-# Define the StreamChunk model
-class StreamChunk(BaseModel):
-    """Pydantic model representing a chunk of streamed data."""
-    text: str
-    accumulated_text: str = Field(default="")
-    status: StreamStatus
-    session_id: str
-    error: Optional[str] = None
-    tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 # Define the StreamSession class
 class StreamSession:
@@ -105,17 +84,18 @@ class StreamSession:
                 raise ValueError("Provider is not set")
             
             # Stream chunks from the provider
-            async for chunk in self.provider._stream_generate(
+            async for event in self.provider._stream_generate(
                 messages=self.messages,
                 model=self.model,
                 config=self.config or GenerationConfig()
             ):
-                self.accumulated_text += chunk
+                self.accumulated_text += event.text
+                self.usage = event.usage
                 self.last_active = time.time()
                 
                 # Create a StreamChunk and add it to the queue
                 stream_chunk = StreamChunk(
-                    text=chunk,
+                    event=event,
                     # accumulated_text=self.accumulated_text, # no accumulated text except for the final chunk
                     status=self.status,
                     session_id=self.session_id,
@@ -127,13 +107,18 @@ class StreamSession:
             # Mark stream as complete and add final chunk
             self.status = StreamStatus.COMPLETE
             final_chunk = StreamChunk(
-                text="",
+                event=StreamEvent(
+                    type="complete",
+                    text="",
+                    usage=self.usage,
+                ),
                 accumulated_text=self.accumulated_text,
                 status=StreamStatus.COMPLETE,
                 session_id=self.session_id,
                 tool_calls=self.tool_calls,
                 metadata=self.metadata
             )
+            # print("FINAL CHUNK", final_chunk)
             await self._queue.put(final_chunk)
             
             # Optional: Save to database (placeholder)
@@ -150,7 +135,11 @@ class StreamSession:
             logger.error(f"Stream error in session {self.session_id}: {self.error}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             error_chunk = StreamChunk(
-                text="",
+                event=StreamEvent(
+                    type="error",
+                    text="",
+                    usage=None,
+                ),
                 accumulated_text=self.accumulated_text,
                 status=StreamStatus.ERROR,
                 session_id=self.session_id,

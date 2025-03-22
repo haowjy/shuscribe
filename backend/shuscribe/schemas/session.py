@@ -4,8 +4,10 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
 import time
 
-from shuscribe.services.llm.providers.provider import LLMProvider, ProviderName
+from shuscribe.services.llm.providers.provider import LLMProvider
 from shuscribe.services.llm.streaming import StreamSession, StreamStatus
+
+from shuscribe.schemas.provider import ProviderName
 
 class ProviderInstance(BaseModel):
     """Model for tracking a provider instance"""

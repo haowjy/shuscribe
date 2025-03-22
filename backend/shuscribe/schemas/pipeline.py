@@ -1,7 +1,6 @@
-from abc import ABC, abstractmethod
-from enum import Enum
-import re
-from typing import List, Dict, Optional, Any, Union
+# shuscribe/schemas/pipeline.py
+
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from shuscribe.schemas.base import Promptable

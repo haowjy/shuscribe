@@ -8,13 +8,14 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from openai import AsyncOpenAI, AsyncStream
 from openai.types.responses.response import Response as OpenAIResponse
 from openai.types.responses.response_stream_event import ResponseStreamEvent as OpenAIResponseStreamEvent
+from openai.types.responses.response_completed_event import ResponseCompletedEvent as OpenAIResponseCompletedEvent
+
+from shuscribe.schemas.llm import Message, GenerationConfig, Capabilities
+from shuscribe.schemas.provider import LLMResponse, LLMUsage
+from shuscribe.schemas.streaming import StreamEvent
 
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
-from shuscribe.schemas.llm import Message, GenerationConfig, Capabilities
-from shuscribe.services.llm.providers.provider import (
-    LLMProvider, 
-    LLMResponse, 
-)
+from shuscribe.services.llm.providers.provider import LLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -203,11 +204,10 @@ class OpenAIProvider(LLMProvider):
             return LLMResponse(
                 text=content,
                 model=response.model,
-                usage={
-                    "prompt_tokens": response.usage.input_tokens if response.usage else 0,
-                    "completion_tokens": response.usage.output_tokens if response.usage else 0,
-                    "total_tokens": response.usage.total_tokens if response.usage else 0
-                },
+                usage=LLMUsage(
+                    prompt_tokens=response.usage.input_tokens if response.usage else 0,
+                    completion_tokens=response.usage.output_tokens if response.usage else 0,
+                ),
                 raw_response=response,
             )
             
@@ -221,7 +221,7 @@ class OpenAIProvider(LLMProvider):
         messages: List[Message | str],
         model: str,
         config: Optional[GenerationConfig] = None
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[StreamEvent, None]:
         """
         Stream a text completion response from OpenAI using Responses API
         """
@@ -239,8 +239,21 @@ class OpenAIProvider(LLMProvider):
             # https://platform.openai.com/docs/guides/streaming-responses?api-mode=responses
             async for chunk in stream:
                 if chunk.type == "response.output_text.delta":
-                    yield chunk.delta
-                    
+                    yield StreamEvent(
+                        type="in_progress",
+                        text=chunk.delta,
+                    )
+                if chunk.type == "response.completed":
+                    if isinstance(chunk, OpenAIResponseCompletedEvent):
+                        yield StreamEvent(
+                            type="complete",
+                            text="",
+                            usage=LLMUsage(
+                                prompt_tokens=chunk.response.usage.input_tokens if chunk.response.usage else -1,
+                                completion_tokens=chunk.response.usage.output_tokens if chunk.response.usage else -1,
+                            ),
+                    )
+
         except Exception as e:
             logger.error(f"OpenAI Responses API streaming error: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")

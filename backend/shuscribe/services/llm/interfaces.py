@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from typing import AsyncGenerator, Sequence
 
 from shuscribe.schemas.llm import Message, GenerationConfig
+from shuscribe.schemas.streaming import StreamEvent
+    
 class StreamingProvider(ABC):
     @abstractmethod
     async def _stream_generate(
@@ -11,13 +13,17 @@ class StreamingProvider(ABC):
         messages: Sequence[Message | str], 
         model: str, 
         config: GenerationConfig
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[StreamEvent, None]:
         """Stream generate text completions.
         
         Returns:
             An async generator that yields string chunks.
         """
-        yield ""  # This is just for type hinting, implementations will override
+        yield StreamEvent(
+            type="in_progress",
+            text="",
+            usage=None,
+        )  # This is just for type hinting, implementations will override
 
 
 

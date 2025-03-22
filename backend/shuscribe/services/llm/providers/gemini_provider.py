@@ -8,11 +8,12 @@ from typing import Any, AsyncGenerator, List, Optional, Tuple
 from google import genai
 from google.genai import types as genai_types
 
+from shuscribe.schemas.streaming import StreamEvent
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
 from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig, Capabilities # ToolDefinition, ToolType, 
+from shuscribe.schemas.provider import LLMResponse, LLMUsage
 from shuscribe.services.llm.providers.provider import (
     LLMProvider, 
-    LLMResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -314,7 +315,10 @@ class GeminiProvider(LLMProvider):
             return LLMResponse(
                 text=content or "",
                 model=model,
-                usage=usage,
+                usage=LLMUsage(
+                    prompt_tokens=usage["prompt_tokens"],
+                    completion_tokens=usage["completion_tokens"],
+                ),
                 raw_response=response,
                 tool_calls=tool_calls
             )
@@ -329,7 +333,7 @@ class GeminiProvider(LLMProvider):
         messages: List[Message | str],
         model: str,
         config: Optional[GenerationConfig] = None
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[StreamEvent, None]:
         """
         Stream a text completion response from Gemini
         """
@@ -346,10 +350,30 @@ class GeminiProvider(LLMProvider):
                 model=model,
                 contents=contents,
                 config=gemini_config
-            ): # type: ignore I'm getting a type error here... but it works???
+            ): # type: ignore # NOTE: I'm getting a type error here... but it works???
                 # Extract and yield text from the chunk
-                if hasattr(chunk, 'text') and chunk.text:
-                    yield chunk.text
+                chunk: genai_types.GenerateContentResponse
+                if chunk.candidates and chunk.candidates[0].finish_reason is not None:
+                    prompt_tokens = chunk.usage_metadata.prompt_token_count or 0 if chunk.usage_metadata else 0
+                    completion_tokens = chunk.usage_metadata.candidates_token_count or 0 if chunk.usage_metadata else 0
+                    yield StreamEvent(
+                        type="complete",
+                        text="",
+                        usage=LLMUsage(
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
+                        )
+                    )
+                else:
+                    if chunk.text:
+                        yield StreamEvent(
+                            type="in_progress",
+                            text=chunk.text,
+                            usage=LLMUsage(
+                            prompt_tokens=0,
+                            completion_tokens=0,
+                            )
+                        )
                 
         except Exception as e:
             logger.error(f"Gemini API streaming error: {str(e)}")

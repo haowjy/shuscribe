@@ -1,47 +1,21 @@
 # shuscribe/services/llm/providers/provider.py
 
 from abc import abstractmethod
-from enum import Enum
-from typing import AsyncGenerator, List, Dict, Any, Optional, Sequence, TypeVar, Callable, Awaitable
+from typing import AsyncGenerator, List, Any, Optional, Sequence, TypeVar, Callable, Awaitable
 import asyncio
 import random
 import logging
 
-from pydantic import BaseModel, Field
-
 from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig, Capabilities
+from shuscribe.schemas.provider import LLMResponse
+
 from shuscribe.services.llm.streaming import StreamManager, StreamSession
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException, RetryConfig
 from shuscribe.services.llm.interfaces import StreamingProvider
+
 T = TypeVar('T')
 logger = logging.getLogger(__name__)
 
-class ProviderName(str, Enum):
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    GEMINI = "gemini"
-    # OPENROUTER = "openrouter"
-    # GROQ = "groq"
-    # COHERE = "cohere"
-
-class LLMResponse(BaseModel):
-    """Generic response model for any provider"""
-    text: str
-    model: str
-    usage: Dict[str, int]
-    raw_response: Any = Field(..., exclude=True)
-    
-    # Generic fields for various provider capabilities
-    tool_calls: Optional[List[Dict[str, Any]]] = None
-    citations: Optional[List[Dict[str, Any]]] = None
-    media: Optional[List[Dict[str, Any]]] = None  # For generated images/videos
-    context_id: Optional[str] = None  # For caching/context management
-    class Config:
-        json_encoders = {
-            # Optionally, add custom JSON encoders if you decide to serialize other complex fields later
-            # Example: You can serialize complex objects by converting them to strings
-            # YourCustomType: lambda v: str(v),
-        }
     
 class LLMProvider(StreamingProvider):
     """Base provider with new streaming support"""

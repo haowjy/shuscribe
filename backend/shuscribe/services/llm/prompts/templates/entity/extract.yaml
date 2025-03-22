@@ -39,4 +39,9 @@ prompt: |
   - Extract and classify all significant narrative entities in this chapter
   - Focus on these entity types:
   {{ entity_types }}
-    
+
+  ## Extraction Rules
+  - Make sure to combine entities that reference the same entity (describe the entity in more detail if needed)
+  - Include both explicitly named and strongly implied entities
+  - Note uncertainty when entity details are ambiguous
+  - Focus on quality over quantity - only include truly significant entities that are likely to be important to the story now and in the future

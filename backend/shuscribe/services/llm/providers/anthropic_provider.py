@@ -10,15 +10,17 @@ import anthropic
 from anthropic import AsyncAnthropic, AsyncStream
 from anthropic.types import MessageParam
 from anthropic.types.message import Message as AnthropicMessage
-from anthropic.types.raw_message_stream_event import RawMessageStreamEvent as AnthropicMessageStreamEvent
+from anthropic.types.message_stream_event import MessageStreamEvent as AnthropicMessageStreamEvent
 from anthropic.types.raw_content_block_delta_event import RawContentBlockDeltaEvent as AnthropicContentBlockDeltaEvent
 from anthropic.types.text_delta import TextDelta as AnthropicTextDelta
+from anthropic.types.thinking_delta import ThinkingDelta as AnthropicThinkingDelta
 from shuscribe.services.llm.errors import ErrorCategory, LLMProviderException
 from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig
+from shuscribe.schemas.provider import LLMResponse, LLMUsage
 from shuscribe.services.llm.providers.provider import (
     LLMProvider,
-    LLMResponse,
 )
+from shuscribe.schemas.streaming import StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -214,11 +216,10 @@ class AnthropicProvider(LLMProvider):
             return LLMResponse(
                 text=content,
                 model=response.model,
-                usage={
-                    "prompt_tokens": response.usage.input_tokens,
-                    "completion_tokens": response.usage.output_tokens,
-                    "total_tokens": response.usage.input_tokens + response.usage.output_tokens
-                },
+                usage=LLMUsage(
+                    prompt_tokens=response.usage.input_tokens,
+                    completion_tokens=response.usage.output_tokens,
+                ),
                 raw_response=response,
                 tool_calls=tool_calls if tool_calls else None
             )
@@ -233,26 +234,56 @@ class AnthropicProvider(LLMProvider):
         messages: List[Message | str],
         model: str,
         config: Optional[GenerationConfig] = None
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[StreamEvent, None]:
         """Stream a text completion response from Anthropic"""
         try:
             # Prepare parameters with streaming enabled
             params = self._prepare_anthropic_params(
                 messages=messages,
                 model=model,
-                config=config,
-                stream=True
+                config=config
             )
-                
-            # Create the stream
-            stream: AsyncStream[AnthropicMessageStreamEvent] = await self.client.messages.create(**params)
             
             # Process the streamed chunks
-            async for chunk in stream:
-                if isinstance(chunk, AnthropicContentBlockDeltaEvent):
-                    if isinstance(chunk.delta, AnthropicTextDelta):
-                        yield chunk.delta.text
-                    
+            async with self.client.messages.stream(**params) as stream:
+                is_thinking = False
+                
+                async for event in stream:
+                    if isinstance(event, AnthropicContentBlockDeltaEvent):
+                        delta = event.delta
+                        
+                        if isinstance(delta, AnthropicThinkingDelta):
+                            thinking_text = delta.thinking
+                            if not is_thinking:
+                                thinking_text = "<ANTHROPIC_THINKING>" + thinking_text
+                            yield StreamEvent(
+                                type="in_progress",
+                                text=thinking_text,
+                            )
+                            is_thinking = True
+                            
+                        if isinstance(delta, AnthropicTextDelta):
+                            if is_thinking:
+                                yield StreamEvent(
+                                    type="in_progress",
+                                    text="</ANTHROPIC_THINKING>",
+                                )
+                                is_thinking = False
+                            yield StreamEvent(
+                                type="in_progress",
+                                text=delta.text,
+                            )
+
+            message: AnthropicMessage = await stream.get_final_message()
+            yield StreamEvent(
+                type="complete",
+                text="",
+                usage=LLMUsage(
+                    prompt_tokens=message.usage.input_tokens,
+                    completion_tokens=message.usage.output_tokens,
+                ),
+            )
+            
         except Exception as e:
             logger.error(f"Anthropic API streaming error: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")

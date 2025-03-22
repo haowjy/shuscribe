@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -11,7 +11,6 @@ class EntitySigLvl(str, Enum):
     SUPPORTING = "supporting"
     MINOR = "minor"
     BACKGROUND = "background"
-    PERIPHERAL = "peripheral"
     
     @property
     def int_val(self) -> int:
@@ -20,8 +19,7 @@ class EntitySigLvl(str, Enum):
             self.MAJOR: 4,
             self.SUPPORTING: 3,
             self.MINOR: 2,
-            self.BACKGROUND: 1,
-            self.PERIPHERAL: 0,
+            self.BACKGROUND: 1
         }[self]
     
     def __gt__(self, other: "EntitySigLvl") -> bool:
@@ -58,7 +56,7 @@ class EntityType(DescriptiveEnum):
     OTHER = "other", "Elements not fitting other categories"
     
     
-class FoundEntity(BaseModel):
+class ExtractedEntity(BaseModel):
     description: str = Field(
         description="The description of the entity (what the entity is, what it does, etc)")
     
@@ -80,12 +78,17 @@ class FoundEntity(BaseModel):
     related_entities: List[str] = Field(
         description="List of entity identifiers that are related to the entity")
     
-    def to_upsert_str(self, sig_related_entities: List[str] | None = None) -> str:
-        if sig_related_entities:
-            return f"""{self.entity_type.value}: {self.identifier} - {self.significance_level.value} (related: {', '.join(sig_related_entities)})"""
-        else:
-            return f"""{self.entity_type.value}: {self.identifier} - {self.significance_level.value}"""
+    def to_upsert_str(self, sig_entities: List['ExtractedEntity'] | None = None) -> str:
+        if sig_entities:
+            related_entities = [e.identifier for e in sig_entities if e.identifier in self.related_entities]
+            if len(related_entities) > 0:
+                return f"""{self.entity_type.value}: {self.identifier} - {self.significance_level.value} (related: {', '.join(related_entities)})"""
+            
+        return f"""{self.entity_type.value}: {self.identifier} - {self.significance_level.value}"""
 
-class FindEntitiesOutputSchema(BaseModel):
-    entities: List[FoundEntity] = Field(
+class ExtractEntitiesOutSchema(BaseModel):
+    entities: List[ExtractedEntity] = Field(
         description="important entities found in the chapter that carry narrative significance")
+
+    def filter_entities(self, sig_level: EntitySigLvl) -> List[ExtractedEntity]:
+        return [entity for entity in self.entities if entity.significance_level >= sig_level]
