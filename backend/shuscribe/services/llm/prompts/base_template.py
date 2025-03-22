@@ -1,6 +1,8 @@
 # shuscribe/services/llm/prompts/template.py
 
-from typing import Dict, List, Optional, Union, Any
+from abc import abstractmethod
+import os
+from typing import Dict, List, Optional, Any
 import yaml
 from pydantic import BaseModel, Field
 from jinja2 import Environment
@@ -22,7 +24,7 @@ class PromptTemplateConfig(BaseModel):
     messages: Optional[List[Message | str]] = Field(default_factory=list)
 
 
-class PromptTemplate:
+class PromptTemplateFactory:
     """Enhanced prompt template supporting multi-turn conversations with Jinja2"""
     
     def __init__(self, config: PromptTemplateConfig):
@@ -30,13 +32,13 @@ class PromptTemplate:
         self.env = Environment(autoescape=False)
     
     @classmethod
-    def from_yaml_string(cls, yaml_string: str) -> 'PromptTemplate':
+    def from_yaml_string(cls, yaml_string: str) -> 'PromptTemplateFactory':
         data = yaml.safe_load(yaml_string)
         config = PromptTemplateConfig(**data)
         return cls(config)
     
     @classmethod
-    def from_name(cls, name: str, package="shuscribe.services.llm.prompts.prompt") -> 'PromptTemplate':
+    def from_name(cls, name: str, package="shuscribe.services.llm.prompts.prompt") -> 'PromptTemplateFactory':
         try:
             yaml_file = f"{name}.yaml"
             yaml_text = importlib.resources.read_text(package, yaml_file)
@@ -44,30 +46,56 @@ class PromptTemplate:
         except (FileNotFoundError, ModuleNotFoundError, ImportError) as e:
             raise ValueError(f"Prompt template '{name}' not found in package '{package}': {str(e)}")
     
+    def _render_template(self, content: str, variables: Dict[str, Any]) -> str:
+        template = self.env.from_string(content)
+        return template.render(**variables)
+
+
+class PromptTemplate:
+    """Wrapper around a PromptTemplateFactory that allows for custom formatting logic"""
+    
+    def __init__(self, name: str, package: str):
+        self.name = name
+        self.package = package
+        self.factory = PromptTemplateFactory.from_name(self.name, self.package)
+    
+    @classmethod
+    def from_yaml_string(cls, yaml_string: str) -> 'PromptTemplate':
+        factory = PromptTemplateFactory.from_yaml_string(yaml_string)
+        pt = cls("", "")
+        pt.factory = factory
+        return pt
+    
+    def reload(self) -> 'PromptTemplate':
+        env = os.environ.get("ENVIRONMENT", "prod").lower()
+        if env == "prod":
+            logging.warning("SECURITY: Attempted to reload template in production environment")
+            return self
+        
+        self.factory = PromptTemplateFactory.from_name(self.name, self.package)
+        return self
+    
+    @abstractmethod
     def format(self, **kwargs) -> List[Message]:
         """Format the template with the given variables."""
         formatted_messages = []
         
         # Add system message if present
-        if self.config.system_prompt:
+        if self.factory.config.system_prompt:
             formatted_messages.append(Message(
                 role=MessageRole.SYSTEM,
-                content=self._render_template(self.config.system_prompt, kwargs)
+                content=self.factory._render_template(self.factory.config.system_prompt, kwargs)
             ))
         
         # Add any additional messages
-        if isinstance(self.config.messages, list):
-            formatted_messages.extend(self.config.messages)
+        if isinstance(self.factory.config.messages, list):
+            formatted_messages.extend(self.factory.config.messages)
                 
         # Add user message with prompt if present
-        if self.config.prompt:
+        if self.factory.config.prompt:
             formatted_messages.append(Message(
                 role=MessageRole.USER,
-                content=self._render_template(self.config.prompt, kwargs)
+                content=self.factory._render_template(self.factory.config.prompt, kwargs)
             ))
         
         return formatted_messages
-    
-    def _render_template(self, content: str, variables: Dict[str, Any]) -> str:
-        template = self.env.from_string(content)
-        return template.render(**variables)

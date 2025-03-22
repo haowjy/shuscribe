@@ -1,14 +1,14 @@
 # shuscribe/services/llm/prompts/__init__.py
 
-from shuscribe.services.llm.prompts.template import PromptTemplate, PromptTemplateConfig
-from shuscribe.services.llm.prompts.manager import PromptManager
-from shuscribe.services.llm.prompts.groups import EntityPromptGroup, ChapterPromptGroup, WikiPromptGroup
+from shuscribe.services.llm.prompts.base_template import PromptTemplateFactory, PromptTemplateConfig
+# from shuscribe.services.llm.prompts.manager import PromptManager
+# from shuscribe.services.llm.prompts.groups import EntityPromptGroup, ChapterPromptGroup, WikiPromptGroup
 
 __all__ = [
-    'PromptTemplate',
+    'PromptTemplateFactory',
     'PromptTemplateConfig',
-    'PromptManager',
-    'EntityPromptGroup',
-    'ChapterPromptGroup',
-    'WikiPromptGroup',
+    # 'PromptManager',
+    # 'EntityPromptGroup',
+    # 'ChapterPromptGroup',
+    # 'WikiPromptGroup',
 ]

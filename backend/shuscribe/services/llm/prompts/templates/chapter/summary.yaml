@@ -1,6 +1,6 @@
 name: "chapter_summary"
 description: "Generate a comprehensive summary of plot events in the chapter"
-version: "1.0"
+version: "0.1"
 author: "haowjy"
 
 system_prompt: |
@@ -11,42 +11,41 @@ prompt: |
   Create a comprehensive summary of all significant events that occurred in this chapter.
 
   {% if story_metadata -%}
-  # Story Context
+  # Story Metadata
   {{ story_metadata }}
   {%- endif %}
 
-  {%- if reader_context -%}
-  # Reader Context
-  {{ reader_context }}
+  {%- if summary_so_far -%}
+  # Story So Far
+  {{ summary_so_far }}
   {%- endif %}
   
   # Narrative Context
   
-  {%- if last_chapter -%}
-  ## Previous Chapter
-  {{ last_chapter }}
+  {%- if recent_summaries -%}
+  ## Summary of Previous Chapters
+  {{ recent_summaries }}
   {% endif %}
   
   ## Current Chapter
-
   {{ current_chapter -}}
 
   {% raw %}
 
   # Instructions
-  - Create a detailed, chronological Markdown bullet-point summary of all significant plot events
+  - Create a detailed Markdown bullet-point summary of all significant plot events
   - Use Markdown formatting headers to organize the summary into sections of major scenes
   - Each bullet point should represent a distinct event, action, or development
   - Use sub-bullets (indented) for details related to the main event
   - **Narrative Element Labeling:**  
     - Mark important narrative elements by adding one of these labels at the end of the bullet point:
-      - `[!FORESHADOW]` - Potentially significant details that might be important later
       - `[!CHARACTER]` - Notable character development, motivation reveal, or relationship change
       - `[!WORLD]` - Important worldbuilding information or setting details or new concepts specific to this world
+      - `[!LORE]` - background information, traditions, and knowledge specific to this world
+      - `[!FORESHADOW]` - Potentially significant details that might be important later
       - `[!SYMBOL]` - Symbolic or metaphorical elements
       - `[!THEME]` - Thematic statements or developments
       - `[!CALLBACK]` - References to earlier events or elements
-      - `[!MYSTERY]` - Unexplained events or open questions
       - `[!ALLUSION]` - Allusions to other stories or popular culture
       - `[!CONTRADICTION]` - A contradiction with previous knowledge
     - multiple labels should be separated by a space like this: `[!FORESHADOW] [!CHARACTER]`

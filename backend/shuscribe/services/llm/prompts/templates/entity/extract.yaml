@@ -1,0 +1,42 @@
+name: "entity_extraction"
+description: "Extract and classify narrative entities from chapter content"
+version: "1.0"
+author: "haowjy"
+
+system_prompt: |
+  You are an expert narrative analyst who identifies and classifies entities within stories. You focus on extracting characters, locations, items, concepts, and events with precision and detail.
+
+prompt: |
+  # Task
+  Identify and extract all significant narrative entities from this chapter.
+
+  {% if story_metadata -%}
+  # Story Metadata
+  {{ story_metadata }}
+  {%- endif %}
+
+  {%- if summary_so_far -%}
+  # Story So Far
+  {{ summary_so_far }}
+  {%- endif %}
+  
+  # Narrative Context
+  
+  {%- if recent_summaries -%}
+  ## Summary of Previous Chapters
+  {{ recent_summaries }}
+  {% endif %}
+  
+  ## Current Chapter
+  {{ current_chapter }}
+  
+  {% if chapter_summary -%}
+  ## Current Chapter Summary
+  {{ chapter_summary }}
+  {%- endif %}
+  
+  # Instructions
+  - Extract and classify all significant narrative entities in this chapter
+  - Focus on these entity types:
+  {{ entity_types }}
+    
