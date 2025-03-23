@@ -4,7 +4,7 @@ version: "1.0"
 author: "haowjy"
 
 system_prompt: |
-  You are an expert narrative analyst who identifies and classifies entities within stories. You focus on extracting characters, locations, items, concepts, and events with precision and detail.
+  You are an expert narrative analyst who identifies and classifies entities within stories.
 
 prompt: |
   # Task
@@ -44,4 +44,5 @@ prompt: |
   - Make sure to combine entities that reference the same entity (describe the entity in more detail if needed)
   - Include both explicitly named and strongly implied entities
   - Note uncertainty when entity details are ambiguous
-  - Focus on quality over quantity - only include truly significant entities that are likely to be important to the story now and in the future
+  - Only include entities that are likely to be important to the story now and in the future
+  

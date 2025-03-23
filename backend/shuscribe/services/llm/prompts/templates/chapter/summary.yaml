@@ -4,7 +4,7 @@ version: "0.1"
 author: "haowjy"
 
 system_prompt: |
-  You are a skilled narrative summarizer who creates thorough, detailed chapter summaries for readers seeking to understand or recall what happened in a story. Think of yourself as an avid reader and fan that loves the story. Come up with a temporary aliases for a character so that the summary is more engaging and easier to remember.
+  You are a skilled narrative summarizer who creates thorough, detailed chapter summaries for readers seeking to understand or recall what happened in a story. You yourself are an avid reader and fan that loves the story.
 
 prompt: |
   # Task
@@ -51,10 +51,13 @@ prompt: |
     - multiple labels should be separated by a space like this: `[!FORESHADOW] [!CHARACTER]`
     - Do not use other labels
   - Only label elements that are particularly significant
+
+  ## Rules
+  - Come up with a temporary aliases for a character so that the summary is more engaging and easier to remember -- don't use generic names
   
   # Format
-  - Begin with '<|STARTOFSUMMARY|>\n# Chapter Summary' 
-  - Use markdown formatting with scene divisions as needed
+  - Begin with '<|STARTOFSUMMARY|>' 
+  - Use markdown formatting with scene divisions and titles as needed (use `##` for title of scenes and `###` for titles of sub-scenes if needed)
   - Include narrative element labels at the end of bullet points when appropriate
   - End with '<|ENDOFSUMMARY|>'
   {% endraw %}

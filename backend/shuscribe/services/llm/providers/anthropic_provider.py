@@ -143,7 +143,7 @@ class AnthropicProvider(LLMProvider):
             "messages": anthropic_messages,
             "temperature": config.temperature,
             "top_p": config.top_p,
-            "max_tokens": config.max_tokens or 4096,  # Default to 4096 if not specified
+            "max_tokens": config.max_output_tokens or 4096,  # Default to 4096 if not specified
         }
         
         # Add streaming if requested

@@ -48,5 +48,5 @@ class ProcessingConfig(BaseModel):
     provider_name: str
     model: str
     max_previous_chapters: int = 5
-    generate_entity_articles_threshold: EntitySigLvl = EntitySigLvl.SUPPORTING
+    generate_entity_articles_threshold: EntitySigLvl = EntitySigLvl.MAJOR
     focus_genre: Optional[str] = None  # For genre-specific entity extraction

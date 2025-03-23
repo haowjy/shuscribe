@@ -222,11 +222,11 @@ class GeminiProvider(LLMProvider):
             gemini_config.top_p = config.top_p
         if config.top_k is not None:
             gemini_config.top_k = config.top_k
-        if config.max_tokens is not None:
-            gemini_config.max_output_tokens = config.max_tokens
+        if config.max_output_tokens is not None:
+            gemini_config.max_output_tokens = config.max_output_tokens
         if config.stop_sequences:
             gemini_config.stop_sequences = config.stop_sequences
-            
+        
         # Add response schema for structured output
         if config.response_schema:
             gemini_config.response_mime_type = "application/json"
@@ -353,6 +353,16 @@ class GeminiProvider(LLMProvider):
             ): # type: ignore # NOTE: I'm getting a type error here... but it works???
                 # Extract and yield text from the chunk
                 chunk: genai_types.GenerateContentResponse
+                
+                if chunk.text:
+                    yield StreamEvent(
+                        type="in_progress",
+                        text=chunk.text,
+                        usage=LLMUsage(
+                        prompt_tokens=0,
+                        completion_tokens=0,
+                        )
+                    )
                 if chunk.candidates and chunk.candidates[0].finish_reason is not None:
                     prompt_tokens = chunk.usage_metadata.prompt_token_count or 0 if chunk.usage_metadata else 0
                     completion_tokens = chunk.usage_metadata.candidates_token_count or 0 if chunk.usage_metadata else 0
@@ -364,16 +374,6 @@ class GeminiProvider(LLMProvider):
                             completion_tokens=completion_tokens,
                         )
                     )
-                else:
-                    if chunk.text:
-                        yield StreamEvent(
-                            type="in_progress",
-                            text=chunk.text,
-                            usage=LLMUsage(
-                            prompt_tokens=0,
-                            completion_tokens=0,
-                            )
-                        )
                 
         except Exception as e:
             logger.error(f"Gemini API streaming error: {str(e)}")

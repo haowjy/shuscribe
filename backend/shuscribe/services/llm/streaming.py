@@ -90,12 +90,12 @@ class StreamSession:
                 config=self.config or GenerationConfig()
             ):
                 self.accumulated_text += event.text
-                self.usage = event.usage
                 self.last_active = time.time()
-                
+                    
                 # Create a StreamChunk and add it to the queue
                 stream_chunk = StreamChunk(
-                    event=event,
+                    text=event.text,
+                    usage=event.usage,
                     # accumulated_text=self.accumulated_text, # no accumulated text except for the final chunk
                     status=self.status,
                     session_id=self.session_id,
@@ -107,11 +107,8 @@ class StreamSession:
             # Mark stream as complete and add final chunk
             self.status = StreamStatus.COMPLETE
             final_chunk = StreamChunk(
-                event=StreamEvent(
-                    type="complete",
-                    text="",
-                    usage=self.usage,
-                ),
+                text="",
+                usage=event.usage,
                 accumulated_text=self.accumulated_text,
                 status=StreamStatus.COMPLETE,
                 session_id=self.session_id,
@@ -135,11 +132,8 @@ class StreamSession:
             logger.error(f"Stream error in session {self.session_id}: {self.error}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             error_chunk = StreamChunk(
-                event=StreamEvent(
-                    type="error",
-                    text="",
-                    usage=None,
-                ),
+                text="",
+                usage=event.usage if event else None,
                 accumulated_text=self.accumulated_text,
                 status=StreamStatus.ERROR,
                 session_id=self.session_id,
@@ -148,6 +142,7 @@ class StreamSession:
                 metadata=self.metadata
             )
             await self._queue.put(error_chunk)
+            return
 
     def __aiter__(self):
         """

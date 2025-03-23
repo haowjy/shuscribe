@@ -6,18 +6,18 @@ from pydantic import BaseModel, Field
 from shuscribe.schemas.base import DescriptiveEnum
 
 class EntitySigLvl(str, Enum):
-    CENTRAL = "central"
-    MAJOR = "major"
-    SUPPORTING = "supporting"
-    MINOR = "minor"
-    BACKGROUND = "background"
+    CENTRAL = "Central"
+    MAJOR = "Major"
+    # SUPPORTING = "Supporting"
+    MINOR = "Minor"
+    BACKGROUND = "Background"
     
     @property
     def int_val(self) -> int:
         return {
             self.CENTRAL: 5,
             self.MAJOR: 4,
-            self.SUPPORTING: 3,
+            # self.SUPPORTING: 3,
             self.MINOR: 2,
             self.BACKGROUND: 1
         }[self]
@@ -37,23 +37,23 @@ class EntitySigLvl(str, Enum):
 
 class EntityType(DescriptiveEnum):
     # Primary Narrative Elements (Essential)
-    CHARACTER = "character", "People, beings, or sentient entities (including unnamed)"
-    LOCATION = "location", "Places, settings, or spatial environments"
-    EVENT = "event", "Significant occurrences, happenings, or incidents"
-    ITEM = "item", "Physical objects or artifacts with narrative significance"
-    CONCEPT = "concept", "Abstract systems, powers, theories, or ideas important to the world"
+    CHARACTER = "Character", "People, beings, or sentient entities (including unnamed)"
+    LOCATION = "Location", "Places, settings, or spatial environments"
+    EVENT = "Event", "Significant occurrences, happenings, or incidents"
+    ITEM = "Item", "Physical objects or artifacts with narrative significance"
+    CONCEPT = "Concept", "Abstract systems, powers, theories, or ideas important to the world"
     
     # Grouping & Context Elements (Important)
-    GROUP = "group", "Collections of characters (including organizations, factions, etc.)"
-    TIME_PERIOD = "time_period", "Significant temporal ranges or eras"
-    CULTURE = "culture", "Societal patterns, practices, and beliefs"
+    GROUP = "Group", "Collections of characters (including organizations, factions, etc.)"
+    TIME_PERIOD = "Time Period", "Significant temporal ranges or eras"
+    CULTURE = "Culture", "Societal patterns, practices, and beliefs"
     
     # Literary Elements (Secondary for MVP)
-    THEME = "theme", "Recurring ideas, motifs, or messages"
-    SYMBOLISM = "symbolism", "Symbolic elements and their meanings"
-    ALLUSION = "allusion", "References to other works, events, or cultural touchpoints"
+    THEME = "Theme", "Recurring ideas, motifs, or messages"
+    SYMBOLISM = "Symbolism", "Symbolic elements and their meanings"
+    ALLUSION = "Allusion", "References to something outside the story without directly explaining it"
     
-    OTHER = "other", "Elements not fitting other categories"
+    OTHER = "Other", "Key entities that don't fit other categories"
     
     
 class ExtractedEntity(BaseModel):
@@ -82,9 +82,9 @@ class ExtractedEntity(BaseModel):
         if sig_entities:
             related_entities = [e.identifier for e in sig_entities if e.identifier in self.related_entities]
             if len(related_entities) > 0:
-                return f"""{self.entity_type.value}: {self.identifier} - {self.significance_level.value} (related: {', '.join(related_entities)})"""
+                return f"""[{self.significance_level.value}] [{self.entity_type.value}] "{self.identifier}" (related: {', '.join(related_entities)})"""
             
-        return f"""{self.entity_type.value}: {self.identifier} - {self.significance_level.value}"""
+        return f"""[{self.significance_level.value}] [{self.entity_type.value}] "{self.identifier}" """
 
 class ExtractEntitiesOutSchema(BaseModel):
     entities: List[ExtractedEntity] = Field(

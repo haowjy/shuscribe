@@ -7,10 +7,11 @@ from pydantic import BaseModel
 import logging
 from sse_starlette.sse import EventSourceResponse
 
-# Import existing models directly from the LLM service
-from shuscribe.services.llm.session import LLMSession
 from shuscribe.schemas.llm import Message, GenerationConfig, ThinkingConfig
-from shuscribe.services.llm.providers.provider import ProviderName, LLMResponse
+from shuscribe.schemas.provider import ProviderName
+
+from shuscribe.services.llm.session import LLMSession
+from shuscribe.services.llm.providers.provider import LLMResponse
 from shuscribe.services.llm.streaming import StreamChunk, StreamStatus
 from shuscribe.services.llm.errors import LLMProviderException, ErrorCategory, RetryConfig
 
@@ -33,7 +34,7 @@ class GenerateRequest(BaseModel):
     
     # Generation config options
     temperature: Optional[float] = 0.7
-    max_tokens: Optional[int] = None
+    max_output_tokens: Optional[int] = None
     top_p: Optional[float] = 1.0
     system_prompt: Optional[str] = None
     stop_sequences: Optional[List[str]] = None
@@ -64,7 +65,7 @@ class GenerateRequest(BaseModel):
                     "What is a narrative wiki generator?"
                 ],
                 "temperature": 0.7,
-                "max_tokens": 1000,
+                "max_output_tokens": 1000,
                 "enable_thinking": True
             }
         }
@@ -108,7 +109,7 @@ def build_generation_config(request: GenerateRequest) -> GenerationConfig:
     # Create the config object
     return GenerationConfig(
         temperature=request.temperature,
-        max_tokens=request.max_tokens,
+        max_output_tokens=request.max_output_tokens,
         top_p=request.top_p,
         system_prompt=request.system_prompt,
         stop_sequences=request.stop_sequences,
@@ -230,6 +231,7 @@ async def get_stream(
                         stream_chunk = StreamChunk(
                             text=chunk.text,
                             accumulated_text=stream_session.accumulated_text,  # Include accumulated_text for final chunk
+                            usage=chunk.usage,
                             status=chunk.status,
                             session_id=session_id,
                             error=chunk.error,
@@ -241,6 +243,7 @@ async def get_stream(
                         stream_chunk = StreamChunk(
                             text=chunk.text, 
                             accumulated_text="",  # Omit for non-final chunks
+                            usage=None, # no usage for intermediate chunks
                             status=chunk.status,
                             session_id=session_id,
                             error=chunk.error,

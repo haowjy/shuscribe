@@ -120,9 +120,9 @@ class OpenAIProvider(LLMProvider):
             "top_p": config.top_p,
         }
         
-        # Add max_tokens if specified
-        if config.max_tokens is not None:
-            params["max_output_tokens"] = config.max_tokens
+        # Add max_output_tokens if specified
+        if config.max_output_tokens is not None:
+            params["max_output_tokens"] = config.max_output_tokens
             
         if stream:
             params["stream"] = True
