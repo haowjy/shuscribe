@@ -9,7 +9,7 @@ from shuscribe.services.llm.interfaces import GenerationConfig, Message
 from shuscribe.services.llm.providers.provider import LLMProvider
 from shuscribe.services.llm.streaming import StreamSession
 
-from shuscribe.schemas.streaming import StreamChunk
+from shuscribe.schemas.streaming import StreamChunk, StreamStatus
 from shuscribe.schemas.session import UserProviders, SessionRegistry, StreamSessionInfo
 from shuscribe.schemas.provider import ProviderName
 

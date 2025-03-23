@@ -1,0 +1,13 @@
+{
+  "status": "complete",
+  "session_id": "65ca1519-b389-4e34-a236-8b1c64ba3ec8",
+  "text": "",
+  "accumulated_text": "<|STARTOFSUMMARY|>\n\n## The Gamer's Last Stand\n\n*   The protagonist, a dedicated Pokémon player, is on the verge of losing a crucial battle in Pokémon Mansion on an emulator.\n    *   Her Gyarados is near defeat against a Vulpix.\n    *   She contemplates switching to other Pokémon but acknowledges their weaknesses.\n*   A Discord notification alerts her to a Shadow Mewtwo raid at the library gym.\n    *   The event is time-sensitive, with only a 10-minute window.\n*   She saves her game state and rushes to the library, disregarding traffic signals.\n*   While crossing the street, she is struck by a vehicle.\n    *   Her last thought is about her Gyarados.\n\n## Rebirth\n\n*   The protagonist regains consciousness in an amber fluid-filled container.\n    *   She experiences distorted sensations and muffled sounds.\n    *   The container shatters, and she is caught by a middle-aged man.\n*   The man, Dr. Fuji, expresses relief and calls her \"Amber.\" [!CHARACTER]\n    *   He wraps her in his lab coat.\n*   The protagonist finds herself in a child's body and speaks with a young girl's voice. [!CHARACTER]\n*   She notices a massive purple tail and sees Mewtwo, who looks terrifyingly real. [!WORLD]\n    *   Mewtwo's eyes meet hers, and she feels primal terror.\n*   An Arcanine attacks Mewtwo with a stream of flames.\n\n## Escape from the Lab\n\n*   The protagonist realizes she is in Dr. Fuji's lab, in the form of his dead daughter, Amber, and Mewtwo is battling. [!CHARACTER] [!WORLD] [!LORE]\n*   She urges Dr. Fuji to escape.\n*   Dr. Fuji carries her through the chaotic laboratory.\n    *   They pass by other broken tanks.\n    *   They witness the destruction caused by Mewtwo.\n*   Mewtwo blasts through the ceiling and escapes.\n*   Dr. Fuji shields the protagonist from falling debris.\n*   They navigate through the damaged facility.\n    *   They see a Kadabra variant glitching in and out of existence. [!WORLD]\n*   Dr. Fuji is injured by falling debris.\n*   They reach a hallway leading to a wealthy estate interior.\n    *   They see panicked scientists and security guards.\n    *   They overhear fragments of conversations about the security breach, containment failure, and the \"legendary clone.\" [!LORE]\n*   Flames begin to spread through the facility.\n*   Dr. Fuji expresses hope for fixing their family and life. [!CHARACTER] [!FORESHADOW]\n\n<|ENDOFSUMMARY|>",
+  "usage": {
+    "prompt_tokens": 3791,
+    "completion_tokens": 599
+  },
+  "error": null,
+  "tool_calls": [],
+  "metadata": {}
+}

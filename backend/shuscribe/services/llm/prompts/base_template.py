@@ -9,6 +9,7 @@ from jinja2 import Environment
 import importlib.resources
 import logging
 
+from shuscribe.schemas.base import BaseOutputSchema
 from shuscribe.schemas.llm import Message, MessageRole
 
 logger = logging.getLogger(__name__)
@@ -58,16 +59,19 @@ class PromptTemplate:
         self.name = name
         self.package = package
         self.factory = PromptTemplateFactory.from_name(self.name, self.package)
-        self._response_schema = None
+        
+        self.default_provider: str = "gemini"
+        self.default_model: str = "gemini-2.0-flash-001"
+        self.default_temperature: float = 0.4
+        
+        self._response_schema: Type[BaseOutputSchema] | None = None
     
     @property
-    def response_schema(self) -> Type[BaseModel]:
-        if self._response_schema is None:
-            raise ValueError(f"Response schema for prompt template '{self.name}' not set")
+    def response_schema(self) -> Type[BaseOutputSchema] | None:
         return self._response_schema
     
     @response_schema.setter
-    def response_schema(self, schema: Type[BaseModel]):
+    def response_schema(self, schema: Type[BaseOutputSchema]):
         self._response_schema = schema
     
     

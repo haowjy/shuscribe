@@ -286,6 +286,15 @@ class AnthropicProvider(LLMProvider):
         except Exception as e:
             logger.error(f"Anthropic API streaming error: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
+            yield StreamEvent(
+                type="error",
+                text="",
+                error=str(e),
+                usage=LLMUsage(
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                )
+            )
             raise self._handle_provider_error(e)
         
     def _handle_provider_error(self, exception: Exception) -> LLMProviderException:

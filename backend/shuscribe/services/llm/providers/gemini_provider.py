@@ -229,8 +229,12 @@ class GeminiProvider(LLMProvider):
         
         # Add response schema for structured output
         if config.response_schema:
-            gemini_config.response_mime_type = "application/json"
-            gemini_config.response_schema = config.response_schema
+            if config.thinking_config and config.thinking_config.enabled: # NOTE: Gemini doesn't support thinking + structured output yet
+                response_schema_str = config.response_schema.to_output_schema_str()
+                gemini_config.system_instruction = f"{gemini_config.system_instruction}\n\nThe response should be in the following JSON format: ```json\n{response_schema_str}\n```"
+            else:
+                gemini_config.response_mime_type = "application/json"
+                gemini_config.response_schema = config.response_schema
             
         # Handle context/caching ID
         if config.context_id:
@@ -363,21 +367,36 @@ class GeminiProvider(LLMProvider):
                         completion_tokens=0,
                         )
                     )
-                if chunk.candidates and chunk.candidates[0].finish_reason is not None:
-                    prompt_tokens = chunk.usage_metadata.prompt_token_count or 0 if chunk.usage_metadata else 0
-                    completion_tokens = chunk.usage_metadata.candidates_token_count or 0 if chunk.usage_metadata else 0
-                    yield StreamEvent(
-                        type="complete",
-                        text="",
-                        usage=LLMUsage(
-                            prompt_tokens=prompt_tokens,
-                            completion_tokens=completion_tokens,
+                if chunk.candidates:
+                    # TODO: if google adds "thinking" to the response, we can use that to yield a "thinking" event
+                    # Currently google doesn't support getting the "thinking" through the API - https://ai.google.dev/gemini-api/docs/thinking
+                    
+                    # If the model has finished generating, yield the final chunk
+                    if chunk.candidates[0].finish_reason is not None:
+                        prompt_tokens = chunk.usage_metadata.prompt_token_count or 0 if chunk.usage_metadata else 0
+                        completion_tokens = chunk.usage_metadata.candidates_token_count or 0 if chunk.usage_metadata else 0
+                        yield StreamEvent(
+                            type="complete",
+                            text="",
+                            usage=LLMUsage(
+                                prompt_tokens=prompt_tokens,
+                                completion_tokens=completion_tokens,
+                            )
                         )
-                    )
                 
         except Exception as e:
             logger.error(f"Gemini API streaming error: {str(e)}")
             logger.error(traceback.format_exc())
+            # Yield an error event before raising the exception
+            yield StreamEvent(
+                type="error",
+                text="",
+                error=str(e),
+                usage=LLMUsage(
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                    )
+            )
             raise self._handle_provider_error(e)
     
     def _handle_provider_error(self, exception: Exception) -> LLMProviderException:

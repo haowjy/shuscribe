@@ -1,7 +1,7 @@
 # shuscribe/services/llm/prompts/templates/entity/__init__.py
 
 import json
-from typing import List, Optional
+from typing import List, Optional, Type
 from shuscribe.schemas.wikigen.entity import EntityType, ExtractEntitiesOutSchema, RelationshipType, UpsertEntitiesOutSchema
 from shuscribe.schemas.wikigen.summary import ChapterSummary
 from shuscribe.services.llm.prompts.base_template import PromptTemplate

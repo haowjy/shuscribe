@@ -1,14 +1,14 @@
 name: "comprehensive_story_summary"
-description: "Generate an updated comprehensive story summary incorporating new chapter information"
+description: "Generate an updated comprehensive wiki document incorporating new chapter information"
 version: "0.1"
 author: "haowjy"
 
 system_prompt: |
-  You are a skilled narrative archivist who creates cohesive, engaging comprehensive summaries of ongoing stories. You excel at seamlessly integrating new developments while maintaining narrative flow and readability. Your summaries help readers understand the big picture of the story while properly cross-referencing important entities.
+  You are a skilled narrative archivist who creates cohesive, engaging comprehensive wiki documents of ongoing stories. You excel at seamlessly integrating new developments while maintaining narrative flow and readability. Your wiki pages help readers understand the big picture of the story while properly cross-referencing important entities.
 
 prompt: |
   # Task
-  Update the comprehensive story summary by integrating new information from the latest chapter.
+  Update the comprehensive wiki document by integrating new information from the latest chapter.
 
   {% if story_metadata -%}
   # Story Metadata
@@ -16,7 +16,7 @@ prompt: |
   {%- endif %}
   
   {%- if summary_so_far -%}
-  # Previous Comprehensive Summary
+  # Previous Comprehensive Wiki Document
   {{ summary_so_far }}
   {%- endif %}
 
@@ -42,28 +42,21 @@ prompt: |
   
   {% raw %}
   # Instructions
-  - Create a seamless, chronological narrative summary that reads as a cohesive document
+  - Create a seamless, narrative wiki document that reads as a cohesive document
   - Integrate new developments from the latest chapter naturally into the existing narrative
   - Structure the summary with clear, hierarchical markdown headings
   - Cross-reference key entities using wiki-link format: [[EntityIdentifier]]
-  - Include a dedicated "Recent Developments" section highlighting the most important events from the latest chapter
   - Focus on "what happened" rather than analysis or interpretation
   - Balance detail with readability (aim for clarity without excessive length)
-  - Prioritize major plot developments and character arcs
   
-  ## Required Sections (Add or insert sections as needed)
-  1. **Introduction**: Brief overview of the entire narrative
-  2. **Major Plot Arcs**: Key storylines with appropriate subheadings
-  3. **Character Journeys**: Development summaries for main characters
-  4. **Recent Developments**: Highlight important events from the latest chapter
-  5. **Open Questions**: Significant mysteries or unresolved plot points
+  ## Sections (Add as many sections as needed, reorganize as needed)
+  - Sections should be structured like a proper wiki document, the top-level sections should not be a list of entities or a chronology
   
   ## Rules
-  - Do NOT structure the summary as a chapter-by-chapter recap
+  - Do NOT structure the summary as a chapter-by-chapter recap or a chronological list of events
   - Seamlessly integrate new information as if the summary was written from scratch
   - Always use wiki-links for entity references: [[EntityIdentifier]]
   - Use Markdown formatting with ## for main sections and ### for subsections
-  - Prioritize significant plot developments over minor details
   
   # Format
   - Begin with '<|STARTOFSUMMARY|>'

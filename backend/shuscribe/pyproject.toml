@@ -35,4 +35,5 @@ dev = [
     "mypy>=1.15.0",
     "pytest>=8.3.5",
     "pytest-asyncio>=0.25.3",
+    "ruamel-yaml>=0.18.10",
 ]
