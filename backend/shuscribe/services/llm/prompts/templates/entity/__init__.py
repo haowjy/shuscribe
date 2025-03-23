@@ -153,6 +153,11 @@ class UpsertTemplate(PromptTemplate):
             existing_entities_prompt = json.dumps(existing_entities, indent=2)
         else:
             existing_entities_prompt = None
+            
+        if recent_summaries:
+            recent_summaries_prompt = "\n".join([summary.to_prompt() for summary in recent_summaries])
+        else:
+            recent_summaries_prompt = None
 
         entity_types_prompt = EntityType.to_prompt_reference()
         relationship_types_prompt = RelationshipType.to_prompt_reference()
@@ -165,6 +170,8 @@ class UpsertTemplate(PromptTemplate):
             story_metadata=story_metadata.to_prompt() if story_metadata else None,
             chapter_summary=chapter_summary.to_prompt() if chapter_summary else None,
             existing_entities=existing_entities_prompt,
+            summary_so_far=summary_so_far,
+            recent_summaries=recent_summaries_prompt,
             
             entity_types=entity_types_prompt,
             relationship_types=relationship_types_prompt,
