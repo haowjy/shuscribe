@@ -5,6 +5,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import List, Dict, Literal, Optional, Any, Type, Union
 
+from shuscribe.schemas.base import BaseOutputSchema
 from shuscribe.services.llm.errors import RetryConfig
 
 class ContentType(str, Enum):
@@ -71,7 +72,7 @@ class GenerationConfig(BaseModel):
     system_prompt: Optional[str] = None
     top_p: Optional[float] = 1.0
     top_k: Optional[int] = 0
-    response_schema: Optional[Type[BaseModel]] = None # structured output
+    response_schema: Optional[Type[BaseOutputSchema]] = None # structured output
     search: bool = False  # Simple flag for backward compatibility
     parallel_tool_calling: bool = False
     # tools: Optional[List[ToolDefinition]] = None

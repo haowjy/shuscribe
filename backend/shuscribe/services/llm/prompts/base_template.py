@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 import os
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Type
 import yaml
 from pydantic import BaseModel, Field
 from jinja2 import Environment
@@ -58,6 +58,18 @@ class PromptTemplate:
         self.name = name
         self.package = package
         self.factory = PromptTemplateFactory.from_name(self.name, self.package)
+        self._response_schema = None
+    
+    @property
+    def response_schema(self) -> Type[BaseModel]:
+        if self._response_schema is None:
+            raise ValueError(f"Response schema for prompt template '{self.name}' not set")
+        return self._response_schema
+    
+    @response_schema.setter
+    def response_schema(self, schema: Type[BaseModel]):
+        self._response_schema = schema
+    
     
     @classmethod
     def from_yaml_string(cls, yaml_string: str) -> 'PromptTemplate':
