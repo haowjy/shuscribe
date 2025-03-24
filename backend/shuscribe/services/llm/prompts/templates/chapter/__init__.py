@@ -1,6 +1,7 @@
 # shuscribe/services/llm/prompts/templates/chapter/__init__.py
 
 from typing import List, Optional
+from shuscribe.schemas.wikigen.story import WikiPage
 from shuscribe.schemas.wikigen.summary import ChapterSummary
 from shuscribe.services.llm.prompts.base_template import PromptTemplate
 from shuscribe.schemas.pipeline import Chapter, StoryMetadata
@@ -20,7 +21,7 @@ class SummaryTemplate(PromptTemplate):
         self,
         current_chapter: Chapter,
         story_metadata: Optional[StoryMetadata] = None,
-        summary_so_far: Optional[str] = None, # TODO: make the promptable class
+        summary_so_far: Optional[WikiPage] = None, # TODO: make the promptable class
         recent_summaries: Optional[List[ChapterSummary]] = None,
     ) -> list[Message]:
         """Format the prompt template with the given context
@@ -36,7 +37,7 @@ class SummaryTemplate(PromptTemplate):
             # Story Metadata
             {{ story_metadata }}
             ```
-            summary_so_far (Optional[str], optional): The summary so far. Defaults to None.
+            summary_so_far (Optional[WikiPage], optional): The summary so far. Defaults to None.
             ```
             # Story So Far
             {{ summary_so_far }}
@@ -58,7 +59,7 @@ class SummaryTemplate(PromptTemplate):
         return super().format(
             current_chapter=current_chapter.to_prompt(),
             story_metadata=story_metadata.to_prompt() if story_metadata else None,
-            summary_so_far=summary_so_far,
+            summary_so_far=summary_so_far.to_prompt() if summary_so_far else None,
             recent_summaries=recent_summaries_prompt,
         )
         

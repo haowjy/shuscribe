@@ -18,19 +18,23 @@ from openai.lib._pydantic import _ensure_strict_json_schema
 
 from shuscribe.utils import find_last_json_block
     
-class DescriptiveEnum(Enum):
+class DescriptiveEnum(str, Enum):
     """Enum with a description"""
-    description: str
+    _description: str
     
     def __new__(cls, value: Any, description: str = ""):
-        obj = object.__new__(cls)
+        obj = str.__new__(cls, value)
         obj._value_ = value
-        obj.description = description
+        object.__setattr__(obj, '_description', description)
         return obj
+    
+    @property
+    def description(self):
+        return self._description
     
     def __repr__(self):
         return f"{self.__class__.__name__}.{self.name} ({self.description})"
-    
+
 class Promptable(BaseModel):
     """Base class for objects that can be converted to parts of a prompt"""
     @abstractmethod

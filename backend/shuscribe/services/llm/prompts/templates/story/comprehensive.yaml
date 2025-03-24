@@ -57,7 +57,7 @@ prompt: |
   ## Rules
   - Do NOT structure the summary as a chapter-by-chapter recap or a chronological list of events
   - Seamlessly integrate new information as if the summary was written from scratch
-  - Always use wiki-links for entity references: [[Entity identifier]]
+  - Always use wiki-links for entity references: [[Entity identifier]] (including in headers)
   - Use Markdown formatting with ## for main sections and ### for subsections
   
   # Format

@@ -71,6 +71,7 @@ prompt: |
      - Refine the narrative role based on current understanding
      - Select all applicable entity types (can be multiple)
      - Maintain a complete list of all known aliases
+     - Be selective about the facts you add -- these facts should be not "events" but rather "attributes" of the entity
   
   3. **Fact Management**:
      - Add new facts revealed in this chapter

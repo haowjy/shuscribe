@@ -201,13 +201,13 @@ class UpsertEntity(BaseModel):
         description="main identifier of the entity. This identifier should be something that you would actually call the entity in conversation. Add clarifications (parentheses, prefix titles, titles, etc) to the identifier to make it unique. Change the identifier if you think it would no longer be unique")
     
     detailed_description: str = Field(
-        description="detailed markdown bullet point description of the entity")
+        description="detailed markdown bullet point description of the entity's attributes (what the entity is, what it does, etc), not a chronology of what happens to the entity")
     
     narrative_role: str = Field(
         description="narrative role this entity plays in the context of the story")
     
     facts: List[EntityFact] = Field(
-        description="list of NEW facts about the entity")
+        description="list of **NEW** facts about the entity that are not events but rather attributes of the entity")
     
     removed_facts: List[str] = Field(
         description="list of facts about the entity that are no longer true or no longer relevant")

@@ -5,6 +5,7 @@ from typing import List, Optional, Type
 from shuscribe.schemas.llm import GenerationConfig, ThinkingConfig
 from shuscribe.schemas.provider import ProviderName
 from shuscribe.schemas.wikigen.entity import EntitySigLvl, EntityType, ExtractEntitiesOutSchema, RelationshipType, UpsertEntitiesOutSchema
+from shuscribe.schemas.wikigen.story import WikiPage
 from shuscribe.schemas.wikigen.summary import ChapterSummary
 from shuscribe.services.llm.prompts.base_template import PromptTemplate
 from shuscribe.schemas.pipeline import Chapter, StoryMetadata
@@ -38,7 +39,7 @@ class ExtractTemplate(PromptTemplate):
         self,
         current_chapter: Chapter,
         story_metadata: Optional[StoryMetadata] = None,
-        summary_so_far: Optional[str] = None, # TODO: make the promptable class
+        summary_so_far: Optional[WikiPage] = None, 
         recent_summaries: Optional[List[ChapterSummary]] = None,
         chapter_summary: Optional[ChapterSummary] = None,
     ) -> list[Message]:
@@ -85,7 +86,7 @@ class ExtractTemplate(PromptTemplate):
             current_chapter=current_chapter.to_prompt(),
             
             story_metadata=story_metadata.to_prompt() if story_metadata else None,
-            summary_so_far=summary_so_far,
+            summary_so_far=summary_so_far.to_prompt() if summary_so_far else None,
             recent_summaries=recent_summaries_prompt,
             chapter_summary=chapter_summary.to_prompt() if chapter_summary else None,
             

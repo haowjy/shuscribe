@@ -1,0 +1,380 @@
+{
+  "entities": [
+    {
+      "old_identifier": "Amber (Reincarnated)",
+      "identifier": "Amber (Reincarnated)",
+      "detailed_description": "*   The protagonist of the story, formerly a Pokemon Go player.\n*   Reincarnated into the body of Dr. Fuji's deceased daughter, Amber.\n*   Retains memories and experiences from her previous life.\n*   Experiences a sense of displacement and confusion due to being in a child's body.\n*   Feels a connection to her past life, thinking about her Gyarados before her death.\n*   Exhibits a caring nature, expressing concern for Dr. Fuji's well-being.\n*   Struggles with insomnia, fearing the loss of her old self.\n*   Haunted by the memory of Mewtwo's awakening and the chemical taste of the clone tank fluid.\n*   Reflects on the foreignness of her physical sensations and feels guilt over replacing the original Amber.\n*   Contemplates the hidden laboratory and Mewtwo's existence, contrasting it with her own accidental rebirth.\n*   Memories of her past life flood back, including her mother, her cat, and her Pokémon card collection.\n*   Grapples with the terror of Team Rocket and their potential interest in her meta-knowledge.\n*   Feels like an anomaly, something unplanned for, and faces the challenge of pretending to be Amber.\n*   Awestruck by the sight of real-life Pokémon, such as the Pidgeot.\n*   Falls asleep on Storm's back during the Celadon Express flight, lulled by the wind and the rhythm of flight.",
+      "narrative_role": "Protagonist of the story, experiencing the challenges of her new life and the implications of her reincarnation. Her perspective drives the narrative as she navigates the Pokemon world, grappling with identity and the implications of her unique situation.",
+      "facts": [
+        {
+          "fact": "Struggles with insomnia due to the trauma and strangeness of her situation.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Feels guilt over replacing the original Amber.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Is awestruck by the sight of real-life Pokémon.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Falls asleep on Storm's back during the Celadon Express flight.",
+          "type": "Explicit"
+        }
+      ],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Amber (Dr. Fuji's daughter)",
+        "Protagonist",
+        "Reincarnated Amber",
+        "Amber",
+        "the protagonist"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Dr. Fuji believes the protagonist is his daughter, Amber, and is protective of her. He provides a sense of security.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Amber is haunted by the memory of Mewtwo's awakening.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Dr. Fuji",
+      "identifier": "Dr. Fuji",
+      "detailed_description": "*   A middle-aged scientist working in a hidden laboratory.\n*   Emotionally attached to the protagonist, believing her to be his deceased daughter, Amber.\n*   Shows great care and concern for the protagonist's well-being.\n*   Injured by falling debris during Mewtwo's escape.\n*   Expresses a desire to fix their family and life.\n*   His lab coat smells of antiseptic, coffee, and something earthy.\n*   Moved heaven, earth, and even created the most powerful Pokemon to bring his daughter back.\n*   Provides a sense of security to Amber during the Celadon Express flight.",
+      "narrative_role": "Supporting character and protector of the protagonist, providing emotional depth and motivation. His scientific ambition is a key element of the story. He represents parental love and ambition.",
+      "facts": [
+        {
+          "fact": "Moved heaven, earth, and even created the most powerful Pokemon to bring his daughter back.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Provides a sense of security to Amber during the Celadon Express flight.",
+          "type": "Explicit"
+        }
+      ],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Dr. Fuji",
+        "Amber's Father",
+        "Scientist"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Dr. Fuji believes the protagonist is his daughter, Amber, and is protective of her. He provides a sense of security.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Dr. Fuji's Lab",
+          "description": "Dr. Fuji is the head scientist at Dr. Fuji's Lab.",
+          "relationship_type": "Association",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Dr. Fuji is responsible for creating Mewtwo.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Mewtwo",
+      "identifier": "Mewtwo",
+      "detailed_description": "*   A powerful Psychic-type Pokémon created through genetic engineering.\n*   Known for its immense psychic abilities and intelligence.\n*   Depicted as raw, primal, and terrifying in its initial appearance after being released from its tank.\n*   Wreaks havoc in Dr. Fuji's lab upon awakening.\n*   Classified as the world's strongest Pok\n*   Exhibits a moment of possible recognition or memory when making eye contact with the protagonist.\n*   Escapes the lab by blasting through the ceiling.\n*   His awakening is a haunting memory for Amber.",
+      "narrative_role": "Antagonist and a significant force of chaos in the laboratory, representing the consequences of Dr. Fuji's experiments. Its escape sets the stage for future conflicts. A pivotal figure whose awakening triggers chaos and symbolizes the conflict between human ambition and nature.",
+      "facts": [
+        {
+          "fact": "His awakening is a haunting memory for Amber.",
+          "type": "Explicit"
+        }
+      ],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Mewtwo",
+        "Shadow Mewtwo"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji's Lab",
+          "description": "Mewtwo's rampage causes significant damage to Dr. Fuji's Lab.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Amber is haunted by the memory of Mewtwo's awakening.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Dr. Fuji is responsible for creating Mewtwo.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Dr. Fuji's Lab",
+      "identifier": "Dr. Fuji's Lab",
+      "detailed_description": "*   A hidden laboratory located underground, accessible through a mansion-like interior.\n*   Contains advanced technology for genetic experimentation and cloning.\n*   Heavily damaged during Mewtwo's escape, with broken tanks, shattered glass, and fires.\n*   Features an evolution acceleration chamber and containment fields.\n*   Contains multiple tanks filled with amber fluid.\n*   Houses Kadabra variants.\n*   The location where Dr. Fuji conducts his genetic engineering and cloning experiments. ",
+      "narrative_role": "Primary setting that establishes the tone and stakes of the narrative, highlighting the consequences of scientific ambition. It is the place where the protagonist is reborn and where Mewtwo escapes. Setting that embodies the themes of scientific experimentation and the moral implications of cloning.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [
+        "Dr. Fuji's Lab"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Mewtwo was contained in Dr. Fuji's lab before escaping and causing damage.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Dr. Fuji is the head scientist at Dr. Fuji's Lab.",
+          "relationship_type": "Association",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Amber was reborn in Dr. Fuji's lab.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Cinnabar Island",
+      "detailed_description": "*   A volcanic island that serves as the backdrop for the events of the story.\n*   Represents the contrast between the natural world and the artificiality of the lab.\n*   Tourists visit the island, unaware of the hidden laboratory beneath their feet.\n*   The location of the Celadon Express departure.",
+      "narrative_role": "Setting that highlights the adventure aspect of the story and the protagonist's transition to a new reality.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [
+        "Cinnabar Island"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji's Lab",
+          "description": "Dr. Fuji's Lab is located beneath Cinnabar Island.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Celadon Express",
+      "detailed_description": "*   A scenic tour service to Celadon City using Pidgeot, Fearow, and Noctowl.\n*   Operated by Captain Lin and Captain Reed.\n*   Provides transportation for passengers from Cinnabar Island to Celadon City.\n*   Employs well-trained Pokémon for flight.",
+      "narrative_role": "A mode of transportation that introduces Amber to the reality of the Pokemon world and facilitates her journey.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Group",
+        "Location"
+      ],
+      "aliases": [
+        "Celadon Express"
+      ],
+      "related_entities": []
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Captain Lin",
+      "detailed_description": "*   A trainer who operates the Celadon Express.\n*   Flies with a Noctowl and an Ampharos.\n*   Grins at the businessman's barely concealed wince at the word 'scenic.'\n*   Notices Amber's nervousness and reassures her, introducing her to the Pidgeot named Storm.\n*   Gives a safety briefing, emphasizing the importance of relaxation when riding a Pokémon.",
+      "narrative_role": "A guide and facilitator for Amber's journey, representing the normalcy and wonder of the Pokemon world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Captain Lin",
+        "Lin"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Celadon Express",
+          "description": "Captain Lin operates the Celadon Express.",
+          "relationship_type": "Association",
+          "is_bidirectional": true
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Captain Reed",
+      "detailed_description": "*   A trainer who operates the Celadon Express.\n*   Flies with a Fearow and a Magneton.\n*   Has a weathered face creased in permanent concentration.",
+      "narrative_role": "A guide and facilitator for Amber's journey, representing the professionalism and skill of trainers in the Pokemon world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Captain Reed",
+        "Reed"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Celadon Express",
+          "description": "Captain Reed operates the Celadon Express.",
+          "relationship_type": "Association",
+          "is_bidirectional": true
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Storm (Pidgeot)",
+      "detailed_description": "*   A Pidgeot used by the Celadon Express.\n*   Gentle and understanding.\n*   The Pidgeot that Amber rides on.",
+      "narrative_role": "A means of transportation and a symbol of the wonder and reality of the Pokemon world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Storm"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Amber rides on Storm.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Celadon Express",
+          "description": "Storm is used by the Celadon Express.",
+          "relationship_type": "Association",
+          "is_bidirectional": true
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Celadon Express Takeoff",
+      "detailed_description": "*   An event where Amber and other passengers are transported by Pidgeot to Celadon City.\n*   Captain Lin and Captain Reed manage the Pidgeot flight service.\n*   The Pidgeot are escorted by a Fearow and Noctowl.\n*   The takeoff is described as breathtaking and overwhelming for Amber.\n*   The flight provides a sense of freedom and wonder to Amber.\n*   The event symbolizes Amber's transition into the Pokemon world.",
+      "narrative_role": "A significant occurrence that emphasizes the adventure and freedom that Amber is beginning to experience. It marks a pivotal moment in her adaptation to the Pokemon world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Event"
+      ],
+      "aliases": [
+        "Celadon Express Takeoff"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Amber experiences the Celadon Express takeoff.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Dr. Fuji accompanies Amber on the Celadon Express.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Captain Lin",
+          "description": "Captain Lin is in charge of the Celadon Express.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Captain Reed",
+          "description": "Captain Reed is in charge of the Celadon Express.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Team Rocket",
+      "identifier": "Team Rocket",
+      "detailed_description": "*   An organization known for its unethical practices and interest in powerful Pokémon.\n*   They lost their prize weapon (Mewtwo) and their secret lab (Dr. Fuji's Lab).\n*   They pose a potential threat to Amber due to her unique knowledge and background.\n*   Amber fears what Team Rocket might do if they realize she has meta-knowledge of their plans.\n*   They are a constant source of anxiety for Amber, who worries about their reach and influence.",
+      "narrative_role": "Antagonistic force that adds tension and conflict, representing the dangers of the Pokemon world. They are a looming threat to Amber due to her unique knowledge and background.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Group"
+      ],
+      "aliases": [
+        "Team Rocket"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Amber fears Team Rocket's potential interest in her meta-knowledge.",
+          "relationship_type": "Thematic",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Team Rocket lost Mewtwo, their prize weapon.",
+          "relationship_type": "Ownership",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Dr. Fuji's Lab",
+          "description": "Team Rocket lost their secret lab.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Identity and Existence",
+      "identifier": "Identity and Existence (Theme)",
+      "detailed_description": "*   The internal conflict Amber experiences regarding her identity, existence, and the implications of her accidental rebirth.\n*   Amber struggles with the feeling of being an imposter in Amber's body.\n*   She questions her right to exist, feeling like she stole Amber's second chance.\n*   She grapples with the question of who she really is: the person who died chasing a mobile game or the experiment who stole a second chance.\n*   The theme explores the consequences of scientific experimentation and the nature of self.",
+      "narrative_role": "Theme that explores the nature of self and the consequences of scientific experimentation. It highlights Amber's internal struggles and her search for meaning in her new life.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Theme"
+      ],
+      "aliases": [
+        "Identity and Existence"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Amber is the central figure experiencing this theme.",
+          "relationship_type": "Thematic",
+          "is_bidirectional": false
+        }
+      ]
+    }
+  ]
+}
