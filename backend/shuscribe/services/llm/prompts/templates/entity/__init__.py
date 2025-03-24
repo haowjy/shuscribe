@@ -5,7 +5,7 @@ from typing import List, Optional, Type
 from shuscribe.schemas.llm import GenerationConfig, ThinkingConfig
 from shuscribe.schemas.provider import ProviderName
 from shuscribe.schemas.wikigen.entity import EntitySigLvl, EntityType, ExtractEntitiesOutSchema, RelationshipType, UpsertEntitiesOutSchema
-from shuscribe.schemas.wikigen.story import WikiPage
+from shuscribe.schemas.wikigen.wiki import WikiPage
 from shuscribe.schemas.wikigen.summary import ChapterSummary
 from shuscribe.services.llm.prompts.base_template import PromptTemplate
 from shuscribe.schemas.pipeline import Chapter, StoryMetadata

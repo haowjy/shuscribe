@@ -1,7 +1,7 @@
 # shuscribe/services/llm/prompts/templates/chapter/__init__.py
 
 from typing import List, Optional
-from shuscribe.schemas.wikigen.story import WikiPage
+from shuscribe.schemas.wikigen.wiki import WikiPage
 from shuscribe.schemas.wikigen.summary import ChapterSummary
 from shuscribe.services.llm.prompts.base_template import PromptTemplate
 from shuscribe.schemas.pipeline import Chapter, StoryMetadata
