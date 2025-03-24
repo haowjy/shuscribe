@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Literal, Optional, Any, Type, Union
 
 from shuscribe.schemas.base import BaseOutputSchema
+from shuscribe.schemas.provider import ProviderName
 from shuscribe.services.llm.errors import RetryConfig
 
 class ContentType(str, Enum):
@@ -66,6 +67,9 @@ class ThinkingConfig(BaseModel):
 # Enhanced generation config
 class GenerationConfig(BaseModel):
     """Provider-agnostic generation configuration"""
+    provider: Optional[ProviderName] = None
+    model: Optional[str] = None
+    
     temperature: Optional[float] = 0.7
     max_output_tokens: Optional[int] = None # OpenAI max_output_tokens?
     

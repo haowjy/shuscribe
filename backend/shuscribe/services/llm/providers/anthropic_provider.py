@@ -134,7 +134,7 @@ class AnthropicProvider(LLMProvider):
         # Add a mock response schema if specified
         if config.response_schema:
             response_schema_str = config.response_schema.to_output_schema_str()
-            system_prompt += f"\n\nThe response should be in the following JSON format: ```json\n{response_schema_str}\n```"
+            system_prompt += f"\n\nThe full response should be in the **SINGLE** (1 json block) following JSON schema: ```json\n{response_schema_str}\n```"
             
         # Prepare request parameters with appropriate defaults
         params = {

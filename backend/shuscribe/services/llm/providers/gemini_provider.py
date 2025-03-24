@@ -231,7 +231,7 @@ class GeminiProvider(LLMProvider):
         if config.response_schema:
             if config.thinking_config and config.thinking_config.enabled: # NOTE: Gemini doesn't support thinking + structured output yet
                 response_schema_str = config.response_schema.to_output_schema_str()
-                gemini_config.system_instruction = f"{gemini_config.system_instruction}\n\nThe response should be in the following JSON format: ```json\n{response_schema_str}\n```"
+                gemini_config.system_instruction = f"{gemini_config.system_instruction}\n\nThe full response should be in the **SINGLE** (1 json block) following JSON schema: ```json\n{response_schema_str}\n```"
             else:
                 gemini_config.response_mime_type = "application/json"
                 gemini_config.response_schema = config.response_schema

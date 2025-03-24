@@ -10,7 +10,8 @@ import importlib.resources
 import logging
 
 from shuscribe.schemas.base import BaseOutputSchema
-from shuscribe.schemas.llm import Message, MessageRole
+from shuscribe.schemas.llm import GenerationConfig, Message, MessageRole
+from shuscribe.schemas.provider import ProviderName
 
 logger = logging.getLogger(__name__)
 
@@ -60,20 +61,11 @@ class PromptTemplate:
         self.package = package
         self.factory = PromptTemplateFactory.from_name(self.name, self.package)
         
-        self.default_provider: str = "gemini"
-        self.default_model: str = "gemini-2.0-flash-001"
-        self.default_temperature: float = 0.4
-        
-        self._response_schema: Type[BaseOutputSchema] | None = None
-    
-    @property
-    def response_schema(self) -> Type[BaseOutputSchema] | None:
-        return self._response_schema
-    
-    @response_schema.setter
-    def response_schema(self, schema: Type[BaseOutputSchema]):
-        self._response_schema = schema
-    
+        self.default_config = GenerationConfig(
+            temperature=0.4,
+            provider=ProviderName.GEMINI,
+            model="gemini-2.0-flash-001",
+        )    
     
     @classmethod
     def from_yaml_string(cls, yaml_string: str) -> 'PromptTemplate':
@@ -87,8 +79,8 @@ class PromptTemplate:
         if env == "prod":
             logging.warning("SECURITY: Attempted to reload template in production environment")
             return self
-        
-        self.factory = PromptTemplateFactory.from_name(self.name, self.package)
+        self.__init__(self.name, self.package)
+        # self.factory = PromptTemplateFactory.from_name(self.name, self.package)
         return self
     
     @abstractmethod

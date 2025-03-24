@@ -161,7 +161,7 @@ class OpenAIProvider(LLMProvider):
         
         # Add response format configuration for structured output
         if config.response_schema:
-            schema = config.response_schema.model_json_schema()
+            schema = config.response_schema.openai_json_schema()
             schema["additionalProperties"] = False
             params["text"] = {
                 "format": {
@@ -257,6 +257,15 @@ class OpenAIProvider(LLMProvider):
         except Exception as e:
             logger.error(f"OpenAI Responses API streaming error: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
+            yield StreamEvent(
+                type="error",
+                text="",
+                error=str(e),
+                usage=LLMUsage(
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                )
+            )
             raise self._handle_provider_error(e)
     
     

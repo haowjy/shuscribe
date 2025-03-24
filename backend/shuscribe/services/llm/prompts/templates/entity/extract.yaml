@@ -47,5 +47,4 @@ prompt: |
   - Make sure to combine entities that reference the same entity (describe the entity in more detail if needed)
   - Include both explicitly named as well as strongly implied entities
   - Note uncertainty when entity details are ambiguous
-  - Be selective about what entities you include -- only include entities that you believe are important to the story now and and could return to in the future
-  
+  - Be selective about what entities you include -- only include entities that you believe are important to the story now and in the future (e.g. background entities are not relevant)

@@ -9,7 +9,7 @@ class EntitySigLvl(DescriptiveEnum):
     MAJOR = "Major", "necessary for the story to function"
     RELEVANT = "Relevant", "relevant to the story"
     MINOR = "Minor", "Having a slight or indirect connection to the story; not essential"
-    INCIDENTAL = "Incidental", "mentioned only briefly; unimportant"
+    INCIDENTAL = "Incidental", "mentioned only briefly; unimportant; background"
     
     @property
     def int_val(self) -> int:
@@ -32,6 +32,15 @@ class EntitySigLvl(DescriptiveEnum):
     
     def __le__(self, other: "EntitySigLvl") -> bool:
         return self.int_val <= other.int_val
+    
+    @staticmethod
+    def to_prompt_reference(tab_prefix: str = "  ") -> str:
+        entity_sig_lvls_prompt = ""
+        for entity_sig_lvl in EntitySigLvl:
+            entity_sig_lvls_prompt += (
+                f"{tab_prefix}{entity_sig_lvl.int_val}. {entity_sig_lvl.value}: {entity_sig_lvl.description}\n"
+            )
+        return entity_sig_lvls_prompt
     
 
 class EntityType(DescriptiveEnum):
@@ -89,7 +98,7 @@ class ExtractedEntity(BaseModel):
         description="The type of entity")
     
     identifier: str = Field(
-        description="The main identifier of the entity that will be used to reference the entity and you believe is unique")
+        description="The main identifier of the entity that will be used to reference the entity. Ensure that this identifier is unique across the story by adding clarifications (parentheses, prefix titles, titles, etc). This identifier should be something that you would actually call the entity in conversation")
 
     aliases: List[str] = Field(
         description="All names and other identifiers for the entity")
@@ -102,8 +111,8 @@ class ExtractedEntity(BaseModel):
             related_entities = [e.identifier for e in sig_entities if e.identifier in self.related_entities]
             
         return (
-            f'identifier: {self.identifier}\n' +
-            (f'aliases: {self.aliases}\n' if self.aliases else '') +
+            f'name: {self.identifier}\n' +
+            (f'other_names: {self.aliases}\n' if self.aliases else '') +
             f'entity_type: {self.entity_type.value}\n' +
             f'significance_level: {self.significance_level.value}\n' +
             f'narrative_role: {self.narrative_role}\n' +
@@ -189,7 +198,7 @@ class UpsertEntity(BaseModel):
         description="old identifier of the entity if you are updating an existing entity")
     
     identifier: str = Field(
-        description="main identifier of the entity. you may change the identifier if you think it is no longer unique")
+        description="main identifier of the entity. This identifier should be something that you would actually call the entity in conversation. Add clarifications (parentheses, prefix titles, titles, etc) to the identifier to make it unique. Change the identifier if you think it would no longer be unique")
     
     detailed_description: str = Field(
         description="detailed markdown bullet point description of the entity")

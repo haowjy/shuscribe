@@ -9,7 +9,7 @@ from shuscribe.services.llm.prompts.base_template import Message
 class SummaryTemplate(PromptTemplate):
     """Wrapper around a PromptTemplate that allows for custom formatting logic"""
     
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         # Store the template instance directly, not just its config
         super().__init__(
             "summary", 

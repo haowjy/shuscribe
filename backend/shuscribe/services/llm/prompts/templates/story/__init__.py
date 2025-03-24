@@ -1,20 +1,31 @@
 # shuscribe/services/llm/prompts/templates/story/__init__.py
 
 from typing import List, Optional
+from shuscribe.schemas.llm import GenerationConfig, ThinkingConfig
+from shuscribe.schemas.provider import ProviderName
 from shuscribe.schemas.wikigen.entity import UpsertEntitiesOutSchema
 from shuscribe.schemas.wikigen.summary import ChapterSummary
 from shuscribe.services.llm.prompts.base_template import PromptTemplate
 from shuscribe.schemas.pipeline import Chapter, StoryMetadata
 from shuscribe.services.llm.prompts.base_template import Message
 
-class ComprehensiveSummaryTemplate(PromptTemplate):
+class ComprehensiveWikiTemplate(PromptTemplate):
     """Wrapper around a PromptTemplate that allows for custom formatting logic"""
     
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         # Store the template instance directly, not just its config
         super().__init__(
             "comprehensive", 
             "shuscribe.services.llm.prompts.templates.story"
+        )
+        self.default_config = GenerationConfig(
+            temperature=0.4,
+            provider=ProviderName.ANTHROPIC,
+            model="claude-3-7-sonnet-20250219",
+            thinking_config=ThinkingConfig(
+                enabled=True,
+                budget_tokens=1024,
+            ),
         )
         
     def format(
@@ -83,4 +94,4 @@ class ComprehensiveSummaryTemplate(PromptTemplate):
             recent_summaries=recent_summaries_prompt,
         )
         
-comprehensive_summary = ComprehensiveSummaryTemplate()
+comprehensive_wiki = ComprehensiveWikiTemplate()

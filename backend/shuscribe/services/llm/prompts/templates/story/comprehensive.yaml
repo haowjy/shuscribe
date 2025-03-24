@@ -1,4 +1,4 @@
-name: "comprehensive_story_summary"
+name: "comprehensive_story_wiki"
 description: "Generate an updated comprehensive wiki document incorporating new chapter information"
 version: "0.1"
 author: "haowjy"
@@ -45,22 +45,24 @@ prompt: |
   - Create a seamless, narrative wiki document that reads as a cohesive document
   - Integrate new developments from the latest chapter naturally into the existing narrative
   - Structure the summary with clear, hierarchical markdown headings
-  - Cross-reference key entities using wiki-link format: [[EntityIdentifier]]
-  - Focus on "what happened" rather than analysis or interpretation
+  - Cross-reference key entities using wiki-link format: [[Entity's (main) identifier]]
+  - Focus on "what happened" rather than analysis or interpretation (don't mention entities that don't represent the plot or world)
   - Balance detail with readability (aim for clarity without excessive length)
   
   ## Sections (Add as many sections as needed, reorganize as needed)
   - Sections should be structured like a proper wiki document, the top-level sections should not be a list of entities or a chronology
+  - Don't be afraid to remove/merge/reorganize sections from the previous comprehensive wiki document if they are no longer relevant or everything is becoming too detailed
+  - These sections should not have any literary element stuff like themes, symbolism, etc - this is a wiki document, not a literary analysis
   
   ## Rules
   - Do NOT structure the summary as a chapter-by-chapter recap or a chronological list of events
   - Seamlessly integrate new information as if the summary was written from scratch
-  - Always use wiki-links for entity references: [[EntityIdentifier]]
+  - Always use wiki-links for entity references: [[Entity identifier]]
   - Use Markdown formatting with ## for main sections and ### for subsections
   
   # Format
-  - Begin with '<|STARTOFSUMMARY|>'
+  - Begin with '<|STARTWIKI|>'
   - Use markdown formatting with proper section headings
-  - Include wiki-links to entities using [[EntityIdentifier]] format
-  - End with '<|ENDOFSUMMARY|>'
+  - Include wiki-links to entities using [[Entity identifier]] format; do not include other aliases for the entity in the wiki-links
+  - End with '<|ENDWIKI|>'
   {% endraw %}
