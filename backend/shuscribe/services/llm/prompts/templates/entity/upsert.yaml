@@ -15,17 +15,17 @@ prompt: |
   {{ story_metadata }}
   {%- endif %}
 
-  {%- if summary_so_far -%}
+  {% if summary_so_far -%}
   # Story So Far
   {{ summary_so_far }}
   {%- endif %}
   
   # Narrative Context
   
-  {%- if recent_summaries -%}
+  {% if recent_summaries -%}
   ## Summary of Previous Chapters
   {{ recent_summaries }}
-  {% endif %}
+  {%- endif %}
   
   ## Current Chapter
   {{ current_chapter }}

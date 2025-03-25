@@ -87,6 +87,14 @@ class GenerationConfig(BaseModel):
     context_id: Optional[str] = None  # Generic context/caching ID
     thinking_config: Optional[ThinkingConfig] = None
 
+
+class EmbeddingConfig(BaseModel):
+    """Configuration for embedding"""
+    model: Optional[str] = None
+    task_type: Optional[str] = None
+    dimensions: Optional[int] = None # number of dimensions for the embedding, sometimes not supported by provider
+    
+
 @dataclass
 class Capabilities:
     streaming: bool = False

@@ -1,0 +1,176 @@
+{
+  "entities": [
+    {
+      "old_identifier": "Amber (Reincarnated)",
+      "identifier": "Amber (Reincarnated)",
+      "detailed_description": "*   Reincarnated protagonist of the story.\n*   Formerly a Pokemon fan who was hit by a truck while playing Pokemon GO.\n*   Woke up in an amber fluid-filled container in Dr. Fuji's lab.\n*   Currently inhabiting the body of Dr. Fuji's deceased daughter, Amber.\n*   Has the voice of a young girl.\n*   Is aware of her past life and knowledge of Pokemon.\n*   Expresses concern and caring towards Dr. Fuji despite the chaos.\n*   Struggles with insomnia due to trauma and existential dread.\n*   Feels disconnected from her former self and alienated by her new body.\n*   Experiences guilt and displacement, knowing she occupies a body that belongs to the original Amber.\n*   Fears the potential consequences of Team Rocket discovering her meta-knowledge.\n*   Feels like an anomaly, something unplanned for even by Arceus.\n*   Is awestruck by the reality of Pokemon in the world.",
+      "narrative_role": "Central character experiencing the transition from gamer to a real-life character in the Pokémon world, grappling with a new identity, existential dread, and the dangers surrounding her.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Protagonist",
+        "Reincarnated Amber",
+        "Amber (Dr. Fuji's daughter)",
+        "Amber"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Father figure in her new life; he is deeply emotional and caring towards her.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Witnessed Mewtwo's destructive escape and made eye contact, experiencing primal terror and a flicker of recognition.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Existential Dread",
+          "description": "Experiences existential dread as a core part of her internal conflict.",
+          "relationship_type": "Thematic",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Dr. Fuji",
+      "identifier": "Dr. Fuji",
+      "detailed_description": "*   Middle-aged scientist and Amber's father in her new life.\n*   Emotional and caring, deeply affected by the loss of his daughter.\n*   Overjoyed to see Amber alive.\n*   Injured during Mewtwo's escape, sustaining cuts and bruises on his back.\n*   Determined to protect Amber and fix their family and life.\n*   Conducting experiments related to Pokemon cloning and genetic engineering.\n*   Provides a sense of stability and support to Amber.",
+      "narrative_role": "Supporting character providing emotional depth and context to Amber's situation, acting as a protector and guide in this new reality.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Daughter in her reincarnated form; he is deeply emotional and caring towards her.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Creator of Mewtwo; responsible for Mewtwo's existence and subsequent escape.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Mewtwo",
+      "identifier": "Mewtwo",
+      "detailed_description": "*   Powerful Psychic-type Pokémon created by Dr. Fuji.\n*   Raw, primal, and terrifyingly real in its current form.\n*   Form is unstable, and its movements carry immense power.\n*   Caused chaos in the lab during its escape.\n*   Made eye contact with Amber, showing a flicker of recognition.\n*   Attacked by an Arcanine with flames.\n*   Blasted through the ceiling to escape the lab.\n*   Grappling with its own existence.",
+      "narrative_role": "Antagonistic force driving the action and creating urgency for Amber and Dr. Fuji to escape, representing a threat and a mystery.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Created by Dr. Fuji; the result of his experiments.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Made eye contact with Amber, possibly recognizing her.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Dr. Fuji's Laboratory",
+      "identifier": "Dr. Fuji's Laboratory",
+      "detailed_description": "*   Underground facility where Amber awakens in a tank.\n*   Filled with tanks, equipment related to Pokémon experimentation, and amber fluid.\n*   Chaotic and dangerous due to Mewtwo's rampage.\n*   Contains other tanks like Amber's, now shattered.\n*   Located within a wealthy estate or mansion.\n*   Features include an Enhancement Lab Three and an evolution acceleration chamber.",
+      "narrative_role": "Primary setting for the action and conflict, representing both a literal and metaphorical prison for Amber and a place of dangerous experimentation.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Location where Mewtwo was created and subsequently escaped, causing significant damage.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Existential Dread",
+      "detailed_description": "*   The emotional and psychological struggle of Amber as she navigates her new life.\n*   Encompasses her feelings of displacement, alienation, and uncertainty about her purpose.\n*   Fueled by her memories of her past life and the knowledge that she occupies a body that belongs to someone else.\n*   Exacerbated by the dangers surrounding her and the potential threat of Team Rocket.",
+      "narrative_role": "Central theme that drives Amber's internal conflict and character development throughout the story.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Theme"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Experiences existential dread as a core part of her internal conflict.",
+          "relationship_type": "Thematic",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Reincarnation",
+      "detailed_description": "* The phenomenon of Amber's reincarnation and the implications of being a successful clone of Dr. Fuji's daughter.\n* Raises questions about identity, purpose, and existence.\n* Causes Amber to grapple with feelings of displacement, guilt, and a lack of purpose.\n* Drives much of Amber's internal conflict and existential dread.",
+      "narrative_role": "Key concept that underpins the narrative and Amber's journey, driving her internal conflict and existential dread.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Concept",
+        "Theme"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "The character who is experiencing reincarnation.",
+          "relationship_type": "Thematic",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Pidgeot (Storm)",
+      "detailed_description": "* The Pidgeot that Amber is going to fly on as part of the Celadon Express service.\n* Represents Amber's first real encounter with Pokemon in the real world.\n* Described as gentle and well-trained.\n* Its feathers are described as feeling like silk.\n* Part of a larger formation of Pidgeot used for transport.",
+      "narrative_role": "Central to Amber's experience of flight and the thrill of being in the Pokemon world. Symbolizes her transition from fan to participant in the Pokemon world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Item"
+      ],
+      "aliases": [
+        "Storm"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Amber is a passenger on Storm.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        }
+      ]
+    }
+  ]
+}

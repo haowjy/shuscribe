@@ -3,7 +3,7 @@
 import logging
 import os
 import traceback
-from typing import Any, AsyncGenerator, List, Optional, Tuple
+from typing import Any, AsyncGenerator, List, Optional, Sequence, Tuple
 
 from google import genai
 from google.genai import types as genai_types
@@ -399,6 +399,19 @@ class GeminiProvider(LLMProvider):
             )
             raise self._handle_provider_error(e)
     
+    # def embed(self, contents: Sequence, model: str, embed_config: EmbedContentConfig) -> Sequence:
+    #     """
+    #     Embed a list of contents using Gemini
+    #     """
+    #     response = self.client.models.embed_content(
+    #         model=model,
+    #         contents=contents,
+    #         config=genai_types.EmbedContentConfig(
+    #             embedding_dim=embedding_dim
+    #         )
+    #     )
+    #     return response.embeddings
+    
     def _handle_provider_error(self, exception: Exception) -> LLMProviderException:
         """
         Convert provider-specific exceptions to our exception types
@@ -461,3 +474,15 @@ class GeminiProvider(LLMProvider):
         
         # Call parent close method to handle stream manager cleanup
         await super().close()
+        
+if __name__ == "__main__":
+    from google import genai
+
+    client = genai.Client(api_key="GEMINI_API_KEY")
+
+    result = client.models.embed_content(
+            model="gemini-embedding-exp-03-07",
+            contents="How does alphafold work?",
+    )
+
+    print(result.embeddings)

@@ -106,3 +106,6 @@ venv.bak/
 .mypy_cache/
 
 .idea/*
+
+# Temporary Entity DB (data contains embeddings -- too large to commit)
+entity_db.json

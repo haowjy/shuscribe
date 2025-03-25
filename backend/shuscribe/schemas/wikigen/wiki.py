@@ -16,5 +16,5 @@ class WikiPage(Promptable):
         return cls(title=title, content=wiki_content)
     
     def to_prompt(self) -> str:
-        return f"# {self.title} <Content>\n{self.content}\n</Content>"
+        return f"# {self.title}\n<Content>\n{self.content}\n</Content>"
     

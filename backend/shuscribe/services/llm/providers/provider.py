@@ -6,7 +6,7 @@ import asyncio
 import random
 import logging
 
-from shuscribe.schemas.llm import Message, MessageRole, GenerationConfig, Capabilities
+from shuscribe.schemas.llm import EmbeddingConfig, Message, MessageRole, GenerationConfig, Capabilities
 from shuscribe.schemas.provider import LLMResponse
 
 from shuscribe.services.llm.streaming import StreamManager, StreamSession
@@ -132,6 +132,14 @@ class LLMProvider(StreamingProvider):
         Must be implemented by each provider
         """
         pass
+    
+    def embed(
+        self, 
+        text: str, 
+        config: Optional[EmbeddingConfig] = None
+    ) -> List[float]:
+        """Embed a text"""
+        raise NotImplementedError("Embedding is not implemented for this provider")
     
     # Update generate method to use retry
     async def generate(

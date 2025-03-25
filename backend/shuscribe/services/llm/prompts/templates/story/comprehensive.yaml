@@ -53,10 +53,12 @@ prompt: |
   - Sections should be structured like a proper wiki document, the top-level sections should not be a list of entities or a chronology
   - Don't be afraid to remove/merge/reorganize sections from the previous comprehensive wiki document if they are no longer relevant or everything is becoming too detailed
   - These sections should not have any literary element stuff like themes, symbolism, etc - this is a wiki document, not a literary analysis
+  - Start with an overview or intro
   
   ## Rules
   - Do NOT structure the summary as a chapter-by-chapter recap or a chronological list of events
   - Seamlessly integrate new information as if the summary was written from scratch
+  - However, DO NOT FOCUS TOO MUCH ON THE NEW INFORMATION - the summary should still be a comprehensive wiki document
   - Always use wiki-links for entity references: [[Entity identifier]] (including in headers)
   - Use Markdown formatting with ## for main sections and ### for subsections
   

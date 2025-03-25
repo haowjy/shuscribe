@@ -124,11 +124,11 @@ class UpsertTemplate(PromptTemplate):
     def format(
         self,
         current_chapter: Chapter,
-        entity_batch: List[str],
+        entity_batch: dict,
         story_metadata: Optional[StoryMetadata] = None,
         chapter_summary: Optional[ChapterSummary] = None,
         existing_entities: Optional[List[dict]] = None,
-        summary_so_far: Optional[str] = None,
+        summary_so_far: Optional[WikiPage] = None,
         recent_summaries: Optional[List[ChapterSummary]] = None,
     ) -> list[Message]:
         """Format the prompt template with the given context
@@ -140,7 +140,7 @@ class UpsertTemplate(PromptTemplate):
             {{ current_chapter }}
             ```
             
-            entity_batch (List[str]): The extracted entity batch.
+            entity_batch (List[dict]): The extracted entity batch.
             ```
             # Entity Batch for Processing
             The following entities have been extracted from the current chapter:
@@ -166,7 +166,7 @@ class UpsertTemplate(PromptTemplate):
             {{ existing_entities }}
             ```
             
-            summary_so_far (Optional[str], optional): The summary so far. Defaults to None.
+            summary_so_far (Optional[WikiPage], optional): The summary so far. Defaults to None.
             ```
             # Story So Far
             {{ summary_so_far }}
@@ -181,8 +181,7 @@ class UpsertTemplate(PromptTemplate):
             list[Message]: The formatted prompt template
         """
         
-        entity_batch_prompt = "\n---\n".join([f"{entity}" for entity in entity_batch])
-        entity_batch_prompt = f"```yaml\n{entity_batch_prompt}\n```"
+        entity_batch_prompt = f"```json\n{json.dumps(entity_batch, indent=2)}\n```"
         
         if existing_entities:
             existing_entities_prompt = json.dumps(existing_entities, indent=2)
@@ -205,7 +204,7 @@ class UpsertTemplate(PromptTemplate):
             story_metadata=story_metadata.to_prompt() if story_metadata else None,
             chapter_summary=chapter_summary.to_prompt() if chapter_summary else None,
             existing_entities=existing_entities_prompt,
-            summary_so_far=summary_so_far,
+            summary_so_far=summary_so_far.to_prompt() if summary_so_far else None,
             recent_summaries=recent_summaries_prompt,
             
             entity_types=entity_types_prompt,
