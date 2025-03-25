@@ -2,7 +2,9 @@
 
 from pydantic import BaseModel, Field
 from enum import Enum
-from typing import Literal, Optional, List, Dict, Any
+from typing import Literal, Optional, List, Dict, Any, TextIO
+
+import yaml
 from shuscribe.schemas.provider import LLMUsage
 
 # Define the StreamStatus enum
@@ -18,6 +20,7 @@ class StreamEvent(BaseModel):
     """Pydantic model representing an event in a streaming session."""
     type: Literal["in_progress", "complete", "error"]
     text: str = Field(default="")
+    error: Optional[str] = None
     usage: Optional[LLMUsage] = None # only populated for the final chunk
 
 # Define the StreamChunk model
@@ -33,3 +36,4 @@ class StreamChunk(BaseModel):
     error: Optional[str] = None
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list) # TODO
     metadata: Dict[str, Any] = Field(default_factory=dict) # TODO
+    

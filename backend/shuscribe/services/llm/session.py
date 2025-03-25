@@ -9,7 +9,7 @@ from shuscribe.services.llm.interfaces import GenerationConfig, Message
 from shuscribe.services.llm.providers.provider import LLMProvider
 from shuscribe.services.llm.streaming import StreamSession
 
-from shuscribe.schemas.streaming import StreamChunk
+from shuscribe.schemas.streaming import StreamChunk, StreamStatus
 from shuscribe.schemas.session import UserProviders, SessionRegistry, StreamSessionInfo
 from shuscribe.schemas.provider import ProviderName
 
@@ -125,10 +125,22 @@ class LLMSession:
                        config: Optional[GenerationConfig] = None, api_key: Optional[str] = None, 
                        user_id: Optional[str] = None, **kwargs):
         """Generate a response using the specified provider and model with user tracking."""
+        if not provider_name:
+            if config and config.provider:
+                provider_name = config.provider
+            else:
+                raise ValueError("No provider name or config provided")
+        
         if isinstance(provider_name, str):
             provider_name = ProviderName(provider_name)
         
         provider_instance = await self.get_provider(provider_name, api_key, user_id)
+
+        if not model:
+            if config and config.model:
+                model = config.model
+            else:
+                raise ValueError("No model provided")
         
         if config and user_id:
             if not config.context_id:
@@ -180,6 +192,18 @@ class LLMSession:
         **kwargs
     ) -> AsyncIterator[StreamChunk]:
         """Generate a streaming response, compatible with SSE."""
+        if not provider_name:
+            if config and config.provider:
+                provider_name = config.provider
+            else:
+                raise ValueError("No provider name or config provided")
+        
+        if not model:
+            if config and config.model:
+                model = config.model
+            else:
+                raise ValueError("No model provided")
+        
         if isinstance(provider_name, str):
             provider_name = ProviderName(provider_name)
         

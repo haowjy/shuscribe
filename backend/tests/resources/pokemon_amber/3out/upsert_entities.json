@@ -1,0 +1,295 @@
+{
+  "entities": [
+    {
+      "old_identifier": "Amber (Reincarnated)",
+      "identifier": "Amber (Reincarnated)",
+      "detailed_description": "*   Reincarnated protagonist of the story.\n*   Formerly a Pokemon fan who was hit by a truck while playing Pokemon GO.\n*   Woke up in an amber fluid-filled container in Dr. Fuji's lab.\n*   Currently inhabiting the body of Dr. Fuji's deceased daughter, Amber.\n*   Has the voice of a young girl.\n*   Is aware of her past life and knowledge of Pokemon.\n*   Expresses concern and caring towards Dr. Fuji despite the chaos.\n*   Struggles with insomnia due to trauma and existential dread.\n*   Feels disconnected from her former self and alienated by her new body.\n*   Experiences guilt and displacement, knowing she occupies a body that belongs to the original Amber.\n*   Fears the potential consequences of Team Rocket discovering her meta-knowledge.\n*   Feels like an anomaly, something unplanned for even by Arceus.\n*   Is awestruck by the reality of Pokemon in the world.\n*   Forced to wear a powder-blue dress by Dr. Fuji, highlighting her discomfort with her new identity.\n*   Expresses frustration with being treated like a doll.\n*   Realizes that real Pokemon battles are different from the simplified versions in the games.\n*   Experiences a restless energy in her new body, contrasting with her previous life.\n*   Begins doing sit-ups and other exercises to exhaust her energy.\n*   Plans to leave the apartment and explore Celadon City.\n*   Participated in her first Pokemon battle, defeating Joey the Kid's Rattata.\n*   Won 300 pokedollars in her first battle, feeling guilty about taking money from a child.",
+      "narrative_role": "Central character experiencing the transition from gamer to a real-life character in the Pok\\'emon world, grappling with a new identity, existential dread, and the dangers surrounding her. Now actively seeking adventure and independence and experiencing the realities of Pokemon battles.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Protagonist",
+        "Amber (Dr. Fuji's daughter)",
+        "Dr. Fuji's daughter",
+        "Amber",
+        "Reincarnated Amber",
+        "Ambertwo"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Father figure in her new life; he is deeply emotional and caring towards her.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Witnessed Mewtwo's destructive escape and made eye contact, experiencing primal terror and a flicker of recognition.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Existential Dread",
+          "description": "Experiences existential dread as a core part of her internal conflict.",
+          "relationship_type": "Thematic",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Ditto",
+          "description": "Ditto is a companion to Amber.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Celadon City",
+          "description": "Amber is exploring Celadon City.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Joey the Kid",
+          "description": "Amber defeated Joey in her first Pokemon battle.",
+          "relationship_type": "Personal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Dr. Fuji",
+      "identifier": "Dr. Fuji",
+      "detailed_description": "*   Middle-aged scientist and Amber's father in her new life.\n*   Emotional and caring, deeply affected by the loss of his daughter.\n*   Overjoyed to see Amber alive.\n*   Injured during Mewtwo's escape, sustaining cuts and bruises on his back.\n*   Determined to protect Amber and fix their family and life.\n*   Conducting experiments related to Pokemon cloning and genetic engineering.\n*   Provides a sense of stability and support to Amber.\n*   Unaware of Amber's plan to leave the apartment and explore Celadon City.",
+      "narrative_role": "Supporting character providing emotional depth and context to Amber's situation, acting as a protector and guide in this new reality. He is currently unaware of Amber's growing desire for independence.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Daughter in her reincarnated form; he is deeply emotional and caring towards her.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Creator of Mewtwo; responsible for Mewtwo's existence and subsequent escape.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Ditto (Amber's Ditto)",
+      "identifier": "Ditto",
+      "detailed_description": "*   A shapeshifting Pokemon.\n*   Initially tasked by Dr. Fuji to protect Amber.\n*   Has been showing growing curiosity and attempting to mimic Amber's actions.\n*   Attempted to transform into pants for Amber, but created cartoonish, two-dimensional legs, causing it to collapse.\n*   Reverted to its blob shape with a (~_~) face after the failed transformation.\n*   Briefly transformed into a miniature Sandslash while watching a Pokemon battle.\n*   Now acts as a scarf for Amber.\n*   Participated in a Pokemon battle, transforming into a Rattata and defeating Joey the Kid's Rattata.\n*   Appears to be combat-trained, moving with precision and efficiency during battle.",
+      "narrative_role": "Serves as a companion and source of amusement for Amber, highlighting the evolving relationship between humans and Pokemon in this world. Its growing personality adds a lighthearted element to the story. Demonstrates surprising combat prowess.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Ditto (Amber's Ditto)"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Ditto is a companion to Amber.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Dr. Fuji initially tasked Ditto to protect Amber.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Joey the Kid",
+          "description": "Ditto defeated Joey's Rattata in a Pokemon battle.",
+          "relationship_type": "Personal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Mewtwo",
+      "identifier": "Mewtwo",
+      "detailed_description": "*   Powerful Psychic-type Pok\\'emon created by Dr. Fuji.\n*   Raw, primal, and terrifyingly real in its current form.\n*   Form is unstable, and its movements carry immense power.\n*   Caused chaos in the lab during its escape.\n*   Made eye contact with Amber, showing a flicker of recognition.\n*   Attacked by an Arcanine with flames.\n*   Blasted through the ceiling to escape the lab.\n*   Grappling with its own existence.\n*   Currently at large, posing a potential threat.",
+      "narrative_role": "Antagonistic force driving the action and creating urgency for Amber and Dr. Fuji to escape, representing a threat and a mystery. Mewtwo's existence continues to loom as a potential future conflict.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Created by Dr. Fuji; the result of his experiments.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Made eye contact with Amber, possibly recognizing her.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Celadon City",
+      "identifier": "Celadon City",
+      "detailed_description": "*   A city in the Pokemon world where Amber plans to explore and seek her first Pokemon adventure.\n*   Bustling urban environment integrated with Pokemon.\n*   Features a Gym and a Game Corner.\n*   Has a transit stop with ticket booths staffed by a Machop, Meowth, and human.\n*   Streets are dominated by bicycles.\n*   Features buildings that defy the simple up-down geography of the games.\n*   Has a Pidgey postal service.\n*   Features the Celadon Gym Outer Gardens, which resemble a public park.",
+      "narrative_role": "Serves as the setting for Amber's upcoming adventures and symbolizes her transition into the Pokemon world. Represents a real, lived-in Pokemon world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Amber plans to explore Celadon City.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Cinnabar Island",
+          "description": "Amber and Dr. Fuji traveled to Celadon City from Cinnabar Island.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Joey the Kid",
+      "detailed_description": "*   A confident ten-year-old boy who challenges Amber to a Pokemon battle.\n*   Wears a blue cap crooked on his head.\n*   Initially mocks Amber, triggering her competitive spirit.\n*   Uses a Rattata in battle.\n*   Is initially smug but becomes shocked when Ditto transforms into a Rattata.\n*   Becomes frustrated and desperate during the battle as his Rattata is defeated.\n*   Ultimately pays Amber the 300 pokedollars he wagered, despite being upset.\n*   Cares for his fainted Rattata after the battle, revealing a good heart.",
+      "narrative_role": "Represents a typical young Pokemon trainer, serving as Amber's first opponent and highlighting the realities of Pokemon battles. His good sportsmanship adds a touch of warmth to the story.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Joey"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Challenged Amber to a Pokemon battle and was defeated.",
+          "relationship_type": "Personal",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Ditto",
+          "description": "Ditto defeated Joey's Rattata in a Pokemon battle.",
+          "relationship_type": "Personal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Celadon Gym Outer Gardens",
+      "detailed_description": "*   The outer gardens of Celadon Gym, resembling a public park with a patchwork of dirt and grass.\n*   A place where trainers engage in Pokemon battles.\n*   Features worn dirt battle areas, indicating frequent use.\n*   The location where Amber has her first Pokemon battle.",
+      "narrative_role": "The setting for Amber's first Pokemon battle and her initial interactions with other trainers, marking her entry into the battling aspect of the Pokemon world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Celadon City",
+          "description": "The gardens are located in Celadon City.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Status Moves",
+      "detailed_description": "*   A type of move used by Pokemon that affects the opponent's stats rather than dealing direct damage.\n*   Amber reflects on their potential application in real battles, contrasting with game mechanics.\n*   Amber uses Tail Whip, questioning if it works the same in reality as in the games.",
+      "narrative_role": "A concept that Amber reflects on regarding its application in real battles, contrasting with game mechanics. It highlights the differences between the game and the real world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Concept"
+      ],
+      "aliases": [],
+      "related_entities": []
+    },
+    {
+      "old_identifier": null,
+      "identifier": "Real vs. Game Mechanics in Battles",
+      "detailed_description": "*   The concept of Pokemon battles being different in reality compared to the games.\n*   Emphasizes the need for real-time strategy and adaptation.\n*   Illustrated by the lack of health bars and turn-based combat in real battles.\n*   Amber's experiences and observations during battles highlight this theme.\n*   Amber questions if status moves work the same in reality as in the games.",
+      "narrative_role": "A theme explored through Amber's experiences and observations during battles, highlighting the differences between the game and the real world.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Theme"
+      ],
+      "aliases": [],
+      "related_entities": []
+    },
+    {
+      "old_identifier": "Ditto (Amber's Ditto)",
+      "identifier": "Ditto (Amber's Ditto)",
+      "detailed_description": "*   A shapeshifting Pokemon and Amber's companion.\n*   Mimics Amber's movements and expressions, showing growing curiosity and personality.\n*   Attempted to transform into pants for Amber, but failed due to creating two-dimensional cartoon legs.\n*   Shares a bond with Amber, offering companionship and support.\n*   Is obedient to Amber's commands, but also displays independent thought and amusement.\n*   Travels on Amber's shoulders like a scarf.\n*   Perked up at the prospect of a battle, sliding off Amber's shoulders with eagerness.\n*   Transformed into a Rattata during a battle with Joey.\n*   Demonstrated skill and precision in battle, moving with a grace that suggests combat training.",
+      "narrative_role": "Ditto provides comic relief and emotional support to Amber, reflecting her adaptation to her new life. It is evolving from a simple protector to a companion with its own personality and battle prowess.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Ditto"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Companion Pokemon to Amber, sharing a close bond.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        }
+      ]
+    },
+    {
+      "old_identifier": "Cinnabar Island",
+      "identifier": "Cinnabar Island",
+      "detailed_description": "*   A volcanic island that serves as a tourist destination.\n*   Features black volcanic sand beaches and a visible volcano silhouette.\n*   Tourists are generally unaware of the secret laboratory beneath it.\n*   Amber and Dr. Fuji stayed at a hotel on the island after escaping the laboratory before arranging transportation to leave.\n*   Mentioned in passing as a contrast to Celadon City.",
+      "narrative_role": "Represents the contrast between the mundane world and the hidden dangers of the Pokemon universe. Serves as a temporary safe haven for Amber and Dr. Fuji. Now a place of the past, as Amber has moved on to Celadon City.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji's Laboratory",
+          "description": "The location of Dr. Fuji's Laboratory.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Celadon City",
+          "description": "Amber has moved on from Cinnabar Island to Celadon City.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    }
+  ]
+}

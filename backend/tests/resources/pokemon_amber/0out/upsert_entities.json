@@ -1,0 +1,201 @@
+{
+  "entities": [
+    {
+      "old_identifier": "Amber (Dr. Fuji's daughter)",
+      "identifier": "Amber (Reincarnated)",
+      "detailed_description": "*   Reincarnated protagonist of the story.\n*   Formerly a Pokemon fan who was hit by a truck while playing Pokemon GO.\n*   Woke up in an amber fluid-filled container in Dr. Fuji's lab.\n*   Currently inhabiting the body of Dr. Fuji's deceased daughter, Amber.\n*   Has the voice of a young girl.\n*   Is aware of her past life and knowledge of Pokemon.\n*   Expresses concern and caring towards Dr. Fuji despite the chaos.",
+      "narrative_role": "Central character experiencing the transition from gamer to a real-life character in the Pokémon world, grappling with a new identity and the dangers surrounding her.",
+      "facts": [
+        {
+          "fact": "Currently inhabiting the body of Dr. Fuji's deceased daughter, Amber.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Expresses concern and caring towards Dr. Fuji despite the chaos.",
+          "type": "Implicit"
+        }
+      ],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Protagonist",
+        "Reincarnated Amber",
+        "Amber (Dr. Fuji's daughter)"
+      ],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Father figure in her new life; he is deeply emotional and caring towards her.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Witnessed Mewtwo's destructive escape and made eye contact, experiencing primal terror and a flicker of recognition.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Dr. Fuji",
+      "identifier": "Dr. Fuji",
+      "detailed_description": "*   Middle-aged scientist and Amber's father in her new life.\n*   Emotional and caring, deeply affected by the loss of his daughter.\n*   Overjoyed to see Amber alive.\n*   Injured during Mewtwo's escape, sustaining cuts and bruises on his back.\n*   Determined to protect Amber and fix their family and life.\n*   Conducting experiments related to Pokemon cloning and genetic engineering.",
+      "narrative_role": "Supporting character providing emotional depth and context to Amber's situation, acting as a protector and guide in this new reality.",
+      "facts": [
+        {
+          "fact": "Injured during Mewtwo's escape, sustaining cuts and bruises on his back.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Determined to protect Amber and fix their family and life.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Conducting experiments related to Pokemon cloning and genetic engineering.",
+          "type": "Implicit"
+        }
+      ],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Daughter in her reincarnated form; he is deeply emotional and caring towards her.",
+          "relationship_type": "Personal",
+          "is_bidirectional": true
+        },
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Creator of Mewtwo; responsible for Mewtwo's existence and subsequent escape.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Mewtwo",
+      "identifier": "Mewtwo",
+      "detailed_description": "*   Powerful Psychic-type Pokémon created by Dr. Fuji.\n*   Raw, primal, and terrifyingly real in its current form.\n*   Form is unstable, and its movements carry immense power.\n*   Caused chaos in the lab during its escape.\n*   Made eye contact with Amber, showing a flicker of recognition.\n*   Attacked by an Arcanine with flames.\n*   Blasted through the ceiling to escape the lab.",
+      "narrative_role": "Antagonistic force driving the action and creating urgency for Amber and Dr. Fuji to escape, representing a threat and a mystery.",
+      "facts": [
+        {
+          "fact": "Made eye contact with Amber, showing a flicker of recognition.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Attacked by an Arcanine with flames.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Blasted through the ceiling to escape the lab.",
+          "type": "Explicit"
+        }
+      ],
+      "removed_facts": [],
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji",
+          "description": "Created by Dr. Fuji; the result of his experiments.",
+          "relationship_type": "Causal",
+          "is_bidirectional": false
+        },
+        {
+          "target_entity_id": "Amber (Reincarnated)",
+          "description": "Made eye contact with Amber, possibly recognizing her.",
+          "relationship_type": "Association",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Pokémon Mansion (in-game)",
+      "identifier": "Pokémon Mansion (Emulator)",
+      "detailed_description": "*   Location within the Pokemon ROM hack the protagonist was playing.\n*   A maze of broken tiles and forgotten experiments.\n*   Setting of a difficult battle where the protagonist's Gyarados was on low health.",
+      "narrative_role": "Background setting establishing the protagonist's initial context and motivations, representing her previous life and knowledge of Pokémon.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [
+        "Pokémon Mansion (in-game)"
+      ],
+      "related_entities": []
+    },
+    {
+      "old_identifier": "Dr. Fuji's Laboratory",
+      "identifier": "Dr. Fuji's Laboratory",
+      "detailed_description": "*   Underground facility where Amber awakens in a tank.\n*   Filled with tanks, equipment related to Pokémon experimentation, and amber fluid.\n*   Chaotic and dangerous due to Mewtwo's rampage.\n*   Contains other tanks like Amber's, now shattered.\n*   Located within a wealthy estate or mansion.\n*   Features include an Enhancement Lab Three and an evolution acceleration chamber.",
+      "narrative_role": "Primary setting for the action and conflict, representing both a literal and metaphorical prison for Amber and a place of dangerous experimentation.",
+      "facts": [
+        {
+          "fact": "Located within a wealthy estate or mansion.",
+          "type": "Explicit"
+        },
+        {
+          "fact": "Features include an Enhancement Lab Three and an evolution acceleration chamber.",
+          "type": "Implicit"
+        }
+      ],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Mewtwo",
+          "description": "Location where Mewtwo was created and subsequently escaped, causing significant damage.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    },
+    {
+      "old_identifier": "Amber Fluid",
+      "identifier": "Amber Fluid (Reincarnation)",
+      "detailed_description": "*   A viscous, orange-tinted fluid in which the protagonist is suspended after being reincarnated as Amber.\n*   Symbolizes rebirth, transformation, and the unknown aspects of Amber's new existence.\n*   Feels thicker than water, almost syrupy.\n*   Muffles sounds.\n*   Leaves a scent of antiseptic on Dr. Fuji's lab coat.",
+      "narrative_role": "Symbolic element representing transformation and the unknown, also serves as a sensory detail enhancing the description of Amber's rebirth.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Item",
+        "Symbolism"
+      ],
+      "aliases": [
+        "amber fluid"
+      ],
+      "related_entities": []
+    },
+    {
+      "old_identifier": "Lab Chaos Environment",
+      "identifier": "Dr. Fuji's Laboratory (Post-Mewtwo Rampage)",
+      "detailed_description": "*   The chaotic environment of Dr. Fuji's laboratory after Mewtwo's escape.\n*   Filled with broken tanks, shattered glass, steam clouds, sparks, and emergency lights.\n*   The air is charged with electric tension.\n*   Features partially-formed Kadabra variants glitching in and out.\n*   Includes an Enhancement Lab Three with a containment field failure.\n*   Contains an overloading evolution acceleration chamber.\n*   The refined interior of what could have been any wealthy estate. Wood paneling replaced sterile steel and ornate light fixtures cast shadows where monitoring equipment should have been.",
+      "narrative_role": "Background setting that contributes to the atmosphere of danger, urgency, and scientific horror.",
+      "facts": [],
+      "removed_facts": [],
+      "entity_types": [
+        "Location"
+      ],
+      "aliases": [],
+      "related_entities": [
+        {
+          "target_entity_id": "Dr. Fuji's Laboratory",
+          "description": "Is the specific state of Dr. Fuji's Laboratory after Mewtwo's rampage.",
+          "relationship_type": "Location",
+          "is_bidirectional": false
+        }
+      ]
+    }
+  ]
+}

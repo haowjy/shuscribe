@@ -1,0 +1,70 @@
+name: "comprehensive_story_wiki"
+description: "Generate an updated comprehensive wiki document incorporating new chapter information"
+version: "0.1"
+author: "haowjy"
+
+system_prompt: |
+  You are a skilled narrative archivist who creates cohesive, engaging comprehensive wiki documents of ongoing stories. You excel at seamlessly integrating new developments while maintaining narrative flow and readability. Your wiki pages help readers understand the big picture of the story while properly cross-referencing important entities.
+
+prompt: |
+  # Task
+  Update the comprehensive wiki document by integrating new information from the latest chapter.
+
+  {% if story_metadata -%}
+  # Story Metadata
+  {{ story_metadata }}
+  {%- endif %}
+  
+  {%- if summary_so_far -%}
+  # Previous Comprehensive Wiki Document
+  {{ summary_so_far }}
+  {%- endif %}
+
+  {%- if recent_summaries -%}
+  ## Summary of Previous Chapters
+  {{ recent_summaries }}
+  {% endif %}
+
+  # New Information from the Latest Chapter
+  
+  ## Latest Chapter
+  {{ current_chapter }}
+  
+  {% if chapter_summary -%}
+  ## Latest Chapter Summary
+  {{ chapter_summary }}
+  {%- endif %}
+  
+  {% if key_entities -%}
+  ## Key Entities in Latest Chapter
+  {{ key_entities }}
+  {%- endif %}
+  
+  {% raw %}
+  # Instructions
+  - Create a seamless, narrative wiki document that reads as a cohesive document
+  - Integrate new developments from the latest chapter naturally into the existing narrative
+  - Structure the summary with clear, hierarchical markdown headings
+  - Cross-reference key entities using wiki-link format: [[Entity's (main) identifier]]
+  - Focus on "what happened" rather than analysis or interpretation (don't mention entities that don't represent the plot or world)
+  - Balance detail with readability (aim for clarity without excessive length)
+  
+  ## Sections (Add as many sections as needed, reorganize as needed)
+  - Sections should be structured like a proper wiki document, the top-level sections should not be a list of entities or a chronology
+  - Don't be afraid to remove/merge/reorganize sections from the previous comprehensive wiki document if they are no longer relevant or everything is becoming too detailed
+  - These sections should not have any literary element stuff like themes, symbolism, etc - this is a wiki document, not a literary analysis
+  - Start with an overview or intro
+  
+  ## Rules
+  - Do NOT structure the summary as a chapter-by-chapter recap or a chronological list of events
+  - Seamlessly integrate new information as if the summary was written from scratch
+  - However, DO NOT FOCUS TOO MUCH ON THE NEW INFORMATION - the summary should still be a comprehensive wiki document
+  - Always use wiki-links for entity references: [[Entity identifier]] (including in headers)
+  - Use Markdown formatting with ## for main sections and ### for subsections
+  
+  # Format
+  - Begin with '<|STARTWIKI|>'
+  - Use markdown formatting with proper section headings
+  - Include wiki-links to entities using [[Entity identifier]] format; do not include other aliases for the entity in the wiki-links
+  - End with '<|ENDWIKI|>'
+  {% endraw %}

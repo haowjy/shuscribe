@@ -63,7 +63,7 @@ class AnthropicProvider(LLMProvider):
         """
         return {
             "streaming": True,
-            "structured_output": True, # Not a true structured output
+            "structured_output": False, # Not a true structured output
             "thinking": False,  # TODO: Claude supports a thinking process via system prompt
             "tool_calling": False,  # TODO: Claude supports tools
             "parallel_tool_calls": False,  # Not currently available
@@ -133,9 +133,8 @@ class AnthropicProvider(LLMProvider):
         
         # Add a mock response schema if specified
         if config.response_schema:
-            response_schema = config.response_schema.model_json_schema()
-            response_schema_str = json.dumps(response_schema, indent=4, ensure_ascii=False)
-            system_prompt += f"\n\nThe response should be in the following JSON format: ```json\n{response_schema_str}\n```"
+            response_schema_str = config.response_schema.to_output_schema_str()
+            system_prompt += f"\n\nThe full response should be in the **SINGLE** (1 json block) following JSON schema: ```json\n{response_schema_str}\n```"
             
         # Prepare request parameters with appropriate defaults
         params = {
@@ -287,6 +286,15 @@ class AnthropicProvider(LLMProvider):
         except Exception as e:
             logger.error(f"Anthropic API streaming error: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
+            yield StreamEvent(
+                type="error",
+                text="",
+                error=str(e),
+                usage=LLMUsage(
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                )
+            )
             raise self._handle_provider_error(e)
         
     def _handle_provider_error(self, exception: Exception) -> LLMProviderException:

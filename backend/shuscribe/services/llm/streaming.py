@@ -91,7 +91,12 @@ class StreamSession:
             ):
                 self.accumulated_text += event.text
                 self.last_active = time.time()
-                    
+                
+                if event.type == "error":
+                    self.error = event.error
+                    self.status = StreamStatus.ERROR
+                    raise Exception(self.error)
+                
                 # Create a StreamChunk and add it to the queue
                 stream_chunk = StreamChunk(
                     text=event.text,
