@@ -4,8 +4,12 @@ from typing import Dict, Optional, Any, List, AsyncIterator, Sequence, Union, Tu
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+import uuid
 
+from shuscribe.schemas.pipeline import WikiGenPipelineConfig
 from shuscribe.services.llm.interfaces import GenerationConfig, Message
+from shuscribe.services.llm.pipeline.base_pipeline import Pipeline
+from shuscribe.services.llm.pipeline.pipeline_session import PipelineSession
 from shuscribe.services.llm.providers.provider import LLMProvider
 from shuscribe.services.llm.streaming import StreamSession
 
@@ -304,10 +308,79 @@ class LLMSession:
                 result.append(session_info.model_dump())
         return result
 
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+# Pipeline Sessions
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+    
+    async def create_pipeline_session(
+        self,
+        pipeline_config: WikiGenPipelineConfig,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        pipeline_id: Optional[str] = None
+    ) -> Tuple[str, PipelineSession]:
+        """Create a new pipeline session"""
+        user_id = user_id if user_id else "anonymous"
+        session_id = session_id if session_id else f"{uuid.uuid4().hex}"
+        pipeline_id = pipeline_id or f"pipeline_{uuid.uuid4().hex}"
+        
+        # TODO: Create appropriate pipeline based on config with implemented ABC
+        pipeline = Pipeline(session_id=session_id, pipeline_id=pipeline_id, config=pipeline_config) # type: ignore
+        
+        # Create and register the pipeline session
+        pipeline_session = PipelineSession(session_id=pipeline_id, pipeline_id=pipeline_id, pipeline=pipeline, user_id=user_id)
+        self._sessions.add_pipeline(pipeline_session, user_id)
+        
+        # Start the pipeline
+        await pipeline_session.start()
+        
+        logger.info(f"Created pipeline session {pipeline_id} for user {user_id}")
+        return pipeline_id, pipeline_session
+        
+    def get_pipeline_session(self, pipeline_id: str) -> Optional[PipelineSession]:
+        """Get an existing pipeline session by ID"""
+        return self._sessions.get_pipeline(pipeline_id)
+        
+    async def get_user_pipeline_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all pipeline sessions for a specific user"""
+        result = []
+        pipelines = self._sessions.get_user_pipelines(user_id)
+        
+        for pipeline in pipelines:
+            result.append({
+                "pipeline_id": pipeline.pipeline_id,
+                "user_id": user_id,
+                "status": pipeline.status,
+                "current_step": pipeline.pipeline.current_step.name,
+                "current_chapter": pipeline.pipeline.current_chapter_idx,
+                "created_at": pipeline.created_at,
+                "last_active": pipeline.last_active
+            })
+                
+        return result
+    
+    async def _cleanup_pipeline_session(self, pipeline_id: str) -> bool:
+        """Internal method to clean up a pipeline session."""
+        pipeline = self._sessions.get_pipeline(pipeline_id)
+        if not pipeline:
+            return False
+        
+        if pipeline.is_running:
+            await pipeline.cancel()
+            
+        self._sessions.remove_pipeline(pipeline_id)
+        logger.info(f"Cleaned up pipeline session {pipeline_id}")
+        return True
+
     async def close(self):
         """Close all provider clients and cancel all streaming sessions."""
         for session_id in list(self._sessions.sessions.keys()):
             await self._cleanup_streaming_session(session_id)
+            
+        for pipeline_id in list(self._sessions.pipelines.keys()):
+            await self._cleanup_pipeline_session(pipeline_id)
             
         for user_id, user_providers in self._user_providers.items():
             for provider_dict in user_providers.providers.values():
@@ -321,3 +394,6 @@ class LLMSession:
         
         self._user_providers = {}
         self._sessions = SessionRegistry()
+        
+        
+        

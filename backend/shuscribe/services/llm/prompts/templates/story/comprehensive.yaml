@@ -35,11 +35,6 @@ prompt: |
   {{ chapter_summary }}
   {%- endif %}
   
-  {% if key_entities -%}
-  ## Key Entities in Latest Chapter
-  {{ key_entities }}
-  {%- endif %}
-  
   {% raw %}
   # Instructions
   - Create a seamless, narrative wiki document that reads as a cohesive document

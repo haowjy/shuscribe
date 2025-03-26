@@ -21,7 +21,7 @@ AI tool for creating narrative wikis.
 
 - The FastAPI server will be running on `http://localhost:8000`
 - The database will be running on `http://localhost:5432`
-<!-- - The database adminer will be running on `http://localhost:5050` -->
+- The database adminer will be running on `http://localhost:5050` -->
 
 #### Running the database
 
@@ -35,7 +35,7 @@ To just run the database:
 
   ```bash
   ./db_migrate.sh "migration message"
-  ``` --> -->
+  ``` -->
 
 #### Running fastapi without docker (local development)
 

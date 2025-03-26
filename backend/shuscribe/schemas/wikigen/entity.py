@@ -337,11 +337,12 @@ class TempEntityDB:
                 old_entity.related_entities[related_entity.target_entity_id].relationship_type = related_entity.relationship_type
                 old_entity.related_entities[related_entity.target_entity_id].is_bidirectional = related_entity.is_bidirectional
         
-    def upsert(self, upsert_entities: List[UpsertEntity]):
+    def upsert(self, upsert_entities: List[UpsertEntity]) -> List[TempEntityRecord]:
         # TODO: move to an actual database model, this is a placeholder
         entities_to_embed: List[TempEntityRecord] = []
         entities_updated: List[TempEntityRecord] = []
         entities_new: List[TempEntityRecord] = []
+        
         for entity in upsert_entities:
             # update existing entity
             
@@ -382,8 +383,10 @@ class TempEntityDB:
         for i, entity in enumerate(entities_to_embed):
             entity.embedding = embeddings[i].tolist()
         
-        print(f"Upserted {len(entities_updated)} entities, {len(entities_new)} new entities")
-        print(f"{entities_updated=}\n{entities_new=}")
+        logger.info(f"Upserted {len(entities_updated)} entities, {len(entities_new)} new entities")
+        logger.info(f"{entities_updated=}\n{entities_new=}")
+        
+        return entities_to_embed
     
     def size(self) -> int:
         return len(self.entities_db.entities)
@@ -413,3 +416,11 @@ class TempEntityDB:
                 results.append((entity_list[indices[0][i]], sim))
         
         return results
+
+    def find_by_identifier(self, identifier: List[str]) -> List[TempEntityRecord]:
+        return [self.entities_db.entities[id] for id in identifier if id in self.entities_db.entities]
+    
+    def find_by_alias(self, alias: List[str]) -> List[TempEntityRecord]:
+        return [entity for entity in self.entities_db.entities.values() if any(alias in entity.aliases for alias in alias)]
+    
+    

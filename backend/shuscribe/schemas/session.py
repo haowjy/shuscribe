@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
 import time
 
+from shuscribe.services.llm.pipeline.pipeline_session import PipelineSession
 from shuscribe.services.llm.providers.provider import LLMProvider
 from shuscribe.services.llm.streaming import StreamSession, StreamStatus
 
@@ -75,11 +76,14 @@ class StreamSessionInfo(BaseModel):
     class Config:
         arbitrary_types_allowed = True  # For StreamStatus enum
 
+
 class SessionRegistry:
     """Model for tracking all stream sessions across users"""
     def __init__(self):
         self.sessions: Dict[str, StreamSession] = {}  # session_id -> StreamSession
         self.user_sessions: Dict[str, List[str]] = {}  # user_id -> [session_id]
+        self.pipelines: Dict[str, PipelineSession] = {}  # pipeline_id -> PipelineSession
+        self.user_pipelines: Dict[str, List[str]] = {}  # user_id -> [pipeline_id]
     
     def add_session(self, session: StreamSession, user_id: str) -> None:
         """Add a session to the registry"""
@@ -127,3 +131,37 @@ class SessionRegistry:
                 idle_sessions.append(session_id)
                 
         return idle_sessions
+        
+    def add_pipeline(self, pipeline_session: PipelineSession, user_id: str):
+        """Add a pipeline session to the registry"""
+        pipeline_id = pipeline_session.pipeline_id
+        self.pipelines[pipeline_id] = pipeline_session
+        
+        if user_id not in self.user_pipelines:
+            self.user_pipelines[user_id] = []
+        self.user_pipelines[user_id].append(pipeline_id)
+        
+    def get_pipeline(self, pipeline_id: str) -> Optional[PipelineSession]:
+        """Get a pipeline session by ID"""
+        return self.pipelines.get(pipeline_id)
+        
+    def get_user_pipelines(self, user_id: str) -> List[PipelineSession]:
+        """Get all pipeline sessions for a user"""
+        if user_id not in self.user_pipelines:
+            return []
+        return [self.pipelines[pid] for pid in self.user_pipelines[user_id] if pid in self.pipelines]
+        
+    def remove_pipeline(self, pipeline_id: str):
+        """Remove a pipeline session"""
+        if pipeline_id in self.pipelines:
+            pipeline = self.pipelines[pipeline_id]
+            user_id = pipeline.user_id
+            
+            # Remove from pipelines dict
+            del self.pipelines[pipeline_id]
+            
+            # Remove from user_pipelines
+            if user_id in self.user_pipelines:
+                self.user_pipelines[user_id].remove(pipeline_id)
+                if not self.user_pipelines[user_id]:
+                    del self.user_pipelines[user_id]

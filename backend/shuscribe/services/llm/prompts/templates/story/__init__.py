@@ -5,6 +5,7 @@ from shuscribe.schemas.llm import GenerationConfig, ThinkingConfig
 from shuscribe.schemas.provider import ProviderName
 from shuscribe.schemas.wikigen.entity import UpsertEntitiesOutSchema
 from shuscribe.schemas.wikigen.summary import ChapterSummary
+from shuscribe.schemas.wikigen.wiki import WikiPage
 from shuscribe.services.llm.prompts.base_template import PromptTemplate
 from shuscribe.schemas.pipeline import Chapter, StoryMetadata
 from shuscribe.services.llm.prompts.base_template import Message
@@ -32,10 +33,9 @@ class ComprehensiveWikiTemplate(PromptTemplate):
         self,
         current_chapter: Chapter,
         chapter_summary: ChapterSummary,
-        key_entities: UpsertEntitiesOutSchema, # TODO: temporarily use the UpsertEntitiesOutSchema schema - update to a the database Entity schema later
         
         story_metadata: Optional[StoryMetadata] = None,
-        summary_so_far: Optional[str] = None, # TODO: make the promptable class
+        summary_so_far: Optional[WikiPage] = None, # TODO: make the promptable class
         recent_summaries: Optional[List[ChapterSummary]] = None,
     ) -> list[Message]:
         """Format the prompt template with the given context
@@ -50,12 +50,6 @@ class ComprehensiveWikiTemplate(PromptTemplate):
             ```
             ## Latest Chapter Summary
             {{ chapter_summary }}
-            ```
-            
-            key_entities (List[UpsertEntitiesOutSchema]): The key entities in the latest chapter
-            ```
-            # Key Entities in Latest Chapter
-            {{ key_entities }}
             ```
             
             story_metadata (Optional[StoryMetadata], optional): The story metadata. Defaults to None.
@@ -87,10 +81,9 @@ class ComprehensiveWikiTemplate(PromptTemplate):
         return super().format(
             current_chapter=current_chapter.to_prompt(),
             chapter_summary=chapter_summary.to_prompt(),
-            key_entities=key_entities.model_dump_json(indent=2),
             
             story_metadata=story_metadata.to_prompt() if story_metadata else None,
-            summary_so_far=summary_so_far,
+            summary_so_far=summary_so_far.to_prompt() if summary_so_far else None,
             recent_summaries=recent_summaries_prompt,
         )
         

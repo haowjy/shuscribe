@@ -183,17 +183,17 @@ class StreamSession:
         
         return return_chunk
 
-    def pause(self):
-        """Pause the stream if it is active."""
-        if self.status == StreamStatus.ACTIVE:
-            self.status = StreamStatus.PAUSED
-            self.last_active = time.time()
+    # def pause(self):
+    #     """Pause the stream if it is active."""
+    #     if self.status == StreamStatus.ACTIVE:
+    #         self.status = StreamStatus.PAUSED
+    #         self.last_active = time.time()
 
-    async def resume(self):
-        """Resume a paused stream."""
-        if self.status == StreamStatus.PAUSED:
-            self.status = StreamStatus.ACTIVE
-            self.last_active = time.time()
+    # async def resume(self):
+    #     """Resume a paused stream."""
+    #     if self.status == StreamStatus.PAUSED:
+    #         self.status = StreamStatus.ACTIVE
+    #         self.last_active = time.time()
 
     async def cancel(self):
         """Cancel the stream and clean up resources."""
