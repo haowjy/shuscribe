@@ -1,16 +1,13 @@
 # shuscribe/schemas/pipeline.py
 
-import os
 from pathlib import Path
-from typing import List, Optional, Dict
-from enum import Enum
-from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 from shuscribe.schemas.base import Promptable
-from shuscribe.schemas.llm import ThinkingConfig
+from shuscribe.schemas.llm import GenerationConfig, ThinkingConfig
 from shuscribe.schemas.provider import ProviderName
 from shuscribe.schemas.streaming import StreamChunk, StreamStatus
-from shuscribe.schemas.wikigen.entity import EntitySigLvl
 
 # 
 # SHARED INPUTS
@@ -31,9 +28,9 @@ class StoryMetadata(Promptable):
     title: str
     description: Optional[str] = None
     author: Optional[str] = None
-    word_count: Optional[int] = None
     genres: Optional[List[str]] = None
     additional_tags: Optional[List[str]] = None
+    chapter_files: Optional[List[str]] = None # List of chapter file names
     
     def to_prompt(self) -> str:
         p = (
@@ -49,41 +46,30 @@ class StoryMetadata(Promptable):
 #
 
 class PipelineStepConfig(BaseModel):
-    provider_name: ProviderName
-    model: str
-    temperature: float = 0.7
+    provider_name: Optional[ProviderName] = None
+    model: Optional[str] = None
+    temperature: Optional[float] = None
     thinking_config: Optional[ThinkingConfig] = None
     max_output_tokens: Optional[int] = None
     
+    def to_generation_config(self) -> GenerationConfig:
+        return GenerationConfig(
+            provider=self.provider_name,
+            model=self.model,
+            temperature=self.temperature,
+            thinking_config=self.thinking_config,
+            max_output_tokens=self.max_output_tokens
+        )
+    
 class WikiGenPipelineConfig(BaseModel):
-    summary_config: PipelineStepConfig
-    entity_extraction_config: PipelineStepConfig
-    entity_upsert_config: PipelineStepConfig
-    wiki_generation_config: PipelineStepConfig
-    start_chapter_idx: int
-    end_chapter_idx: int
-    story_name: str
-    story_dir: Path
-    use_cached_responses: Optional[bool] = None  # Falls back to env var if None
-    retry_from_chapter_idx: Optional[int] = None  # For restarting failed pipelines
-    
-    @field_validator('use_cached_responses')
-    def set_cached_responses_from_env(cls, v):
-        if v is None:
-            return os.environ.get('USE_CACHED_RESPONSES', 'false').lower() == 'true'
-        return v
-    
-    @field_validator('retry_from_chapter_idx')
-    def validate_retry_chapter(cls, v, info):
-        start = info.data.get('start_chapter_idx')
-        end = info.data.get('end_chapter_idx')
-        
-        if v is not None and start is not None and end is not None:
-            if v < start or v > end:
-                raise ValueError(f"retry_from_chapter_idx must be between start_chapter_idx ({start}) and end_chapter_idx ({end})")
-        return v
-    
-    
+    summary_config: Optional[PipelineStepConfig] = None
+    entity_extraction_config: Optional[PipelineStepConfig] = None
+    entity_upsert_config: Optional[PipelineStepConfig] = None
+    wiki_generation_config: Optional[PipelineStepConfig] = None
+    start_chapter_idx: int = Field(default=0, description="The chapter index to start the pipeline from")
+    end_chapter_idx: Optional[int] = None
+    story_name: str = Field(default="pokemon_amber", description="The name of the story")
+    story_dir: Path = Field(default=Path("../tests/resources"), description="The directory to save the story to")
     
 class PipelineStepInfo(BaseModel):
     """Information about a pipeline step"""

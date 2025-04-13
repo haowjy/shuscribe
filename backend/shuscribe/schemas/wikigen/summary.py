@@ -16,12 +16,14 @@ class ChapterSummary(Promptable):
     chapter_id: int
     summary: str
     tagged_summary: str
+    raw_summary: str
     tagged_bullets: List[TaggedBullet] = Field(default_factory=list)
     
     @classmethod
-    def from_chapter_summary(cls, chapter_id: int, chapter_summary: str) -> "ChapterSummary":
+    def from_chapter_summary(cls, chapter_id: int, chapter_summary_str: str) -> "ChapterSummary":
         # Parse the chapter summary into a list of tagged bullets
-        tagged_summary = chapter_summary.split("<|STARTOFSUMMARY|>")[1].split("<|ENDOFSUMMARY|>")[0]
+        raw_summary = chapter_summary_str
+        tagged_summary = chapter_summary_str.split("<|STARTOFSUMMARY|>")[1].split("<|ENDOFSUMMARY|>")[0]
         no_tags = []
         tagged_bullets = []
         for line in tagged_summary.split("\n"):
@@ -32,7 +34,13 @@ class ChapterSummary(Promptable):
                 for tag in tags:
                     tagged_bullets.append(TaggedBullet(tag=tag, content=content))
                 no_tags.append(content)
-        return cls(chapter_id=chapter_id, summary="\n".join(no_tags), tagged_summary=tagged_summary, tagged_bullets=tagged_bullets)
+        return cls(
+            chapter_id=chapter_id, 
+            summary="\n".join(no_tags),
+            tagged_summary=tagged_summary, 
+            raw_summary=raw_summary, 
+            tagged_bullets=tagged_bullets
+            )
 
     
     def to_prompt(self) -> str:

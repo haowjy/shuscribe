@@ -54,12 +54,15 @@ prompt: |
   - Do NOT structure the summary as a chapter-by-chapter recap or a chronological list of events
   - Seamlessly integrate new information as if the summary was written from scratch
   - However, DO NOT FOCUS TOO MUCH ON THE NEW INFORMATION - the summary should still be a comprehensive wiki document
-  - Always use wiki-links for entity references: [[Entity identifier]] (including in headers)
+  - Always use wiki-links for entity references: [[Entity identifier|alias]] (including in headers)
   - Use Markdown formatting with ## for main sections and ### for subsections
+  - Stuff that doesn't seem to be very relevant to the story anymore should be removed or merged into other sections
   
   # Format
   - Begin with '<|STARTWIKI|>'
   - Use markdown formatting with proper section headings
-  - Include wiki-links to entities using [[Entity identifier]] format; do not include other aliases for the entity in the wiki-links
+  - Include wiki-links to entities using the full identifier for an entity in the [[Entity identifier]] obsidian md format. You may use **1** alias for an entity in the wiki-link like this [[Entity identifier|alias]] if it makes sense to use the alias in the context of where the entity is being referenced.
+  - Make sure to use ALL of the identifier, including any clarifications (parentheses, prefixes, suffixes, character titles, clarifying adjectives, etc)
+  - Do not include any other aliases for an entity in the wiki-link
   - End with '<|ENDWIKI|>'
   {% endraw %}

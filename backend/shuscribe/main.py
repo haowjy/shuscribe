@@ -9,19 +9,23 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from shuscribe.api.router import api_router
-from shuscribe.core.config import get_settings
+from shuscribe.core.config import get_settings, setup_logger
 
 from dotenv import load_dotenv
 
 # Load environment variables at startup
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+# # Configure logging
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+# )
+logger = setup_logger(
+    __name__, 
+    level=logging.INFO, 
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger(__name__)
 
 # Create FastAPI application
 app = FastAPI(

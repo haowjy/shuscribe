@@ -1,8 +1,14 @@
+# shuscribe/services/llm/pipeline/base_pipeline.py
+
 from abc import ABC, abstractmethod
+import traceback
 from typing import AsyncGenerator, Optional
+import logging
 
 from shuscribe.schemas.pipeline import WikiGenPipelineConfig, PipelineStepInfo, StreamPipelineChunk, StreamStatus
 
+logger = logging.getLogger(__name__)
+    
 class Pipeline(ABC):
     """Base class for all pipeline implementations"""
     
@@ -11,11 +17,11 @@ class Pipeline(ABC):
         self.pipeline_id = pipeline_id
         self.config = config
         self.current_step = PipelineStepInfo.INITIALIZE()
-        self.current_chapter_idx = config.start_chapter_idx if config.retry_from_chapter_idx is None else config.retry_from_chapter_idx
+        self.current_chapter_idx = config.start_chapter_idx
         self.error = None
         self.is_running = False
         self.results = {}
-        
+    
     @abstractmethod
     async def run(self) -> AsyncGenerator[StreamPipelineChunk, None]:
         """Run the pipeline and yield stream chunks for progress updates"""
@@ -28,8 +34,8 @@ class Pipeline(ABC):
         if chapter_idx is not None:
             self.current_chapter_idx = chapter_idx
             
-        progress = {"current": self.current_chapter_idx - self.config.start_chapter_idx + 1, 
-                   "total": self.config.end_chapter_idx - self.config.start_chapter_idx + 1}
+        progress = {"current": self.current_chapter_idx, 
+                    "total": self.config.end_chapter_idx}
         
         chunk = StreamPipelineChunk.create_step_update(
             session_id=self.session_id,
@@ -47,6 +53,8 @@ class Pipeline(ABC):
         self.error = error
         self.is_running = False
         
+        logger.error(f"Pipeline error: {error}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         # Create error chunk
         return StreamPipelineChunk(
             text=str(error),
@@ -56,5 +64,6 @@ class Pipeline(ABC):
             pipeline_id=self.pipeline_id,
             step=PipelineStepInfo.ERROR(error),
             chapter=self.current_chapter_idx,
-            step_message=f"Error during {self.current_step.name}: {str(error)}"
+            step_message=f"Error during {self.current_step.name}: {str(error)}\nTraceback: {traceback.format_exc()}"
         )
+    

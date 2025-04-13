@@ -3,7 +3,6 @@
 from typing import List, Optional
 from shuscribe.schemas.llm import GenerationConfig, ThinkingConfig
 from shuscribe.schemas.provider import ProviderName
-from shuscribe.schemas.wikigen.entity import UpsertEntitiesOutSchema
 from shuscribe.schemas.wikigen.summary import ChapterSummary
 from shuscribe.schemas.wikigen.wiki import WikiPage
 from shuscribe.services.llm.prompts.base_template import PromptTemplate
@@ -21,11 +20,15 @@ class ComprehensiveWikiTemplate(PromptTemplate):
         )
         self.default_config = GenerationConfig(
             temperature=0.4,
-            provider=ProviderName.ANTHROPIC,
-            model="claude-3-7-sonnet-20250219",
+            # provider=ProviderName.ANTHROPIC,
+            # model="claude-3-7-sonnet-20250219",
+            # max_output_tokens=8192,
+            provider=ProviderName.GEMINI,
+            model="gemini-2.5-pro-exp-03-25",
+            # max_output_tokens=8192,
             thinking_config=ThinkingConfig(
                 enabled=True,
-                budget_tokens=1024,
+                # budget_tokens=1024,
             ),
         )
         

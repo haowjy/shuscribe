@@ -6,16 +6,16 @@ import logging
 from contextlib import asynccontextmanager
 import uuid
 
-from shuscribe.schemas.pipeline import WikiGenPipelineConfig
+from shuscribe.schemas.pipeline import StreamPipelineChunk, WikiGenPipelineConfig
+from shuscribe.schemas.streaming import StreamChunk
 from shuscribe.services.llm.interfaces import GenerationConfig, Message
-from shuscribe.services.llm.pipeline.base_pipeline import Pipeline
 from shuscribe.services.llm.pipeline.pipeline_session import PipelineSession
 from shuscribe.services.llm.providers.provider import LLMProvider
 from shuscribe.services.llm.streaming import StreamSession
 
-from shuscribe.schemas.streaming import StreamChunk, StreamStatus
 from shuscribe.schemas.session import UserProviders, SessionRegistry, StreamSessionInfo
 from shuscribe.schemas.provider import ProviderName
+from shuscribe.services.llm.pipeline.pipeline_factory import PipelineFactory, PipelineType
 
 logger = logging.getLogger(__name__)
 
@@ -319,26 +319,64 @@ class LLMSession:
         pipeline_config: WikiGenPipelineConfig,
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
-        pipeline_id: Optional[str] = None
+        pipeline_id: Optional[str] = None,
     ) -> Tuple[str, PipelineSession]:
         """Create a new pipeline session"""
         user_id = user_id if user_id else "anonymous"
-        session_id = session_id if session_id else f"{uuid.uuid4().hex}"
-        pipeline_id = pipeline_id or f"pipeline_{uuid.uuid4().hex}"
+        session_id = session_id or str(uuid.uuid4())
+        pipeline_id = pipeline_id or str(uuid.uuid4())
         
-        # TODO: Create appropriate pipeline based on config with implemented ABC
-        pipeline = Pipeline(session_id=session_id, pipeline_id=pipeline_id, config=pipeline_config) # type: ignore
+        # Create the pipeline instance
+        pipeline = PipelineFactory.create_pipeline(
+            pipeline_type=PipelineType.WIKI_GEN,
+            session_id=session_id,
+            pipeline_id=pipeline_id,
+            config=pipeline_config
+        )
         
-        # Create and register the pipeline session
-        pipeline_session = PipelineSession(session_id=pipeline_id, pipeline_id=pipeline_id, pipeline=pipeline, user_id=user_id)
+        # Create and store the pipeline session
+        pipeline_session = PipelineSession(
+            session_id=session_id,
+            pipeline_id=pipeline_id,
+            pipeline=pipeline,
+            user_id=user_id or "anonymous"
+        )
+        
         self._sessions.add_pipeline(pipeline_session, user_id)
+        return pipeline_id, pipeline_session
+    
+    async def run_pipeline_stream(
+        self,
+        pipeline_config: WikiGenPipelineConfig, # TODO: MAKE A FACTORY FOR THIS
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        pipeline_id: Optional[str] = None,
+    ) -> AsyncIterator[StreamPipelineChunk]:
+        """Run a pipeline and stream its results.
         
-        # Start the pipeline
+        Args:
+            pipeline_config: Configuration for the pipeline
+            user_id: Optional user ID for tracking
+            session_id: Optional session ID for the pipeline
+            pipeline_id: Optional pipeline ID for tracking
+            
+        Returns:
+            An async iterator that yields StreamPipelineChunk objects
+        """
+        pipeline_id, pipeline_session = await self.create_pipeline_session(
+            pipeline_config=pipeline_config,
+            user_id=user_id,
+            session_id=session_id,
+            pipeline_id=pipeline_id
+        )
+        
+        # After creating the session, we should call start() before iterating
         await pipeline_session.start()
         
-        logger.info(f"Created pipeline session {pipeline_id} for user {user_id}")
-        return pipeline_id, pipeline_session
-        
+        # Yield chunks as they arrive from the pipeline
+        async for chunk in pipeline_session:
+            yield chunk
+            
     def get_pipeline_session(self, pipeline_id: str) -> Optional[PipelineSession]:
         """Get an existing pipeline session by ID"""
         return self._sessions.get_pipeline(pipeline_id)

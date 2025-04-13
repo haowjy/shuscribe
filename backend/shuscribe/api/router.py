@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 
 from shuscribe.api.endpoints.llm import router as llm_router
 from shuscribe.api.endpoints.auth import router as auth_router
+from shuscribe.api.endpoints.pipeline import router as pipeline_router
 from shuscribe.auth.dependencies import get_current_user
 from shuscribe.schemas.user import User
 
@@ -12,6 +13,7 @@ api_router = APIRouter()
 # Include existing routers
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_router.include_router(llm_router, prefix="/llm", tags=["llm"])
+api_router.include_router(pipeline_router, prefix="/llm", tags=["pipeline"])
 
 # Root endpoint for API
 @api_router.get("/")

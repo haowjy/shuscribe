@@ -4,7 +4,7 @@ from typing import Dict, Generator, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
-from shuscribe.schemas.base import DescriptiveEnum, BaseOutputSchema
+from shuscribe.schemas.base import DescriptiveEnum, BaseOutputSchema, Promptable
 
 import logging
 logger = logging.getLogger(__name__)
@@ -103,7 +103,7 @@ class ExtractedEntity(BaseModel):
         description="The type of entity")
     
     identifier: str = Field(
-        description="The main identifier of the entity that will be used to reference the entity. Ensure that this identifier will be unique for the story by adding clarifications (parentheses, prefixes, suffixes, character titles, clarifying adjectives, etc). This identifier should be something that you would actually call the entity in conversation")
+        description="The main identifier of the entity that will be used to reference the entity. Ensure that this identifier is unique to the entity by adding clarifications (parentheses, prefixes, suffixes, character titles, clarifying adjectives, etc). This identifier should be something that you would actually call the entity in conversation and describes them completely")
 
     aliases: List[str] = Field(
         description="All names and other identifiers for the entity")
@@ -199,11 +199,11 @@ class EntityFact(BaseModel):
 
 class UpsertEntity(BaseModel):
     
+    identifier: str = Field(
+        description="main identifier of the entity. This identifier should be something that you would actually call the entity in conversation. Add clarifications (parentheses, prefix titles, titles, etc) to the identifier if needed to make it different from another entity. Change the identifier if you think it would no longer be unique")
+    
     old_identifier: Optional[str] = Field(
         description="old identifier of the entity if you are updating an existing entity")
-    
-    identifier: str = Field(
-        description="main identifier of the entity. This identifier should be something that you would actually call the entity in conversation. Add clarifications (parentheses, prefix titles, titles, etc) to the identifier to make it unique. Change the identifier if you think it would no longer be unique")
     
     detailed_description: str = Field(
         description="detailed markdown bullet point description of the entity's attributes (what the entity is, what it does, etc), not a chronology of what happens to the entity")
@@ -220,6 +220,9 @@ class UpsertEntity(BaseModel):
     entity_types: List[EntityType] = Field(
         description="types of entities that the entity can be classified into")
     
+    significance_level: EntitySigLvl = Field(
+        description="The significance level of the entity to the chapter's plot and the story as a whole. You may change the significance as the story evolves")
+    
     aliases: List[str] = Field(
         description="All names and other identifiers for the entity")
     
@@ -230,7 +233,7 @@ class UpsertEntity(BaseModel):
         return (
             prefix +
             "```json\n" +
-            self.model_dump_json(indent=2, include={"identifier", "detailed_description", "narrative_role", "facts", "entity_types", "aliases", "related_entities"}) +
+            self.model_dump_json(indent=2, include={"identifier", "detailed_description", "narrative_role", "facts", "entity_types", "significance_level" , "aliases", "related_entities"}) +
             "```"
         )
 
@@ -254,26 +257,27 @@ import faiss
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
-class TempEntityRecord(BaseModel):
+class TempEntityRecord(Promptable):
     # TODO: move to an actual database model, this is a placeholder
     identifier: str
-    
-    embedding: List[float]
-    
+    embedding: List[float] = Field(default_factory=list)  # Changed to ensure proper JSON serialization
     entity_types: List[EntityType]
-    
     aliases: List[str]
-    
     detailed_description: str
-    
     narrative_role: str
-    
     facts: List[EntityFact]
-    
     related_entities: Dict[str, Relationship]
     
     class Config:
         arbitrary_types_allowed = True
+        json_encoders = {
+            np.ndarray: lambda x: x.tolist(),  # Handle numpy arrays
+            np.float32: float,  # Handle numpy float32
+            np.float64: float,  # Handle numpy float64
+        }
+    
+    def to_prompt(self) -> str:
+        return self.model_dump_json(indent=2, exclude={"embedding"})
     
     def to_embed_content(self, prefix: str = "") -> str:
         return (

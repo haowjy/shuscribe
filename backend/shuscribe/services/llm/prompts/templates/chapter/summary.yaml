@@ -15,7 +15,7 @@ prompt: |
   {{ story_metadata }}
   {%- endif %}
 
-  {%- if summary_so_far -%}
+  {% if summary_so_far -%}
   # Story So Far
   {{ summary_so_far }}
   {%- endif %}

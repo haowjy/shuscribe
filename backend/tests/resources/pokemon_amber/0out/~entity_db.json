@@ -1,8 +1,16 @@
 {
-  "entities": [
-    {
+  "entities": {
+    "Protagonist (Ambertwo)": {
       "identifier": "Protagonist (Ambertwo)",
-      "old_identifier": null,
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "I",
+        "Amber",
+        "Fuji's legendary clone",
+        "AlexaTheGreat"
+      ],
       "detailed_description": "*   The main character of the story.\n*   A female Pokémon gamer from another world who died after being hit by a truck.\n*   Reincarnated into the Pokémon world as a clone of Dr. Fuji's deceased daughter, Amber.\n*   Initially disoriented and confused upon awakening in a cloning tank.\n*   Expresses concern for Dr. Fuji's safety and recognizes the danger of the situation.\n*   Currently in a child's body, implied to be around the same age as Amber was when she died.\n*   Goes by the online handle \"AlexaTheGreat\".",
       "narrative_role": "Protagonist",
       "facts": [
@@ -15,64 +23,59 @@
           "type": "Explicit"
         }
       ],
-      "removed_facts": [],
-      "entity_types": [
-        "Character"
-      ],
-      "aliases": [
-        "I",
-        "Amber",
-        "Fuji's legendary clone",
-        "AlexaTheGreat"
-      ],
-      "related_entities": [
-        {
+      "related_entities": {
+        "Dr. Fuji": {
           "target_entity_id": "Dr. Fuji",
           "description": "Rescued by Dr. Fuji after awakening. The Protagonist recognizes him and his connection to the lab.",
           "relationship_type": "Association",
           "is_bidirectional": true
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "Encountered Mewtwo shortly after awakening. Mewtwo's presence instilled primal terror in the protagonist.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Reincarnation/Isekai": {
           "target_entity_id": "Reincarnation/Isekai",
           "description": "The core premise of the protagonist's rebirth in the Pokemon world.",
           "relationship_type": "Thematic",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji's Laboratory": {
           "target_entity_id": "Dr. Fuji's Laboratory",
           "description": "Awakened in a cloning tank within the laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": false
         },
-        {
+        "Amber (Original)": {
           "target_entity_id": "Amber (Original)",
           "description": "The protagonist is a clone of Dr. Fuji's deceased daughter, Amber.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Protagonist's Death": {
           "target_entity_id": "Protagonist's Death",
           "description": "The event that led to the protagonist's reincarnation.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Pokemon Emulator Game": {
           "target_entity_id": "Pokemon Emulator Game",
           "description": "The game the protagonist was playing before her death.",
           "relationship_type": "Association",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Dr. Fuji": {
       "identifier": "Dr. Fuji",
-      "old_identifier": null,
+      "entity_types": [
+        "Character"
+      ],
+      "aliases": [
+        "Giant middle-aged man"
+      ],
       "detailed_description": "*   A brilliant scientist working in an underground laboratory.\n*   Successfully cloned his deceased daughter, Amber, resulting in the protagonist's new body.\n*   Implied to be involved in Mewtwo's creation.\n*   Expresses joy and relief upon the protagonist's awakening.\n*   Protective of the protagonist, shielding her from danger.\n*   Determined to 'fix' their family and life.\n*   Injured by falling debris during Mewtwo's rampage.",
       "narrative_role": "Guardian/Creator Figure",
       "facts": [
@@ -81,53 +84,41 @@
           "type": "Explicit"
         }
       ],
-      "removed_facts": [],
-      "entity_types": [
-        "Character"
-      ],
-      "aliases": [
-        "Giant middle-aged man"
-      ],
-      "related_entities": [
-        {
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "Rescues the protagonist after she awakens. Sees the protagonist as his daughter, Amber.",
           "relationship_type": "Association",
           "is_bidirectional": true
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "Implied to be involved in Mewtwo's creation. Mewtwo's rampage endangers Dr. Fuji and the protagonist.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji's Laboratory": {
           "target_entity_id": "Dr. Fuji's Laboratory",
           "description": "Works and resides in the laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": true
         },
-        {
+        "Amber (Original)": {
           "target_entity_id": "Amber (Original)",
           "description": "Father of Amber, whose clone is the protagonist.",
           "relationship_type": "Personal",
           "is_bidirectional": false
         },
-        {
+        "Escape from the Lab": {
           "target_entity_id": "Escape from the Lab",
           "description": "Dr. Fuji helps the protagonist escape from the lab after Mewtwo's rampage.",
           "relationship_type": "Causal",
           "is_bidirectional": true
         }
-      ]
+      }
     },
-    {
+    "Mewtwo": {
       "identifier": "Mewtwo",
-      "old_identifier": null,
-      "detailed_description": "*   A powerful, genetically engineered Legendary Pokémon.\n*   Created in Dr. Fuji's lab.\n*   Awakens violently, destroying the lab.\n*   Possesses immense psychic power.\n*   Briefly makes eye contact with the protagonist, causing primal terror.\n*   Attacked by an Arcanine, but quickly retaliates.\n*   Escapes the lab by blasting through the ceiling.",
-      "narrative_role": "Antagonist/Force of Nature",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Character"
       ],
@@ -135,52 +126,50 @@
         "Legendary Pokemon",
         "Fuji's legendary clone (possibly referring to Mewtwo in overheard conversation)"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   A powerful, genetically engineered Legendary Pokémon.\n*   Created in Dr. Fuji's lab.\n*   Awakens violently, destroying the lab.\n*   Possesses immense psychic power.\n*   Briefly makes eye contact with the protagonist, causing primal terror.\n*   Attacked by an Arcanine, but quickly retaliates.\n*   Escapes the lab by blasting through the ceiling.",
+      "narrative_role": "Antagonist/Force of Nature",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "Encountered the protagonist shortly after her awakening. Their eye contact caused primal terror in the protagonist.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji": {
           "target_entity_id": "Dr. Fuji",
           "description": "Created in Dr. Fuji's laboratory. Mewtwo's rampage endangers Dr. Fuji.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji's Laboratory": {
           "target_entity_id": "Dr. Fuji's Laboratory",
           "description": "Rampages through and destroys parts of Dr. Fuji's laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": false
         },
-        {
+        "Shadow Mewtwo Raid": {
           "target_entity_id": "Shadow Mewtwo Raid",
           "description": "The protagonist was on her way to a Shadow Mewtwo raid before her death.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Escape from the Lab": {
           "target_entity_id": "Escape from the Lab",
           "description": "Mewtwo's rampage causes a security breach and allows for escape from the lab.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Eye Contact (Protagonist & Mewtwo)": {
           "target_entity_id": "Eye Contact (Protagonist & Mewtwo)",
           "description": "The protagonist and Mewtwo make eye contact, freezing the protagonist in place with primal terror.",
           "relationship_type": "Association",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Reincarnation/Isekai": {
       "identifier": "Reincarnation/Isekai",
-      "old_identifier": null,
-      "detailed_description": "*   The core premise of the story.\n*   The protagonist dies in her original world and is reborn in the Pokemon world.\n*   Specifically, the reincarnation occurs as a clone of an existing person (Amber).",
-      "narrative_role": "Core Premise/Plot Driver",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Concept"
       ],
@@ -188,34 +177,32 @@
         "Rebirth",
         "Isekai"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   The core premise of the story.\n*   The protagonist dies in her original world and is reborn in the Pokemon world.\n*   Specifically, the reincarnation occurs as a clone of an existing person (Amber).",
+      "narrative_role": "Core Premise/Plot Driver",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist is the subject of the reincarnation/isekai.",
           "relationship_type": "Thematic",
           "is_bidirectional": false
         },
-        {
+        "Protagonist's Death": {
           "target_entity_id": "Protagonist's Death",
           "description": "The event that triggered the reincarnation.",
           "relationship_type": "Causal",
           "is_bidirectional": true
         },
-        {
+        "New World/Pokemon World": {
           "target_entity_id": "New World/Pokemon World",
           "description": "The world the protagonist is reborn into.",
           "relationship_type": "Location",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Dr. Fuji's Laboratory": {
       "identifier": "Dr. Fuji's Laboratory",
-      "old_identifier": null,
-      "detailed_description": "*   An underground research facility.\n*   Where Dr. Fuji conducts his experiments, including cloning and genetic engineering.\n*   Contains cloning tanks, labs (like Enhancement Lab Three), and an evolution acceleration chamber.\n*   Partially disguised as a mansion.\n*   Damaged and destroyed by Mewtwo's rampage.\n*   Contains partially-formed Pokemon variants.",
-      "narrative_role": "Setting/Origin Point",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Location"
       ],
@@ -225,82 +212,88 @@
         "Enhancement Lab Three",
         "Mansion"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   An underground research facility.\n*   Where Dr. Fuji conducts his experiments, including cloning and genetic engineering.\n*   Contains cloning tanks, labs (like Enhancement Lab Three), and an evolution acceleration chamber.\n*   Partially disguised as a mansion.\n*   Damaged and destroyed by Mewtwo's rampage.\n*   Contains partially-formed Pokemon variants.",
+      "narrative_role": "Setting/Origin Point",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist awakens in a cloning tank within the laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji": {
           "target_entity_id": "Dr. Fuji",
           "description": "Dr. Fuji works and resides in the laboratory.",
           "relationship_type": "Association",
           "is_bidirectional": true
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "Mewtwo was created in and rampages through the laboratory.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Escape from the Lab": {
           "target_entity_id": "Escape from the Lab",
           "description": "The setting for the escape sequence after Mewtwo's rampage.",
           "relationship_type": "Location",
           "is_bidirectional": false
         },
-        {
+        "Partially-formed Pokemon Variants": {
           "target_entity_id": "Partially-formed Pokemon Variants",
           "description": "The laboratory contains partially-formed Pokemon variants in tanks.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Amber Fluid Tank": {
           "target_entity_id": "Amber Fluid Tank",
           "description": "The protagonist awakens in an amber fluid tank within the laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": false
         },
-        {
+        "Evolution Acceleration Chamber": {
           "target_entity_id": "Evolution Acceleration Chamber",
           "description": "Mentioned in overheard conversations, implying its importance to the facility's research.",
           "relationship_type": "Association",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Amber (Original)": {
       "identifier": "Amber (Original)",
-      "old_identifier": "Amber (Original)",
-      "detailed_description": "*   Dr. Fuji's deceased daughter.\n*   Her death is Dr. Fuji's primary motivation for his cloning experiments, particularly the creation of Mewtwo and the protagonist.\n*   The protagonist is cloned from her DNA.\n*   Dr. Fuji is desperate to revive her and \"fix\" their family.",
-      "narrative_role": "Motivator/Original Identity",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Character"
       ],
       "aliases": [
         "Amber"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   Dr. Fuji's deceased daughter.\n*   Her death is Dr. Fuji's primary motivation for his cloning experiments, particularly the creation of Mewtwo and the protagonist.\n*   The protagonist is cloned from her DNA.\n*   Dr. Fuji is desperate to revive her and \"fix\" their family.",
+      "narrative_role": "Motivator/Original Identity",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist is a clone of Amber (Original).",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji": {
           "target_entity_id": "Dr. Fuji",
           "description": "Amber (Original) is Dr. Fuji's deceased daughter.",
           "relationship_type": "Personal",
           "is_bidirectional": true
         }
-      ]
+      }
     },
-    {
+    "Shadow Mewtwo Raid": {
       "identifier": "Shadow Mewtwo Raid",
-      "old_identifier": "Shadow Mewtwo Raid",
+      "entity_types": [
+        "Event"
+      ],
+      "aliases": [
+        "Shadow Mewtwo event"
+      ],
       "detailed_description": "*   A time-limited event in a Pokémon GO-like mobile game.\n*   Features a Shadow Mewtwo encounter at the library gym on the protagonist's college campus.\n*   The protagonist was rushing to participate in this raid when she was struck by a vehicle.\n*   The raid was scheduled for March 30, 2024.",
       "narrative_role": "Catalyst for Reincarnation",
       "facts": [
@@ -309,37 +302,35 @@
           "type": "Explicit"
         }
       ],
-      "removed_facts": [],
-      "entity_types": [
-        "Event"
-      ],
-      "aliases": [
-        "Shadow Mewtwo event"
-      ],
-      "related_entities": [
-        {
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist was rushing to the Shadow Mewtwo raid when she died.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "The raid features a Shadow Mewtwo encounter.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Protagonist's Death": {
           "target_entity_id": "Protagonist's Death",
           "description": "The protagonist's pursuit of the Shadow Mewtwo raid directly caused her death.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Protagonist's Death": {
       "identifier": "Protagonist's Death",
-      "old_identifier": "Protagonist's Death",
+      "entity_types": [
+        "Event"
+      ],
+      "aliases": [
+        "Accident"
+      ],
       "detailed_description": "*   The protagonist was struck by a vehicle while rushing to the Shadow Mewtwo raid.\n*   Occurred while crossing University Avenue.\n*   Her last thoughts were about her Gyarados in the paused game.",
       "narrative_role": "Transition Event",
       "facts": [
@@ -352,37 +343,35 @@
           "type": "Explicit"
         }
       ],
-      "removed_facts": [],
-      "entity_types": [
-        "Event"
-      ],
-      "aliases": [
-        "Accident"
-      ],
-      "related_entities": [
-        {
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist's death led to her reincarnation as Ambertwo.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Reincarnation/Isekai": {
           "target_entity_id": "Reincarnation/Isekai",
           "description": "The protagonist's death triggers her reincarnation in the Pokemon world.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Shadow Mewtwo Raid": {
           "target_entity_id": "Shadow Mewtwo Raid",
           "description": "The protagonist was rushing to the Shadow Mewtwo raid when she died.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Escape from the Lab": {
       "identifier": "Escape from the Lab",
-      "old_identifier": "Escape from the Lab",
+      "entity_types": [
+        "Event"
+      ],
+      "aliases": [
+        "Lab escape"
+      ],
       "detailed_description": "*   Dr. Fuji rescues the newly 'born' protagonist (Ambertwo) from his laboratory.\n*   Occurs amidst the chaos of Mewtwo's rampage.\n*   The laboratory is in a state of destruction, with emergency lights, steam, and sparks.\n*   They navigate through panicked scientists and security personnel.\n*   Flames are beginning to spread through the facility.",
       "narrative_role": "Plot Sequence/Introduction to Danger",
       "facts": [
@@ -391,47 +380,35 @@
           "type": "Explicit"
         }
       ],
-      "removed_facts": [],
-      "entity_types": [
-        "Event"
-      ],
-      "aliases": [
-        "Lab escape"
-      ],
-      "related_entities": [
-        {
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist is rescued by Dr. Fuji during the lab escape.",
           "relationship_type": "Association",
           "is_bidirectional": true
         },
-        {
+        "Dr. Fuji": {
           "target_entity_id": "Dr. Fuji",
           "description": "Dr. Fuji leads the protagonist during the lab escape.",
           "relationship_type": "Association",
           "is_bidirectional": true
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "Mewtwo's rampage causes the chaos that necessitates the lab escape.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji's Laboratory": {
           "target_entity_id": "Dr. Fuji's Laboratory",
           "description": "The escape takes place within Dr. Fuji's destroyed laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Partially-formed Pokemon Variants": {
       "identifier": "Partially-formed Pokemon Variants",
-      "old_identifier": "Partially-formed Pokemon Variants",
-      "detailed_description": "*   Unstable Pokémon creatures seen glitching in and out of reality within Dr. Fuji's laboratory.\n*   One example is a Kadabra variant with too many fingers, leaving trails of psychic energy.\n*   Suggests other failed or unstable experiments by Dr. Fuji.",
-      "narrative_role": "Worldbuilding Element/Foreshadowing",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Group"
       ],
@@ -439,34 +416,32 @@
         "Glitched Pokemon",
         "Kadabra variant"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   Unstable Pokémon creatures seen glitching in and out of reality within Dr. Fuji's laboratory.\n*   One example is a Kadabra variant with too many fingers, leaving trails of psychic energy.\n*   Suggests other failed or unstable experiments by Dr. Fuji.",
+      "narrative_role": "Worldbuilding Element/Foreshadowing",
+      "facts": [],
+      "related_entities": {
+        "Dr. Fuji": {
           "target_entity_id": "Dr. Fuji",
           "description": "The partially-formed Pokemon variants are likely the result of Dr. Fuji's experiments.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "The variants exist in the same facility where Mewtwo was created.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji's Laboratory": {
           "target_entity_id": "Dr. Fuji's Laboratory",
           "description": "The partially-formed Pokemon variants are located within Dr. Fuji's laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Primal Terror/Instinct": {
       "identifier": "Primal Terror/Instinct",
-      "old_identifier": "Primal Terror/Instinct",
-      "detailed_description": "*   A deep, instinctual fear experienced by the protagonist upon making eye contact with Mewtwo.\n*   Overrode her gamer knowledge and rational thought.\n*   Triggered by Mewtwo's raw, primal power and existence outside the natural order.\n*   Represents the protagonist's vulnerability in her new body and the overwhelming nature of the Pokémon world's reality.",
-      "narrative_role": "Character Emotion/Thematic Element",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Concept",
         "Theme"
@@ -474,34 +449,32 @@
       "aliases": [
         "Pokemon instinct"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   A deep, instinctual fear experienced by the protagonist upon making eye contact with Mewtwo.\n*   Overrode her gamer knowledge and rational thought.\n*   Triggered by Mewtwo's raw, primal power and existence outside the natural order.\n*   Represents the protagonist's vulnerability in her new body and the overwhelming nature of the Pokémon world's reality.",
+      "narrative_role": "Character Emotion/Thematic Element",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist experiences primal terror.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "Mewtwo's presence and power trigger the primal terror.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Eye Contact (Protagonist & Mewtwo)": {
           "target_entity_id": "Eye Contact (Protagonist & Mewtwo)",
           "description": "Eye contact is the direct trigger for the primal terror.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Pokemon Emulator Game": {
       "identifier": "Pokemon Emulator Game",
-      "old_identifier": "Pokemon Emulator Game",
-      "detailed_description": "*   A Pokémon game the protagonist was playing on an emulator before her death.\n*   Features perma-death rules, adding to the stakes and frustration of the protagonist.\n*   Includes a Gyarados that the protagonist has carefully trained since it was a Magikarp.\n*   The game's state is saved just before the protagonist leaves for the Shadow Mewtwo raid.\n*   Represents the protagonist's past life, dedication to Pokémon, and connection to the Pokémon world.",
-      "narrative_role": "Backstory Element/Symbol",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Concept",
         "Item"
@@ -510,54 +483,50 @@
         "Emulator",
         "Game"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   A Pokémon game the protagonist was playing on an emulator before her death.\n*   Features perma-death rules, adding to the stakes and frustration of the protagonist.\n*   Includes a Gyarados that the protagonist has carefully trained since it was a Magikarp.\n*   The game's state is saved just before the protagonist leaves for the Shadow Mewtwo raid.\n*   Represents the protagonist's past life, dedication to Pokémon, and connection to the Pokémon world.",
+      "narrative_role": "Backstory Element/Symbol",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist was playing the game before her death.",
           "relationship_type": "Association",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Eye Contact (Protagonist & Mewtwo)": {
       "identifier": "Eye Contact (Protagonist & Mewtwo)",
-      "old_identifier": "Eye Contact (Protagonist & Mewtwo)",
-      "detailed_description": "*   A moment of direct eye contact between the newly awakened protagonist and Mewtwo.\n*   Causes the protagonist to freeze in terror due to Mewtwo's overwhelming presence.\n*   Broken by an attack from an Arcanine.",
-      "narrative_role": "Significant Interaction",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Event"
       ],
       "aliases": [],
-      "related_entities": [
-        {
+      "detailed_description": "*   A moment of direct eye contact between the newly awakened protagonist and Mewtwo.\n*   Causes the protagonist to freeze in terror due to Mewtwo's overwhelming presence.\n*   Broken by an attack from an Arcanine.",
+      "narrative_role": "Significant Interaction",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist makes eye contact with Mewtwo.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "Mewtwo makes eye contact with the protagonist.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Primal Terror/Instinct": {
           "target_entity_id": "Primal Terror/Instinct",
           "description": "The eye contact triggers the protagonist's primal terror.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Amber Fluid Tank": {
       "identifier": "Amber Fluid Tank",
-      "old_identifier": "Amber Fluid Tank",
-      "detailed_description": "*   A container filled with amber-colored fluid.\n*   The protagonist awakens inside this tank in Dr. Fuji's lab.\n*   The fluid feels thick and syrupy.\n*   The tank shatters, releasing the protagonist.",
-      "narrative_role": "Birthplace/Incubation Device",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Item"
       ],
@@ -565,54 +534,50 @@
         "Tank",
         "Container"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   A container filled with amber-colored fluid.\n*   The protagonist awakens inside this tank in Dr. Fuji's lab.\n*   The fluid feels thick and syrupy.\n*   The tank shatters, releasing the protagonist.",
+      "narrative_role": "Birthplace/Incubation Device",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist awakens inside the tank.",
           "relationship_type": "Location",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji's Laboratory": {
           "target_entity_id": "Dr. Fuji's Laboratory",
           "description": "The tank is located within Dr. Fuji's laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Evolution Acceleration Chamber": {
       "identifier": "Evolution Acceleration Chamber",
-      "old_identifier": "Evolution Acceleration Chamber",
-      "detailed_description": "*   A piece of equipment mentioned during the lab escape.\n*   Reportedly overloading during the events of the chapter.\n*   Its purpose is implied to be related to accelerating evolution, possibly of Pokémon or clones.",
-      "narrative_role": "Worldbuilding Detail/Potential Plot Device",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Item"
       ],
       "aliases": [],
-      "related_entities": [
-        {
+      "detailed_description": "*   A piece of equipment mentioned during the lab escape.\n*   Reportedly overloading during the events of the chapter.\n*   Its purpose is implied to be related to accelerating evolution, possibly of Pokémon or clones.",
+      "narrative_role": "Worldbuilding Detail/Potential Plot Device",
+      "facts": [],
+      "related_entities": {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "Potentially related to Mewtwo's creation or power surge.",
           "relationship_type": "Association",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji's Laboratory": {
           "target_entity_id": "Dr. Fuji's Laboratory",
           "description": "Located within Dr. Fuji's laboratory.",
           "relationship_type": "Location",
           "is_bidirectional": false
         }
-      ]
+      }
     },
-    {
+    "Pokemon World (Pokemon: Ambertwo)": {
       "identifier": "Pokemon World (Pokemon: Ambertwo)",
-      "old_identifier": "New World/Pokemon World",
-      "detailed_description": "*   A fictional world based on the Pokemon franchise, now the primary setting for the protagonist's reincarnation.\n*   Contains locations like Dr. Fuji's Laboratory and potentially others from the Pokemon games/anime/manga.\n*   Operates under the rules and concepts of the Pokemon universe, including Pokemon, battles, and various technologies.\n*   Currently experiencing a period of chaos due to Mewtwo's escape and the destruction of the laboratory.\n*   The protagonist is now a part of this world, inhabiting a cloned body.",
-      "narrative_role": "Primary Setting",
-      "facts": [],
-      "removed_facts": [],
       "entity_types": [
         "Location",
         "Concept"
@@ -621,38 +586,41 @@
         "Pokemon World",
         "New World"
       ],
-      "related_entities": [
-        {
+      "detailed_description": "*   A fictional world based on the Pokemon franchise, now the primary setting for the protagonist's reincarnation.\n*   Contains locations like Dr. Fuji's Laboratory and potentially others from the Pokemon games/anime/manga.\n*   Operates under the rules and concepts of the Pokemon universe, including Pokemon, battles, and various technologies.\n*   Currently experiencing a period of chaos due to Mewtwo's escape and the destruction of the laboratory.\n*   The protagonist is now a part of this world, inhabiting a cloned body.",
+      "narrative_role": "Primary Setting",
+      "facts": [],
+      "related_entities": {
+        "Protagonist (Ambertwo)": {
           "target_entity_id": "Protagonist (Ambertwo)",
           "description": "The protagonist is now located in and a part of this world.",
           "relationship_type": "Location",
           "is_bidirectional": true
         },
-        {
+        "Dr. Fuji": {
           "target_entity_id": "Dr. Fuji",
           "description": "Dr. Fuji resides and conducts research in this world.",
           "relationship_type": "Location",
           "is_bidirectional": true
         },
-        {
+        "Mewtwo": {
           "target_entity_id": "Mewtwo",
           "description": "Mewtwo is a powerful entity within this world.",
           "relationship_type": "Location",
           "is_bidirectional": true
         },
-        {
+        "Reincarnation/Isekai": {
           "target_entity_id": "Reincarnation/Isekai",
           "description": "The protagonist's arrival in this world is due to reincarnation/isekai.",
           "relationship_type": "Causal",
           "is_bidirectional": false
         },
-        {
+        "Dr. Fuji's Laboratory": {
           "target_entity_id": "Dr. Fuji's Laboratory",
           "description": "A specific location within the Pokemon World where much of the current story takes place.",
           "relationship_type": "Location",
           "is_bidirectional": false
         }
-      ]
+      }
     }
-  ]
+  }
 }

@@ -4,7 +4,7 @@ import json
 from typing import List, Optional, Type
 from shuscribe.schemas.llm import GenerationConfig, ThinkingConfig
 from shuscribe.schemas.provider import ProviderName
-from shuscribe.schemas.wikigen.entity import EntitySigLvl, EntityType, ExtractEntitiesOutSchema, RelationshipType, UpsertEntitiesOutSchema
+from shuscribe.schemas.wikigen.entity import EntitySigLvl, EntityType, ExtractEntitiesOutSchema, RelationshipType, TempEntityRecord, UpsertEntitiesOutSchema
 from shuscribe.schemas.wikigen.wiki import WikiPage
 from shuscribe.schemas.wikigen.summary import ChapterSummary
 from shuscribe.services.llm.prompts.base_template import PromptTemplate
@@ -18,21 +18,22 @@ class ExtractTemplate(PromptTemplate):
             "shuscribe.services.llm.prompts.templates.entity"
         )
         self.default_config = GenerationConfig(
-            # provider=ProviderName.GEMINI,
-            # model="gemini-2.0-flash-thinking-exp", # TODO: move off of thinking-exp later
+            provider=ProviderName.GEMINI,
+            # model="gemini-2.0-flash-001",
+            model="gemini-2.5-pro-exp-03-25",
             # provider=ProviderName.ANTHROPIC,
             # model="claude-3-7-sonnet-20250219",
-            provider=ProviderName.OPENAI,
+            # provider=ProviderName.OPENAI,
             # model="o3-mini-2025-01-31",
-            model="gpt-4o-mini",
+            # model="gpt-4o-mini",
             temperature=0.5,
             
             response_schema=ExtractEntitiesOutSchema,
-            # thinking_config=ThinkingConfig(
-            #     enabled=True,
-            #     budget_tokens=1024,
-            #     effort="low",
-            # ),
+            thinking_config=ThinkingConfig(
+                enabled=True,
+                budget_tokens=1024,
+                effort="low",
+            ),
         )
         
     def format(
@@ -127,7 +128,7 @@ class UpsertTemplate(PromptTemplate):
         entity_batch: dict,
         story_metadata: Optional[StoryMetadata] = None,
         chapter_summary: Optional[ChapterSummary] = None,
-        existing_entities: Optional[List[dict]] = None,
+        existing_entities: Optional[List[TempEntityRecord]] = None,
         summary_so_far: Optional[WikiPage] = None,
         recent_summaries: Optional[List[ChapterSummary]] = None,
     ) -> list[Message]:
@@ -184,7 +185,7 @@ class UpsertTemplate(PromptTemplate):
         entity_batch_prompt = f"```json\n{json.dumps(entity_batch, indent=2)}\n```"
         
         if existing_entities:
-            existing_entities_prompt = json.dumps(existing_entities, indent=2)
+            existing_entities_prompt = "\n".join([entity.to_prompt() for entity in existing_entities])
         else:
             existing_entities_prompt = None
             
