@@ -1,0 +1,80 @@
+# .gitignore
+
+# ----------------------------------------------------------- #
+# General Operating System and IDE Files
+# ----------------------------------------------------------- #
+.DS_Store
+Thumbs.db
+.cache/
+.project
+.settings/
+.classpath
+
+# VS Code specific (workspace settings are often personal)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/extensions.json
+.vscode/cmake-kits.json
+.vscode/*.code-workspace # Ignore any generated multi-root workspace files in the root
+shuscribe.code-workspace # Specifically ignore your saved workspace file
+
+# IntelliJ/PyCharm specific
+.idea/
+
+# Editor config
+*.swp
+*~
+# Backup files
+#*#
+#.#*
+#.fuse_hidden*
+.directory
+.pydevproject
+
+# ----------------------------------------------------------- #
+# Environment Variables
+# ----------------------------------------------------------- #
+.env
+
+# ----------------------------------------------------------- #
+# Python Specific (Applies to backend/)
+# ----------------------------------------------------------- #
+# Virtual environment (uv default)
+backend/.venv/
+
+# Byte-code files
+*.pyc
+__pycache__/
+*.pyd
+*.so
+
+# Distribution / build files
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Testing related
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy cache
+.mypy_cache/
+
+# ----------------------------------------------------------- #
+# Node.js / Frontend Specific (Applies to frontend/)
+# ----------------------------------------------------------- #
+frontend/node_modules/
+frontend/.next/          # Next.js build output
+frontend/out/            # Next.js export output
+frontend/npm-debug.log*
+frontend/.eslintcache
+frontend/.turbo/         # If using Turborepo or similar monorepo tooling
+
+# ----------------------------------------------------------- #
+# Docker Specific
+# ----------------------------------------------------------- #
+# No specific files usually need ignoring here as volumes are managed by Docker
+# and intermediate build artifacts are temporary.
