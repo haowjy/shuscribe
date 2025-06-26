@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from src.api.v1.router import api_router
 from src.config import settings
 from src.core.exceptions import ShuScribeException
-from src.core.logging import setup_logging
+from src.core.logging import configure_console_logging
 
 
 # backend/src/main.py - Update lifespan
@@ -20,7 +20,7 @@ from src.core.logging import setup_logging
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    setup_logging()
+    configure_console_logging(log_level="DEBUG")
     logging.info("ShuScribe backend starting up...")
     
     # Initialize database (for development only)

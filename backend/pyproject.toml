@@ -21,6 +21,7 @@ dependencies = [
     "cryptography>=41.0.0",
     "jupyterlab>=4.4.3",
     "ipykernel>=6.29.5",
+    "toml>=0.10.2",
 ]
 
 [project.optional-dependencies]
