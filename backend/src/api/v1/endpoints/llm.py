@@ -2,8 +2,8 @@
 """
 Endpoints for LLM configurations and capabilities
 """
-from fastapi import APIRouter
-from typing import Dict, List
+from fastapi import APIRouter, Query
+from typing import List, Optional
 
 # Import your structured catalog data and Pydantic schemas for the API response
 from src.services.llm.llm_catalog import AI_MODEL_FAMILIES, LLM_PROVIDERS
@@ -14,6 +14,7 @@ from src.schemas.llm import ( # NEW: Updated schemas
 )
 
 
+# /api/v1/llm/
 router = APIRouter()
 
 @router.get(
@@ -44,15 +45,26 @@ async def get_all_llm_providers_api() -> List[LLMProviderSchema]:
     return LLM_PROVIDERS
 
 @router.get(
-    "/providers/{provider_id}/models",
+    "/models",
     response_model=List[HostedModelInstanceSchema],
-    summary="Get hosted model instances for a specific LLM provider",
-    description="Returns a list of all concrete model instances (e.g., 'gpt-4o') "
-                "offered by a given LLM provider, including their specific names and metadata."
+    summary="Get all hosted model instances",
+    description="Returns a flat list of all concrete model instances (e.g., 'gpt-4o') "
+                "from all providers. Can be filtered by `provider_id`.",
 )
-async def get_hosted_models_by_provider_id(provider_id: str) -> List[HostedModelInstanceSchema]:
+async def get_all_hosted_models(
+    provider_id: Optional[str] = Query(
+        None, description="Filter models by a specific provider ID (e.g., 'openai')."
+    ),
+) -> List[HostedModelInstanceSchema]:
     """
-    Returns a list of hosted model instances for a specified provider.
+    Returns a list of all hosted model instances across all providers.
+    Can be filtered by provider.
     """
-    from src.services.llm.llm_catalog import get_hosted_models_for_provider # Local import to avoid circularity
-    return get_hosted_models_for_provider(provider_id)
+    all_models = [
+        model for provider in LLM_PROVIDERS for model in provider.hosted_models
+    ]
+
+    if provider_id:
+        return [model for model in all_models if model.provider_id == provider_id]
+
+    return all_models

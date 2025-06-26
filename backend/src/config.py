@@ -3,12 +3,23 @@
 Application configuration using Pydantic Settings
 """
 import logging # Added for potential logging in init
+import os
 from typing import List, Optional
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__) # Added logger
 
+# --- Determine environment early to configure Pydantic Settings ---
+# Read the ENVIRONMENT variable directly from the .env file or system environment
+# This allows us to configure `extra` mode conditionally.
+_env_values = dotenv_values(".env") # Load .env file
+CURRENT_ENVIRONMENT = os.getenv("ENVIRONMENT", _env_values.get("ENVIRONMENT", "development")).lower()
+
+# Set the `extra` mode based on the environment
+_extra_mode = "ignore" if CURRENT_ENVIRONMENT == "development" else "forbid"
+logger.info(f"Pydantic Settings 'extra' mode set to: '{_extra_mode}' for environment: '{CURRENT_ENVIRONMENT}'")
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
@@ -27,6 +38,8 @@ class Settings(BaseSettings):
     
     # Self-hosted Portkey Gateway Configuration
     PORTKEY_BASE_URL: str = "http://localhost:8787/v1"  # Default for local Docker setup
+    PORTKEY_API_KEY: Optional[str] = None
+    PORTKEY_VIRTUAL_KEY: Optional[str] = None
     
     # Security
     ENCRYPTION_KEY: str = "change-me-32-character-key-12345678" # Must be 32 bytes for Fernet
@@ -37,6 +50,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = _extra_mode # <-- Dynamically set based on CURRENT_ENVIRONMENT
 
 # Global settings instance
 settings = Settings()
