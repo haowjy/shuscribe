@@ -83,61 +83,57 @@ For the best development experience with this monorepo in VS Code, set up a Mult
 ```
 shuscribe/
 ├── README.md
-├── docker-compose.yml          # Local development environment for core services
-├── .env.example               # Environment variables template for root
+├── docker-compose.yml          # Defines the local development environment services (Portkey Gateway, PostgreSQL)
+├── .env.example               # Template for project-wide environment variables
 ├── .gitignore
-├── shuscribe.code-workspace   # VS Code Multi-Root Workspace config (generated)
+├── shuscribe.code-workspace   # VS Code Multi-Root Workspace configuration
 │
-├── backend/                   # FastAPI application
-│   ├── pyproject.toml        # uv dependencies and config
-│   ├── uv.lock
-│   ├── src/
-│   │   ├── main.py           # FastAPI app entry point
-│   │   ├── database/
-│   │   │   ├── __init__.py
-│   │   │   ├── connection.py # Database connection
-│   │   │   └── models.py     # SQLAlchemy models
-│   │   ├── api/
-│   │   │   ├── __init__.py
-│   │   │   └── routes/       # API endpoints
-│   │   │       ├── __init__.py
-│   │   │       ├── stories.py
-│   │   │       └── wiki.py
-│   │   └── services/
-│   │       ├── __init__.py
-│   │       └── story_processor.py  # LLM pipeline
-│   ├── migrations/           # Alembic database migrations
-│   ├── tests/
-│   ├── Dockerfile
+├── backend/                   # FastAPI application for server-side logic
+│   ├── pyproject.toml        # Defines backend dependencies and project configuration (uv)
+│   ├── uv.lock               # Locks backend dependency versions for reproducible installs
+│   ├── src/                  # Backend application source code
+│   │   ├── main.py           # FastAPI application entry point
+│   │   ├── database/         # Database-related code
+│   │   │   ├── connection.py # Establishes database connections
+│   │   │   └── models.py     # SQLAlchemy ORM models defining database schema
+│   │   ├── api/              # API endpoint definitions
+│   │   │   └── routes/       # Individual API route modules
+│   │   │       ├── stories.py # API endpoints for story management
+│   │   │       └── wiki.py    # API endpoints for wiki article management
+│   │   └── services/         # Business logic and services
+│   │       └── story_processor.py  # Handles LLM (Large Language Model) pipeline logic
+│   ├── migrations/           # Alembic scripts for database schema migrations
+│   ├── tests/                # Backend unit and integration tests
+│   ├── Dockerfile            # Defines how to build the backend Docker image
 │   └── README.md             # Backend-specific documentation
 │
-├── frontend/                 # Next.js application
-│   ├── package.json
-│   ├── next.config.js
-│   ├── tailwind.config.js
-│   ├── src/
-│   │   ├── app/             # App Router (Next.js 13+)
+├── frontend/                 # Next.js application for the user interface
+│   ├── package.json          # Defines frontend dependencies and scripts
+│   ├── next.config.js        # Next.js framework configuration
+│   ├── tailwind.config.js    # Tailwind CSS framework configuration
+│   ├── src/                  # Frontend application source code
+│   │   ├── app/              # Next.js App Router for page-based routing and layouts
 │   │   │   ├── layout.tsx
 │   │   │   ├── page.tsx
-│   │   │   ├── reading/
-│   │   │   └── wiki/
-│   │   ├── components/      # Reusable UI components
-│   │   │   ├── ui/
-│   │   │   ├── reading/
-│   │   │   └── wiki/
-│   │   └── lib/            # Utilities and API clients
-│   ├── public/
-│   ├── Dockerfile
+│   │   │   ├── reading/      # Components/pages related to reading view
+│   │   │   └── wiki/         # Components/pages related to wiki view
+│   │   ├── components/       # Reusable UI components
+│   │   │   ├── ui/           # Generic UI components
+│   │   │   ├── reading/      # UI components specific to reading view
+│   │   │   └── wiki/         # UI components specific to wiki view
+│   │   └── lib/              # Utility functions and API client configurations
+│   ├── public/               # Static assets served directly by Next.js
+│   ├── Dockerfile            # Defines how to build the frontend Docker image
 │   └── README.md             # Frontend-specific documentation
 │
-├── database/
-│   ├── init.sql            # Initial database schema
-│   └── docker/
-│       └── Dockerfile      # Custom PostgreSQL with extensions
+├── database/                 # Database configuration and custom setups
+│   ├── init.sql            # SQL script for initial database schema setup
+│   └── docker/             # Docker configurations specific to the database
+│       └── Dockerfile      # Custom Dockerfile for PostgreSQL with extensions (e.g., pgvector)
 │
-└── scripts/
-    ├── dev-setup.sh        # Development environment setup script
-    └── prototype.py        # LLM pipeline testing script
+└── scripts/                  # Helper scripts for development and prototyping
+    ├── dev-setup.sh        # Script for setting up the development environment
+    └── prototype.py        # Script for testing LLM pipeline prototypes
 ```
 
 ## 🔧 Development Workflow

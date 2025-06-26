@@ -1,4 +1,4 @@
-# backend/src/utils/logging.py
+# backend/src/core/logging.py
 """
 Logging configuration
 """

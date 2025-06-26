@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from src.api.v1.router import api_router
 from src.config import settings
 from src.core.exceptions import ShuScribeException
-from src.utils.logging import setup_logging
+from src.core.logging import setup_logging
 
 
 # backend/src/main.py - Update lifespan

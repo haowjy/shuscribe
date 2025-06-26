@@ -1,4 +1,4 @@
-# backend/src/utils/encryption.py
+# backend/src/core/encryption.py
 """
 Encryption utilities for sensitive data (e.g., API keys)
 """

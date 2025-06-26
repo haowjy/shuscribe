@@ -23,7 +23,7 @@ from src.database.repositories.user import UserRepository
 # NEW: Import Pydantic models from their new schema locations
 from src.schemas.llm.models import LLMMessage, LLMResponse
 from src.schemas.llm.config import LLMCapability, HostedModelInstance, LLMProvider, AIModelFamily
-from src.utils.encryption import decrypt_api_key
+from src.core.encryption import decrypt_api_key
 
 
 logger = logging.getLogger(__name__)
