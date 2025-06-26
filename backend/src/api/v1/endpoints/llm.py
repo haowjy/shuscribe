@@ -6,11 +6,11 @@ from fastapi import APIRouter, Query
 from typing import List, Optional
 
 # Import your structured catalog data and Pydantic schemas for the API response
-from src.services.llm.llm_catalog import AI_MODEL_FAMILIES, LLM_PROVIDERS
-from src.schemas.llm import ( # NEW: Updated schemas
-    AIModelFamilySchema,
-    LLMProviderSchema,
-    HostedModelInstanceSchema
+from src.core.llm.catalog import AI_MODEL_FAMILIES, LLM_PROVIDERS
+from src.schemas.llm.config import ( # NEW: Updated schemas
+    AIModelFamily,
+    LLMProvider,
+    HostedModelInstance
 )
 
 
@@ -19,12 +19,12 @@ router = APIRouter()
 
 @router.get(
     "/families",
-    response_model=List[AIModelFamilySchema],
+    response_model=List[AIModelFamily],
     summary="Get all abstract AI model families and their capabilities",
     description="Returns a list of all defined AI model families (e.g., GPT-4o, Claude 3 Haiku) "
                 "along with their inherent capabilities (e.g., Thinking, Vision), independent of specific providers."
 )
-async def get_all_ai_model_families_api() -> List[AIModelFamilySchema]:
+async def get_all_ai_model_families_api() -> List[AIModelFamily]:
     """
     Returns the comprehensive list of all AI model families.
     """
@@ -32,13 +32,13 @@ async def get_all_ai_model_families_api() -> List[AIModelFamilySchema]:
 
 @router.get(
     "/providers",
-    response_model=List[LLMProviderSchema],
+    response_model=List[LLMProvider],
     summary="Get all LLM providers and their specific hosted model instances",
     description="Returns a list of all configured LLM providers, including details "
                 "about the exact model instances they host (e.g., 'gpt-4o' via OpenAI) "
                 "with associated metadata like pricing hints."
 )
-async def get_all_llm_providers_api() -> List[LLMProviderSchema]:
+async def get_all_llm_providers_api() -> List[LLMProvider]:
     """
     Returns a list of all configured LLM providers with their hosted model instances.
     """
@@ -46,7 +46,7 @@ async def get_all_llm_providers_api() -> List[LLMProviderSchema]:
 
 @router.get(
     "/models",
-    response_model=List[HostedModelInstanceSchema],
+    response_model=List[HostedModelInstance],
     summary="Get all hosted model instances",
     description="Returns a flat list of all concrete model instances (e.g., 'gpt-4o') "
                 "from all providers. Can be filtered by `provider_id`.",
@@ -55,7 +55,7 @@ async def get_all_hosted_models(
     provider_id: Optional[str] = Query(
         None, description="Filter models by a specific provider ID (e.g., 'openai')."
     ),
-) -> List[HostedModelInstanceSchema]:
+) -> List[HostedModelInstance]:
     """
     Returns a list of all hosted model instances across all providers.
     Can be filtered by provider.

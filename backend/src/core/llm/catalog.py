@@ -1,4 +1,3 @@
-# backend/src/services/llm/llm_catalog.py
 """
 Centralized, comprehensive catalog of abstract AI models, concrete hosted model instances,
 and LLM providers. This acts as the single source of truth for LLM configurations.
@@ -7,7 +6,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 # Import the new Pydantic models for LLM configuration
-from src.services.llm.base import (
+from src.schemas.llm.config import (
     AIModelFamily,
     HostedModelInstance,
     LLMProvider,
@@ -248,126 +247,76 @@ LLM_PROVIDERS: List[LLMProvider] = [
             ),
             HostedModelInstance(
                 model_family_id="gemini-2.5-flash-lite", model_name="gemini-2.5-flash-lite-preview-06-17", provider_id="google",
-                input_token_limit=1_048_576, output_token_limit=64_000,
-                input_cost_per_million_tokens=0.10, output_cost_per_million_tokens=0.40,
+                input_token_limit=1_048_576, output_token_limit=65_536,
+                input_cost_per_million_tokens=0.08, output_cost_per_million_tokens=2.50,
             ),
+            # Add other hosted models for Google
         ],
     ),
-    # Add other LLM providers here (e.g., Cohere, TogetherAI, Mistral, Azure, AWS Bedrock)
+    # Add other providers (e.g., Groq, Mistral, Cohere)
 ]
 
 
-# --- 3. Helper Dictionaries for Quick Lookups ---
-# These are generated once at startup for efficient access.
-AI_MODEL_FAMILIES_MAP: Dict[str, AIModelFamily] = {
+# --- 3. Utility Functions to Query the Catalog ---
+
+# Pre-computed lookups for faster access
+_model_families_by_id: Dict[str, AIModelFamily] = {
     family.family_id: family for family in AI_MODEL_FAMILIES
 }
-# {
-#     "gpt-4o": AIModelFamily(
-#         id="gpt-4o",
-#         display_name="GPT-4o",
-#         description="OpenAI's latest and most advanced flagship model...",
-#         capabilities=[LLMCapability.REASONING, LLMCapability.VISION, ...],
-#         typical_context_window=128000
-#     ),
-# }
-
-LLM_PROVIDERS_MAP: Dict[str, LLMProvider] = {
+_providers_by_id: Dict[str, LLMProvider] = {
     provider.provider_id: provider for provider in LLM_PROVIDERS
 }
-# {
-#     "openai": LLMProvider(
-#         id="openai",
-#         display_name="OpenAI",
-#         api_key_format_hint="sk-...",
-#         default_model_name="gpt-4o-mini",
-#         hosted_models=[
-#             HostedModelInstance(name="gpt-4o", model_family_id="gpt-4o", ...),
-#             HostedModelInstance(name="gpt-4o-mini", model_family_id="gpt-4o-mini", ...),
-#             # ... more hosted models from OpenAI ...
-#         ]
-#     ),
-#     # ... more LLMProvider entries ...
-# }
-
-HOSTED_MODELS_MAP: Dict[Tuple[str, str], HostedModelInstance] = {
-    (instance.provider_id, instance.model_name): instance
+_hosted_models_by_provider_and_name: Dict[Tuple[str, str], HostedModelInstance] = {
+    (provider.provider_id, model.model_name): model
     for provider in LLM_PROVIDERS
-    for instance in provider.hosted_models
+    for model in provider.hosted_models
 }
-
-# {
-#     ("openai", "gpt-4o"): HostedModelInstance(
-#         name="gpt-4o", model_family_id="gpt-4o", provider_id="openai",
-#         input_token_limit=128000, output_token_limit=4096,
-#         input_cost_per_million_tokens=5.00, output_cost_per_million_tokens=15.00,
-#         avg_latency_ms=300, custom_properties={}
-#     ),
-#     # ... more (provider_id, model_name) -> HostedModelInstance mappings ...
-# }
-
-# NEW MAP: Hosted instances grouped by AI Model Family ID
-HOSTED_INSTANCES_BY_FAMILY_MAP: Dict[str, List[HostedModelInstance]] = defaultdict(list)
+_hosted_models_by_family: Dict[str, List[HostedModelInstance]] = defaultdict(list)
 for provider in LLM_PROVIDERS:
-    for instance in provider.hosted_models:
-        HOSTED_INSTANCES_BY_FAMILY_MAP[instance.model_family_id].append(instance)
+    for model in provider.hosted_models:
+        _hosted_models_by_family[model.model_family_id].append(model)
 
-# {
-#     "gpt-4o": [
-#         HostedModelInstance(name="gpt-4o", model_family_id="gpt-4o", provider_id="openai", ...),
-#         # If 'gpt-4o' was also available via 'azure-openai', that instance would be here too.
-#     ],
-#     # ... more model_family_id -> List[HostedModelInstance] mappings ...
-# }
 
-# --- 4. Helper Functions for LLMService and API Endpoints ---
 def get_all_ai_model_families() -> List[AIModelFamily]:
-    """Returns a list of all abstract AI model families defined in the catalog."""
+    """Returns a list of all defined AI Model Families."""
     return AI_MODEL_FAMILIES
 
 def get_all_llm_providers() -> List[LLMProvider]:
-    """Returns a list of all LLM providers defined in the catalog, with their hosted instances."""
+    """Returns a list of all defined LLM Providers."""
     return LLM_PROVIDERS
 
 def get_hosted_models_for_provider(provider_id: str) -> List[HostedModelInstance]:
-    """Returns a list of hosted model instances offered by a specific provider."""
-    provider = LLM_PROVIDERS_MAP.get(provider_id)
-    if provider:
-        return provider.hosted_models
-    return []
+    """Returns all hosted model instances for a specific provider."""
+    provider = _providers_by_id.get(provider_id)
+    return provider.hosted_models if provider else []
 
 def get_hosted_model_instance(provider_id: str, model_name: str) -> Optional[HostedModelInstance]:
-    """Returns the HostedModelInstance for a specific provider and model name."""
-    return HOSTED_MODELS_MAP.get((provider_id, model_name))
+    """Retrieves a specific hosted model instance by its provider and name."""
+    return _hosted_models_by_provider_and_name.get((provider_id, model_name))
 
 def get_model_family_by_id(model_family_id: str) -> Optional[AIModelFamily]:
-    """Returns the AIModelFamily object for a given model family ID."""
-    return AI_MODEL_FAMILIES_MAP.get(model_family_id)
+    """Retrieves an AI Model Family by its unique ID."""
+    return _model_families_by_id.get(model_family_id)
 
 def get_capabilities_for_hosted_model(provider_id: str, model_name: str) -> List[LLMCapability]:
     """
-    Returns the capabilities of a specific hosted model instance by looking up its
-    AI Model Family.
+    Retrieves the list of capabilities for a specific hosted model by looking up its family.
     """
-    hosted_instance = get_hosted_model_instance(provider_id, model_name)
-    if hosted_instance:
-        model_family = get_model_family_by_id(hosted_instance.model_family_id)
-        if model_family:
-            return model_family.capabilities
-    return []
+    instance = get_hosted_model_instance(provider_id, model_name)
+    if not instance:
+        return []
+    
+    family = get_model_family_by_id(instance.model_family_id)
+    return family.capabilities if family else []
 
-# NEW HELPER: Get all hosted instances belonging to a specific model family
 def get_hosted_instances_for_family(model_family_id: str) -> List[HostedModelInstance]:
-    """Returns a list of all hosted model instances that belong to a specific AI Model Family."""
-    return HOSTED_INSTANCES_BY_FAMILY_MAP.get(model_family_id, [])
+    """Returns all hosted model instances that belong to a specific AI Model Family."""
+    return _hosted_models_by_family.get(model_family_id, [])
 
-# Helper for `validate_api_key` in LLMService, to pick a default test model
 def get_default_test_model_name_for_provider(provider_id: str) -> Optional[str]:
     """
-    Returns the name of the default model for a provider for testing purposes.
-    This uses the `default_model_name` specified in the LLMProvider config.
+    Gets a default model name for a provider, which can be used for API key validation.
+    Prefers the cheapest and fastest models.
     """
-    provider_config = LLM_PROVIDERS_MAP.get(provider_id)
-    if provider_config:
-        return provider_config.default_model_name
-    return None
+    provider = _providers_by_id.get(provider_id)
+    return provider.default_model_name if provider else None 

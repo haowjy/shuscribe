@@ -9,18 +9,20 @@ from uuid import UUID
 from portkey_ai import AsyncPortkey
 
 from src.config import settings
-# CHANGED: Import all LLM configuration details from the new llm_catalog module
-from src.services.llm.llm_catalog import (
+# CHANGED: Import all LLM configuration details from the new core catalog module
+from src.core.llm.catalog import (
     get_hosted_model_instance,
     get_capabilities_for_hosted_model,
     get_all_llm_providers, # For listing providers
     get_hosted_models_for_provider, # For getting models of a specific provider
-    get_default_test_model_name_for_provider # For validation endpoint
+    get_default_test_model_name_for_provider, # For validation endpoint
+    get_all_ai_model_families, # For getting all AI model families
 )
 from src.core.exceptions import LLMError, ValidationError
 from src.database.repositories.user import UserRepository
-# NEW: Ensure LLMCapability, LLMProvider, HostedModelInstance, AIModelFamily are imported if needed for type hints or specific methods
-from src.services.llm.base import LLMMessage, LLMResponse, LLMCapability, HostedModelInstance, LLMProvider, AIModelFamily
+# NEW: Import Pydantic models from their new schema locations
+from src.schemas.llm.models import LLMMessage, LLMResponse
+from src.schemas.llm.config import LLMCapability, HostedModelInstance, LLMProvider, AIModelFamily
 from src.utils.encryption import decrypt_api_key
 
 
@@ -236,8 +238,7 @@ class LLMService:
     
     def get_all_ai_model_families(self) -> List[AIModelFamily]:
         """Returns a list of all abstract AI model families defined in the catalog."""
-        from src.services.llm.llm_catalog import AI_MODEL_FAMILIES # Import directly here to avoid circularity if get_all_ai_model_families is called by llm_catalog
-        return AI_MODEL_FAMILIES
+        return get_all_ai_model_families()
 
     def get_capabilities_for_hosted_model(self, provider_id: str, model_name: str) -> List[LLMCapability]:
         """

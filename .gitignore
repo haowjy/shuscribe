@@ -11,13 +11,13 @@ Thumbs.db
 .classpath
 
 # VS Code specific (workspace settings are often personal)
-.vscode/settings.json
-.vscode/launch.json
-.vscode/tasks.json
-.vscode/extensions.json
-.vscode/cmake-kits.json
-.vscode/*.code-workspace # Ignore any generated multi-root workspace files in the root
-shuscribe.code-workspace # Specifically ignore your saved workspace file
+**/.vscode/settings.json
+**/.vscode/launch.json
+**/.vscode/tasks.json
+**/.vscode/extensions.json
+**/.vscode/cmake-kits.json
+**/.vscode/*.code-workspace # Ignore any generated multi-root workspace files in the root
+**/.vscode/shuscribe.code-workspace # Specifically ignore your saved workspace file
 
 # IntelliJ/PyCharm specific
 .idea/

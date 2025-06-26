@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__) # Added logger
 # Read the ENVIRONMENT variable directly from the .env file or system environment
 # This allows us to configure `extra` mode conditionally.
 _env_values = dotenv_values(".env") # Load .env file
-CURRENT_ENVIRONMENT = os.getenv("ENVIRONMENT", _env_values.get("ENVIRONMENT", "development")).lower()
+CURRENT_ENVIRONMENT = os.getenv("ENVIRONMENT", _env_values.get("ENVIRONMENT", "development"))
+if CURRENT_ENVIRONMENT is not None:
+    CURRENT_ENVIRONMENT = CURRENT_ENVIRONMENT.lower()
 
 # Set the `extra` mode based on the environment
 _extra_mode = "ignore" if CURRENT_ENVIRONMENT == "development" else "forbid"
