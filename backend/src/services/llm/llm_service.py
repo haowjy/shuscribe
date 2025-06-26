@@ -92,7 +92,7 @@ class LLMService:
                 raise ValidationError(f"No API key found for provider '{provider}' for user '{user_id}'. Please add it via settings.")
             
             # 2. Decrypt the key (only in memory, temporarily)
-            decrypted_key = decrypt_api_key(user_api_key_record.encrypted_api_key)
+            decrypted_key = decrypt_api_key(str(user_api_key_record.encrypted_api_key))
             
             # 3. Create fresh Portkey client for this request - pointing to self-hosted gateway
             portkey_client = AsyncPortkey(
@@ -100,20 +100,19 @@ class LLMService:
             )
             
             # 4. Configure request headers for Portkey to use the user's key
-            request_config = {
+            portkey_options: Dict[str, Any] = {
                 "provider": provider,
                 "Authorization": f"Bearer {decrypted_key}",
             }
             
             # Add optional configurations
             if trace_id:
-                request_config["trace_id"] = trace_id
+                portkey_options["trace_id"] = trace_id
+            
+            final_metadata = { "user_id": str(user_id), "shuscribe_version": "0.1.0" }
             if metadata:
-                request_config["metadata"] = {
-                    **metadata,
-                    "user_id": str(user_id),
-                    "shuscribe_version": "0.1.0"
-                }
+                final_metadata.update(metadata)
+            portkey_options["metadata"] = final_metadata
             
             # 5. Convert messages to OpenAI format (Portkey's standard for chat completions)
             openai_messages = [
@@ -124,19 +123,25 @@ class LLMService:
             # 6. Make the request through self-hosted Portkey
             logger.info(f"Making LLM request: provider={provider}, model={model}, user={user_id}, gateway={settings.PORTKEY_BASE_URL}")
             
-            response = await portkey_client.with_options(**request_config).chat.completions.create(
-                model=model, # Use the exact model name required by the provider
-                messages=openai_messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs
-            )
+            create_kwargs: Dict[str, Any] = {
+                "model": model,
+                "messages": openai_messages,
+                "temperature": temperature,
+                "stream": False,
+                **kwargs,
+            }
+            if max_tokens is not None:
+                create_kwargs["max_tokens"] = max_tokens
+
+            response = await portkey_client.with_options(
+                **portkey_options
+            ).chat.completions.create(**create_kwargs)
             
             # 7. Return standardized response
             return LLMResponse(
-                content=response.choices[0].message.content,
-                model=response.model,
-                usage=response.usage.dict() if response.usage else None,
+                content=response.choices[0].message.content, # type: ignore
+                model=response.model, # type: ignore
+                usage=response.usage.dict() if response.usage else None, # type: ignore
                 metadata={
                     "provider": provider,
                     "gateway": "self-hosted",
@@ -206,14 +211,15 @@ class LLMService:
                 model=test_model,
                 messages=test_messages,
                 max_tokens=5,
-                temperature=0.0
+                temperature=0.0,
+                stream=False,
             )
             
             return {
                 "valid": True,
                 "provider": provider,
                 "test_model": test_model,
-                "response_model": validation_response.model,
+                "response_model": validation_response.model, # type: ignore
                 "gateway": "self-hosted",
                 "message": "API key successfully validated."
             }
