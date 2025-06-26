@@ -54,7 +54,13 @@ To just run the database:
     uv sync
     ```
 
-4. Run the FastAPI server
+4. Run portkey gateway
+
+    ```bash
+    docker run --rm  -p 8787:8787 portkeyai/gateway:latest
+    ```
+
+5. Run the FastAPI server
 
     ```bash
     uvicorn main:app --reload

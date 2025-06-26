@@ -18,18 +18,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
@@ -51,20 +39,10 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
       - OPENAI_API_KEY=${OPENAI_API_KEY}
 
-  celery_worker:
-    build:
-      context: ./backend
-      dockerfile: ../docker/backend/Dockerfile
-    command: celery -A shuscribe.tasks.worker worker --loglevel=info
-    volumes:
-      - ./backend:/app
-    depends_on:
-      - backend
-      - redis
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/shuscribe
-      - REDIS_URL=redis://redis:6379/0
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+  portkey_gateway:
+    image: portkeyai/gateway:latest
+    ports:
+      - "8787:8787"
 
 volumes:
   postgres_data:

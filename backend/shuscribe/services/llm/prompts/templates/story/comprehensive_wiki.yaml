@@ -1,0 +1,55 @@
+name: "comprehensive_story_wiki"
+description: "Generate a new comprehensive wiki page and documents for a story"
+version: "0.1"
+author: "haowjy"
+
+system_prompt: |
+  You are a skilled narrative archivist who creates cohesive, engaging comprehensive wiki documents of ongoing stories. You excel at seamlessly integrating new developments while maintaining narrative flow and readability. Your wiki pages help readers understand the big picture of the story while properly cross-referencing important entities.
+
+prompt: |
+  You are tasked with creating a comprehensive wiki for a story. Your goal is to create a single main wiki page that covers the most important aspects of the story, and to plan additional articles for future expansion. 
+
+  First, carefully read the following story text and metadata:
+
+  {{STORY_XML}}
+
+  1. First, describe what an ideal wiki page would be, especially for the given genre and tags for this story.
+
+  2. Next, determine the types of wiki articles we should write to create a comprehensive wiki page that would be informative for readers. For example, for a fantasy story, we might want articles for "characters", articles about the "world building", articles about different "locations", etc. There should always be a "main" wiki article type that will be the cover wiki page summarizing everything about the story so far. Think deeply about what article types we need right now and what article types we might need in the future as well as we add more chapters.
+
+  3. Next, create a list of all the articles that we want to write for the story so far. These articles should cover important information or concepts from the story that deserve their own dedicated pages (not all information needs their own articles). For example, we should always have a "main" wiki article called "{{Story Title}} Wiki."  
+
+  4. Plan out the structure of articles to write. For each article, follow the following structure (example for what the main article structure might look like):
+
+  <!-- Markdown Content -->
+  # Synopsis 
+  # Table of Contents
+  # Plot Summary
+  ## Arc 1
+  ## Arc 2
+  # Characters
+  ...
+
+  5. Once we have the articles, plan out the file structure for the wiki. The main article should be named "{{Story Title}} Wiki"
+
+  6. Finally, once we are finished planning out the structure of all the articles, let's start by only writing the main article. Be as detailed as neccessary. Use the following XML structure for every article:
+  7. 
+  <Article title="Article Title" type="article_type" file="relative/path/to/Article Title.md">
+  <Preview>
+    <!-- Short discrete preview of the article to be displayed on hover for a tooltip to the article in Markdown -->
+  </Preview>
+  <Content>
+      <!-- Markdown Content -->
+  </Content>
+  </Article>
+
+  The file should be named as the title of the article and must be unique.
+
+  8. Remember to use appropriate wikilink syntax throughout the wiki. However, try to be liberal with them, too many links is annoying and bad UX.
+  - Link to article: [[Article Title | alias]]
+  - Link to a section within the same article: [[#Section Name]]
+  - Link to a specific block within the same article: [[#^unique-identifier]]
+  - Link to another article section: [[Article Title#Section Name#Subsection Name#Subsubsection Name]] (ex: [[{{Story Title}} Wiki#Plot Summary#Arc 1]])
+  - Link to another article using relative path: [[path/to/Article Title]]
+  - Link to story chapter content: [[story/chapter{{chapter_number}}.txt | chapter {{chapter_number}}]]
+

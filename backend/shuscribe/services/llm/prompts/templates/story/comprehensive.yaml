@@ -7,62 +7,66 @@ system_prompt: |
   You are a skilled narrative archivist who creates cohesive, engaging comprehensive wiki documents of ongoing stories. You excel at seamlessly integrating new developments while maintaining narrative flow and readability. Your wiki pages help readers understand the big picture of the story while properly cross-referencing important entities.
 
 prompt: |
-  # Task
-  Update the comprehensive wiki document by integrating new information from the latest chapter.
+  You are tasked with creating a comprehensive wiki for a story. Your goal is to create a wiki website that covers the most important aspects of the story. We will first be planning out the articles to write.
 
-  {% if story_metadata -%}
-  # Story Metadata
-  {{ story_metadata }}
-  {%- endif %}
-  
-  {%- if summary_so_far -%}
-  # Previous Comprehensive Wiki Document
-  {{ summary_so_far }}
-  {%- endif %}
+  First, carefully read the following story text:
 
-  {%- if recent_summaries -%}
-  ## Summary of Previous Chapters
-  {{ recent_summaries }}
-  {% endif %}
+  {{STORY_XML}}
 
-  # New Information from the Latest Chapter
-  
-  ## Latest Chapter
-  {{ current_chapter }}
-  
-  {% if chapter_summary -%}
-  ## Latest Chapter Summary
-  {{ chapter_summary }}
-  {%- endif %}
-  
-  {% raw %}
-  # Instructions
-  - Create a seamless, narrative wiki document that reads as a cohesive document
-  - Integrate new developments from the latest chapter naturally into the existing narrative
-  - Structure the summary with clear, hierarchical markdown headings
-  - Cross-reference key entities using wiki-link format: [[Entity's (main) identifier]]
-  - Focus on "what happened" rather than analysis or interpretation (don't mention entities that don't represent the plot or world)
-  - Balance detail with readability (aim for clarity without excessive length)
-  
-  ## Sections (Add as many sections as needed, reorganize as needed)
-  - Sections should be structured like a proper wiki document, the top-level sections should not be a list of entities or a chronology
-  - Don't be afraid to remove/merge/reorganize sections from the previous comprehensive wiki document if they are no longer relevant or everything is becoming too detailed
-  - These sections should not have any literary element stuff like themes, symbolism, etc - this is a wiki document, not a literary analysis
-  - Start with an overview or intro
-  
-  ## Rules
-  - Do NOT structure the summary as a chapter-by-chapter recap or a chronological list of events
-  - Seamlessly integrate new information as if the summary was written from scratch
-  - However, DO NOT FOCUS TOO MUCH ON THE NEW INFORMATION - the summary should still be a comprehensive wiki document
-  - Always use wiki-links for entity references: [[Entity identifier|alias]] (including in headers)
-  - Use Markdown formatting with ## for main sections and ### for subsections
-  - Stuff that doesn't seem to be very relevant to the story anymore should be removed or merged into other sections
-  
-  # Format
-  - Begin with '<|STARTWIKI|>'
-  - Use markdown formatting with proper section headings
-  - Include wiki-links to entities using the full identifier for an entity in the [[Entity identifier]] obsidian md format. You may use **1** alias for an entity in the wiki-link like this [[Entity identifier|alias]] if it makes sense to use the alias in the context of where the entity is being referenced.
-  - Make sure to use ALL of the identifier, including any clarifications (parentheses, prefixes, suffixes, character titles, clarifying adjectives, etc)
-  - Do not include any other aliases for an entity in the wiki-link
-  - End with '<|ENDWIKI|>'
-  {% endraw %}
+  1. First, describe what an ideal wiki page would be, especially for the given genre and tags for this story.
+
+  2. Next, determine the types of wiki articles we should write to create a comprehensive wiki page that would be informative for readers. For example, for a fantasy story, we might want articles for "characters", articles about the "world building", articles about different "locations", etc. There should always be a "main" wiki article type that will be the cover wiki page summarizing everything about the story so far. Think deeply about what article types we need right now and what article types we might need in the future as well as we add more chapters. Use the following structure to list the types of wiki articles:
+  ```xml
+  <ArticleTypes>
+  <ArticleType type="MAIN"/>
+  <!-- other article types, type in ALL CAPS -->
+  </ArticleTypes>
+  ```
+
+  3. Next, create a list of all the articles that we want to write for the story so far. These articles should cover important information or concepts from the story that deserve their own dedicated pages (not all information needs their own articles). For example, we should always have a "main" wiki article called "{{Story Title}} Wiki."
+
+  NOTES:
+  - some articles can be grouped under a "generic" article if they aren't important enough to be their own separate articles yet 
+
+  4. Plan out the structure of articles to write. For each article, follow the following structure (example for what the main article structure might look like):
+
+  <ArticlePlan title="{{Story Title}} Wiki" type="MAIN"> <!-- This article title should be unique -->
+  <RestrictChapters>
+  <Chapter file="story/chapter1.txt">
+  <!-- A list of all specific relevant chapters to pull from for the article. If we should include ALL the chapters, then do not include this section -->
+  </RestrictChapters>
+  <Tools>
+  <InternetSearch query="if we need to search the internet for any additional information to better ground the article, provide it here.">
+  </Tools>
+  <Structure>
+  <!-- Markdown Content (only the headers) -->
+  <!-- Example for main article: -->
+  # Table of Contents
+  # Synopsis
+  # Plot Summary
+  # Characters
+  ## Character 1
+  ## Character 2
+  ...
+  </Structure>
+  </ArticlePlan>
+
+  DO NOT write out the full content yet, we are just planning all the article structures right now. We don't have to plan out the ENTIRE structure, just the necessary top-level structures. Make sure ALL the articles have their top-level structures planned out for now. Specifics don't have to planned out not. However, note that the structure could change in the future either if we re-evaluate, or when we add more of the ongoing story.
+
+  NOTES:
+  - story metadata doesn't need to be contained in the wiki because those can be accessed discretely
+  - Keep in mind that section name should never have "/" in them because it will message up linking
+  - ensure all of these headers are unique to enable proper markdown linking
+
+  1. Once we have the articles, plan out the file structure for the wiki. (note that `story/*` are already taken for the original story contents) The main article should be named "{{Story Title}} Wiki"
+
+  2. List a set of articles that we should start writing immediately after this planning step. Ensure the format of this list is in XML. These articles will be written in parallel and will not have any context about each other while they are being written. After writing these articles, we will re-evaluating the plan and structure for more articles. 
+
+  ```xml
+  <Write>
+  <Article title="Title that corresponds to the article plan" file="wiki/path/to/planned/file/location"/>
+  </Write>
+  ```
+
+  AUTHOR NOTES:
+  {{AUTHOR_NOTES}}
