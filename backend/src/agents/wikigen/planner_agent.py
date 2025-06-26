@@ -61,7 +61,7 @@ class PlannerAgent:
             # Indent the content for readability in the logs
             logger.debug(f"\n{msg['content']}\n") # Use debug for the actual content
             logger.info("-" * 40) # Separator for messages
-        logger.info("--- LLM Messages (End) ---")
+        logger.info("--- LLM Messages (End) ---\n")
 
         # 6. Call the LLM Service (mocked for demo)
         mock_response_content = json.dumps({
