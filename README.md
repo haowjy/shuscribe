@@ -233,6 +233,15 @@ cd backend
 uv run python -m src.services.llm.llm_service # Or your specific testing script
 ```
 
+### Make sure the Portkey Gateway is running
+
+```bash
+docker run -d \
+  --name portkey-gateway \
+  -p 8787:8787 \
+  portkeyai/gateway:latest
+```
+
 ## 📡 API Endpoints
 
 ### Core

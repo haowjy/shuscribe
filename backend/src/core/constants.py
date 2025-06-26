@@ -43,18 +43,18 @@ POPULAR_LLM_PROVIDERS = [
     "vertex-ai"
 ]
 
-# Default configurations for popular providers
-DEFAULT_PROVIDER_CONFIGS = {
-    "openai": {
-        "default_model": "gpt-4.1-nano",
-        "models": ["gpt-4.1-nano", "gpt-4.1-mini", "gpt-4.1", "gpt-4o", "gpt-4o-mini", "o3", "o4-mini"]
-    },
-    "anthropic": {
-        "default_model": "claude-3-5-haiku-20241022",
-        "models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"]
-    },
-    "google": {
-        "default_model": "gemini-1.5-flash",
-        "models": ["gemini-2.0-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash"]
-    }
-}
+
+# These are simple lists for UI/validation, not tied to detailed model configs directly here.
+POPULAR_LLM_PROVIDERS = [
+    "openai",
+    "anthropic", 
+    "google",
+    # Add others that are commonly supported by Portkey and generally popular
+    "cohere",
+    "mistral",
+    "together",
+    "groq",
+    "azure-openai",
+    "bedrock",
+    "vertex-ai"
+]

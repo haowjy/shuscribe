@@ -77,7 +77,16 @@ Ensure your PostgreSQL container is running (via `docker-compose up -d` from the
 uv run alembic upgrade head
 ```
 
-### 5. Run the FastAPI Application
+### 5. Make sure the Portkey Gateway is running
+
+```bash
+docker run -d \
+  --name portkey-gateway \
+  -p 8787:8787 \
+  portkeyai/gateway:latest
+```
+
+### 6. Run the FastAPI Application
 
 Once dependencies are installed and core Docker services are running:
 
@@ -87,7 +96,7 @@ uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 The `--reload` flag enables hot-reloading for development.
 
-### 6. Access the API
+### 7. Access the API
 
 Once the server is running locally:
 
@@ -162,6 +171,11 @@ All API endpoints are prefixed with `/api/v1`.
 -   `GET /` - Root API endpoint
 -   `GET /health` - Global application health check
 -   `GET /api/v1/health/ping` - API v1 health ping
+
+### LLM Catalog & Configuration (UPDATED)
+-   `GET /api/v1/llm/families` - Get all abstract AI model families and their inherent capabilities.
+-   `GET /api/v1/llm/providers` - Get all LLM providers and their specific hosted model instances.
+-   `GET /api/v1/llm/providers/{provider_id}/models` - Get hosted model instances for a specific LLM provider.
 
 ### Stories
 -   `POST /api/v1/stories` - Upload a new story
