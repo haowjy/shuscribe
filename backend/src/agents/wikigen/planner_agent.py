@@ -1,9 +1,11 @@
 # backend/src/agents/wikigen/planner_agent.py
 
+import asyncio
 import json
 import logging
 from textwrap import dedent
 from typing import Dict, Any, List
+from uuid import UUID, uuid4
 
 # Import the globally available prompt_manager instance
 from src.prompts import prompt_manager
@@ -12,151 +14,147 @@ from src.prompts import prompt_manager
 from src.core.logging import setup_application_logging, configure_console_logging
 from src.config import settings # Assuming src.config exists and provides settings
 
+# Import the LLM service and related models
+from src.services.llm.llm_service import LLMService
+from src.schemas.llm.models import LLMMessage
+
 # Get a logger instance for this module.
 logger = logging.getLogger(__name__)
 
 class PlannerAgent:
-    def __init__(self, llm_service: Any):
+    def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
 
-    def create_plan(
+    async def create_plan(
         self,
         story_title: str,
-        story_content: str,
-        include_examples: bool = False
-    ) -> Dict[str, Any]:
-        """Creates a plan by fetching and rendering prompt data."""
+        story_xml: str,
+        # Parameters required for the real LLMService
+        user_id: UUID,
+        provider: str,
+        model: str,
+    ) -> str:
+        """
+        Creates a wiki structure plan by fetching and rendering the planning prompt.
+        Returns the raw XML plan as a string.
+        """
 
         # 1. Get a scoped "group" for the planning prompts.
         planning_prompts = prompt_manager.get_group("wikigen.planning")
 
-        # 2. Get raw data structures (messages, examples)
+        # 2. Get raw data structures (messages)
         raw_message_templates: List[Dict[str, str]] = planning_prompts.get("messages")
 
         # 3. Prepare dynamic data for rendering.
         render_kwargs: Dict[str, Any] = {
             "story_title": story_title,
-            "story_content": story_content,
+            "story_xml": story_xml,
         }
 
-        if include_examples:
-            examples_data = planning_prompts.get("examples")
-            render_kwargs["examples"] = list(examples_data.values())
-        else:
-            render_kwargs["examples"] = None
-
-        # 4. Render each message's content.
-        final_messages: List[Dict[str, str]] = []
+        # 4. Render each message's content and convert to LLMMessage objects
+        final_messages: List[LLMMessage] = []
         for msg_template in raw_message_templates:
             rendered_content = planning_prompts.render(
                 msg_template['content'],
                 **render_kwargs
             )
-            final_messages.append({"role": msg_template['role'], "content": rendered_content})
+            final_messages.append(LLMMessage(role=msg_template['role'], content=rendered_content))
 
         # 5. Log the Final Messages in a readable, detailed format.
-        logger.info("--- LLM Messages (Start) ---")
+        logger.debug("--- PlannerAgent: LLM Messages (Start) ---")
         for i, msg in enumerate(final_messages):
-            logger.info(f"  Message {i+1} [Role: {msg['role']}] ({len(msg['content'])} chars):")
-            # Indent the content for readability in the logs
-            logger.debug(f"\n{msg['content']}\n") # Use debug for the actual content
-            logger.info("-" * 40) # Separator for messages
-        logger.info("--- LLM Messages (End) ---\n")
+            logger.debug(f"  Message {i+1} [Role: {msg.role}] ({len(msg.content)} chars):")
+            logger.debug(f"\n{msg.content}\n") # Use debug for the actual content
+            logger.debug("-" * 40)
+        logger.debug("--- PlannerAgent: LLM Messages (End) ---\n")
 
-        # 6. Call the LLM Service (mocked for demo)
-        mock_response_content = json.dumps({
-            "title": "Mock Plan",
-            "arcs": ["mock_arc_1", "mock_arc_2"],
-            "entities": ["mock_entity_A", "mock_entity_B"]
-        })
-        try:
-            return json.loads(mock_response_content)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse mock LLM response as JSON: {e}")
-            return {"error": "Invalid JSON response from LLM", "raw_response": mock_response_content}
+        # 6. Call the actual LLM Service's async method
+        llm_response = await self.llm_service.chat_completion(
+            user_id=user_id,
+            provider=provider,
+            model=model,
+            messages=final_messages
+        )
+        raw_xml_plan = llm_response.content
+
+        return raw_xml_plan
 
 
 # === Testing/Demo Code ===
-if __name__ == "__main__":
-    # --- IMPORTANT: Configure logging specifically for this test run ---
-    # Configure the root logger for clean, message-only output on stdout.
-    configure_console_logging(
-        log_level="DEBUG", # Set level to DEBUG to see all prompt content
-        log_format='%(message)s' # Only print the message, no timestamp/name/level
-    )
-    # Then set up the application loggers (e.g., "shuscribe" logger) if needed
-    # This ensures your custom `shuscribe` logger (and other named ones)
-    # follow the desired debug levels.
-    setup_application_logging(log_level="DEBUG") 
+async def main():
+    """Asynchronous main function to run the agent test."""
+    # Configure logging for clear test output, ensuring DEBUG messages are visible.
+    configure_console_logging(log_level="DEBUG", log_format='%(message)s')
+    setup_application_logging(log_level="DEBUG")
 
-    # Mock LLM Service for testing
+    # Import Pydantic models needed for the mock, inside the async function
+    # to ensure they are loaded correctly in this test context.
+    from src.schemas.llm.models import LLMResponse
+
+    # This mock service simulates the interface of the real LLMService.
     class MockLLMService:
-        def call_llm(self, messages: List[Dict[str, str]]) -> str:
-            logger.info("\n=== Mock LLM Service Called ===")
-            logger.debug(f"Received {len(messages)} messages for LLM processing.")
-            return json.dumps({
-                "title": "The Enchanted Forest Adventure",
-                "arcs": [
-                    {
-                        "name": "The Discovery", 
-                        "summary": "Hero finds the magical artifact", 
-                        "start_page": 1, 
-                        "end_page": 10
-                    }
-                ],
-                "entities": [
-                    {"name": "Elara", "type": "PERSON", "importance": "Main protagonist"}
-                ]
-            })
+        async def chat_completion(
+            self,
+            user_id: UUID,
+            provider: str,
+            model: str,
+            messages: List[LLMMessage],
+            **kwargs,
+        ) -> LLMResponse:
+            """A mock of the real LLMService.chat_completion method."""
+            logger.info(
+                f"\n=== MockLLMService.chat_completion called ==="
+            )
+            logger.info(f"  UserID:   {user_id}")
+            logger.info(f"  Provider: {provider}")
+            logger.info(f"  Model:    {model}")
+            logger.info("=" * 50)
 
-    # Create agent instance
-    planner = PlannerAgent(llm_service=MockLLMService())
+            # Return a mock LLMResponse object
+            mock_content = dedent("""
+                <Article title="Example Plan" type="main" file="Example_Plan.md">
+                  <Preview>This is a mock response from the async mock service.</Preview>
+                  <Content>The actual plan would be generated by a real LLM.</Content>
+                </Article>
+            """).strip()
 
-    # Test story content
-    test_story = dedent("""
-    In the quiet village of Oakhaven, young Elara, a gifted but naive spellcaster,
-    discovered an ancient prophecy detailing the rise of the Shadow King in the
-    Forbidden Peaks. Alongside her childhood friend, Finn, a skilled tracker,
-    she embarked on a perilous journey through the Whispering Woods,
-    seeking the legendary Sunstone, the only artifact capable of defeating him.
-    """)
+            return LLMResponse(
+                content=mock_content,
+                model=model,
+                usage={"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+                metadata={"provider": provider, "user_id": str(user_id)}
+            )
+
+    # In a real application, the LLMService would be properly instantiated.
+    planner = PlannerAgent(llm_service=MockLLMService()) # type: ignore
+
+    # Test data
+    test_user_id = uuid4()
+    test_story_xml = dedent("""
+    <Story>
+        <Title>The Crystal of Aethermoor</Title>
+        <Genre>Fantasy</Genre>
+        <Content>
+            In the quiet village of Oakhaven, a prophecy was discovered.
+        </Content>
+    </Story>
+    """).strip()
 
     logger.info("=" * 60)
-    logger.info("TESTING PLANNER AGENT")
+    logger.info("Testing PlannerAgent with an Async Mock LLMService")
     logger.info("=" * 60)
 
-    # Test 1: Without examples
-    logger.info("\n🧪 TEST 1: Planning WITHOUT examples")
-    logger.info("-" * 40)
     try:
-        plan_result = planner.create_plan(
+        await planner.create_plan(
             story_title="The Crystal of Aethermoor",
-            story_content=test_story,
-            include_examples=False
+            story_xml=test_story_xml,
+            user_id=test_user_id,
+            provider="openai",
+            model="gpt-4o"
         )
-        logger.info("✅ SUCCESS: Plan generated without examples")
-        # Ensure JSON result is on a new line after the label
-        logger.info(f"📊 Result:\n{json.dumps(plan_result, indent=2)}")
-        
-    except Exception as e:
-        logger.error(f"❌ ERROR in Test 1: {e}", exc_info=True)
 
-    # Test 2: With examples
-    logger.info("\n🧪 TEST 2: Planning WITH examples")
-    logger.info("-" * 40)
-    try:
-        plan_result = planner.create_plan(
-            story_title="The Crystal of Aethermoor",
-            story_content=test_story,
-            include_examples=True
-        )
-        logger.info("✅ SUCCESS: Plan generated with examples")
-        # Ensure JSON result is on a new line after the label
-        logger.info(f"📊 Result:\n{json.dumps(plan_result, indent=2)}")
-        
     except Exception as e:
-        logger.error(f"❌ ERROR in Test 2: {e}", exc_info=True)
+        logger.error(f"❌ ERROR: {e}", exc_info=True)
 
-    logger.info("\n" + "=" * 60)
-    logger.info("TESTING COMPLETE")
-    logger.info("=" * 60)
+if __name__ == "__main__":
+    asyncio.run(main())

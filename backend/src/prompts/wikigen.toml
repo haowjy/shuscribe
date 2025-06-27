@@ -1,0 +1,104 @@
+# This file contains all prompts for the "Comprehensive Story Wiki" generation pipeline.
+
+[planning]
+name = "Comprehensive Story Wiki Planner"
+description = "Plans the structure of a new comprehensive wiki page and associated documents for a story."
+version = "0.1"
+author = "haowjy"
+
+[[planning.messages]]
+role = "system"
+content = """You are a skilled narrative archivist who creates cohesive, engaging comprehensive wiki documents of ongoing stories. You excel at seamlessly integrating new developments while maintaining narrative flow and readability. Your wiki pages help readers understand the big picture of the story while properly cross-referencing important entities."""
+
+[[planning.messages]]
+role = "user"
+content = """You are tasked with creating a comprehensive wiki for a story. Your goal is to create a single main wiki page that covers the most important aspects of the story, and to plan additional articles for future expansion.
+
+First, carefully read the following story text and metadata:
+
+{{ story_xml }}
+
+1. First, describe what an ideal wiki page would be, especially for the given genre and tags for this story.
+
+2. Next, determine the types of wiki articles we should write to create a comprehensive wiki page that would be informative for readers. For example, for a fantasy story, we might want articles for "characters", articles about the "world building", articles about different "locations", etc. There should always be a "main" wiki article type that will be the cover wiki page summarizing everything about the story so far. Think deeply about what article types we need right now and what article types we might need in the future as well as we add more chapters.
+
+3. Next, create a list of all the articles that we want to write for the story so far. These articles should cover important information or concepts from the story that deserve their own dedicated pages (not all information needs their own articles). For example, we should always have a "main" wiki article called "{{ story_title }} Wiki."
+
+4. Plan out the structure of articles to write. For each article, follow the following structure (example for what the main article structure might look like):
+
+<!-- Markdown Content -->
+# Synopsis
+# Table of Contents
+# Plot Summary
+## Arc 1
+## Arc 2
+# Characters
+...
+
+5. Once we have the articles, plan out the file structure for the wiki. The main article should be named "{{ story_title }} Wiki"
+
+6. Finally, once we are finished planning out the structure of all the articles, let's start by only writing the main article. Be as detailed as necessary. Use the following XML structure for every article:
+
+<Article title="Article Title" type="article_type" file="relative/path/to/Article Title.md">
+<Preview>
+  <!-- Short discrete preview of the article to be displayed on hover for a tooltip to the article in Markdown -->
+</Preview>
+<Content>
+    <!-- Markdown Content -->
+</Content>
+</Article>
+
+The file should be named as the title of the article and must be unique.
+
+7. Remember to use appropriate wikilink syntax throughout the wiki. However, try to be liberal with them, too many links is annoying and bad UX.
+- Link to article: [[Article Title | alias]]
+- Link to a section within the same article: [[#Section Name]]
+- Link to a specific block within the same article: [[#^unique-identifier]]
+- Link to another article section: [[Article Title#Section Name#Subsection Name#Subsubsection Name]] (ex: [[{{ story_title }} Wiki#Plot Summary#Arc 1]])
+- Link to another article using relative path: [[path/to/Article Title]]
+- Link to story chapter content: [[story/chapter{{ chapter_number }}.txt | chapter {{ chapter_number }}]]
+"""
+
+
+[generate_article]
+name = "Wiki Article Generator"
+description = "Generates the full Markdown content for a single wiki article based on a structured plan."
+version = "0.1"
+author = "haowjy"
+
+[[generate_article.messages]]
+role = "system"
+content = """You are an expert wiki author named ShuScribe. Your task is to write a detailed, engaging, and well-structured wiki article in Markdown format. You will be given the full context of the original story, the overall plan for the wiki, and a specific plan for the article you need to write. Adhere strictly to the provided content plan for the article's structure."""
+
+[[generate_article.messages]]
+role = "user"
+content = """Your task is to write the full content for the wiki article titled "{{ article_title }}".
+
+Follow these instructions carefully:
+1.  **Use the original story as your primary source of truth.** Do not invent new facts.
+2.  **Adhere to the provided content structure.** The headings and sections you must include are laid out in the "Article Content Structure" section.
+3.  **Write in clear, encyclopedic language.** The tone should be informative and neutral.
+4.  **Use Markdown for formatting.**
+5.  **Embed wikilinks naturally.** Use the `[[Article Title]]` or `[[Article Title|alias]]` syntax to link to other articles mentioned in the overall wiki plan. Only link to articles that are part of the provided plan.
+
+---
+**Original Story Content:**
+{{ story_content }}
+---
+**Overall Wiki Plan (for context on what other articles exist for linking):**
+{{ overall_wiki_plan }}
+---
+**Your Specific Task: Write the article based on this plan:**
+
+**Article Title:** {{ article_title }}
+**Article Type:** {{ article_type }}
+**Article File Path:** {{ article_file }}
+
+**Article Content Structure (your blueprint):**
+```markdown
+{{ article_content_structure }}
+```
+---
+
+Now, please provide the complete and final Markdown content for the "{{ article_title }}" article.
+""" 
