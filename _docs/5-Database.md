@@ -72,12 +72,17 @@ This schema applies to the Supabase deployment and reflects the current database
 ```
 ┌──────────────┐      ┌────────────────┐      ┌──────────┐      ┌───────────┐
 │    users     │◀────┬│ user_api_keys  │      │ stories  │◀────┬│ chapters  │
-└──────────────┘    │ └────────────────┘      └──────────┘     │└───────────┘
-      ▲             │                           ▲            │
-      │             │                           │            │
-┌─────┴────────┐    │                      ┌────┴────────────┴──┐
-│ user_progress│────┘                      │   wiki_articles    │
-└──────────────┘                           └────────────────────┘
+└──────────────┘    │ └────────────────┘      └─────┬────┘     │└─────┬─────┘
+      ▲             │                               │          │      │
+      │             │                               ▼          │      ▼
+┌─────┴────────┐    │                      ┌─────────────┐     │ ┌─────────────────┐
+│ user_progress│────┘                      │ story_arcs  │◀────┘ │enhanced_chapters│
+└──────────────┘                           └──────┬──────┘       └─────────────────┘
+                                                  │
+                                                  ▼
+                                           ┌─────────────────┐
+                                           │  wiki_articles  │
+                                           └─────────────────┘
                                                  ▲      │
                                                  └──────┘ (Self-referencing via Wikilinks)
 ```
@@ -139,30 +144,74 @@ Stores the raw text content for each chapter of a story.
 | `raw_content` | `TEXT` | The full, original text of the chapter. |
 | `created_at` | `TIMESTAMPTZ` | Timestamp of chapter creation. |
 
-#### 5.5. `wiki_articles`
+#### 5.5. `story_arcs`
+Tracks the arc boundaries and metadata for each story.
+
+| Column Name | Data Type | Description |
+| :--- | :--- | :--- |
+| `id` | `UUID` | **Primary Key.** |
+| `story_id` | `UUID` | **Foreign Key** to `stories.id`. |
+| `arc_number` | `INTEGER` | Sequential arc number (1, 2, 3...). |
+| `title` | `TEXT` | Arc title (e.g., "The Awakening"). |
+| `start_chapter` | `INTEGER` | First chapter number in this arc. |
+| `end_chapter` | `INTEGER` | Last chapter number in this arc. |
+| `summary` | `TEXT` | Summary of the arc's narrative content. |
+| `key_events` | `JSONB` | Important plot points and developments in this arc. |
+| `token_count` | `INTEGER` | Approximate token count for the arc content. |
+| `processing_status` | `TEXT` | Arc processing status (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`). |
+| `created_at` | `TIMESTAMPTZ` | Timestamp of arc creation. |
+| `updated_at` | `TIMESTAMPTZ` | Timestamp of last arc update. |
+
+#### 5.6. `wiki_articles`
 The core table for the generated wiki. Each row is a single, self-contained wiki page.
 
 | Column Name | Data Type | Description |
 | :--- | :--- | :--- |
 | `id` | `UUID` | **Primary Key.** |
 | `story_id` | `UUID` | **Foreign Key** to `stories.id`. |
+| `arc_id` | `UUID` | **Foreign Key** to `story_arcs.id`. The arc this article version belongs to. |
 | `title` | `TEXT` | The human-readable title of the article (e.g., "Dr. Aris"). This is used for `[[Wikilinks]]`. |
 | `slug` | `TEXT` | A unique, URL-friendly identifier (e.g., "dr-aris"). **Unique per `story_id`**. |
+| `article_type` | `TEXT` | Type of article (`main`, `character`, `location`, `concept`, `event`). |
 | `content` | `TEXT` | The full article body in **Markdown format**, containing `[[Wikilinks]]` to other articles. |
+| `preview` | `TEXT` | Short preview text for hover tooltips and quick reference. |
 | `metadata` | `JSONB` | Structured data about the entity (e.g., `{"type": "Character", "significance": "Major", "aliases": ["The Doctor"]}`). |
 | `embedding` | `vector(1536)` | **(Using `pgvector` extension)**. Vector embedding of the article's content for semantic search. |
 | `created_at` | `TIMESTAMPTZ` | Timestamp of the article's first generation. |
 | `updated_at` | `TIMESTAMPTZ` | Timestamp of the article's last update. |
 
-#### 5.6. `user_progress`
-Tracks how far each user has read in each story, enabling spoiler prevention.
+**Note:** The `arc_id` enables spoiler prevention by creating separate article versions for each arc.
+
+#### 5.7. `user_progress`
+Tracks how far each user has read in each story, enabling spoiler prevention with arc-based wiki access.
 
 | Column Name | Data Type | Description |
 | :--- | :--- | :--- |
 | `user_id` | `UUID` | **Composite Primary Key, Foreign Key** to `users.id`. |
 | `story_id` | `UUID` | **Composite Primary Key, Foreign Key** to `stories.id`. |
 | `last_read_chapter` | `INTEGER` | The number of the last chapter the user has completed. |
+| `accessible_arc_id` | `UUID` | **Foreign Key** to `story_arcs.id`. The highest arc the user can safely access. |
 | `updated_at` | `TIMESTAMPTZ` | Timestamp of the last progress update. |
+
+**Spoiler Prevention Logic:**
+- Users can only access wiki articles where `arc_id <= accessible_arc_id`
+- `accessible_arc_id` is updated based on `last_read_chapter` and arc boundaries
+- This ensures readers only see wiki content up to their current progress
+
+#### 5.8. `enhanced_chapters`
+Stores chapter content enhanced with wiki-style backlinks.
+
+| Column Name | Data Type | Description |
+| :--- | :--- | :--- |
+| `id` | `UUID` | **Primary Key.** |
+| `chapter_id` | `UUID` | **Foreign Key** to `chapters.id`. |
+| `arc_id` | `UUID` | **Foreign Key** to `story_arcs.id`. The arc this enhanced version belongs to. |
+| `enhanced_content` | `TEXT` | Chapter content with `[[WikiLinks]]` added by ChapterBacklinker agent. |
+| `link_metadata` | `JSONB` | Metadata about the links added (positions, target articles, context). |
+| `created_at` | `TIMESTAMPTZ` | Timestamp of enhanced chapter creation. |
+| `updated_at` | `TIMESTAMPTZ` | Timestamp of last enhancement update. |
+
+**Note:** Multiple enhanced versions per chapter enable arc-specific linking that avoids spoilers.
 
 ---
 
@@ -187,17 +236,39 @@ class InMemoryUserRepository:
 - **Consistent:** Same data models and relationships as persistent storage
 - **Optional Persistence:** Can export/import data to/from JSON files for continuity
 
-### 7. Key Relationships and Data Flow
+### 7. Arc-Based Data Architecture Benefits
 
-#### 7.1 Web Deployment (Supabase)
+#### 7.1 Spoiler Prevention Through Data Design
+*   **Arc-Specific Articles:** Each `wiki_article` is tied to a specific `arc_id`, enabling progressive disclosure
+*   **Enhanced Chapter Versions:** Multiple `enhanced_chapters` per original chapter with arc-appropriate linking
+*   **User Progress Tracking:** `accessible_arc_id` in `user_progress` determines safe wiki access level
+*   **Query Filtering:** Simple `WHERE arc_id <= user.accessible_arc_id` prevents spoiler access
+
+#### 7.2 Incremental Processing Support
+*   **Arc Boundaries:** `story_arcs` table tracks processing units and their status
+*   **Versioned Content:** Wiki articles can be updated arc-by-arc without affecting previous versions
+*   **Processing State:** Each arc maintains independent processing status for robust error handling
+*   **Content Evolution:** Character development and story progression tracked across arc versions
+
+#### 7.3 Scalability and Performance
+*   **Parallel Processing:** Different arcs can be processed concurrently (future enhancement)
+*   **Efficient Queries:** Arc-based filtering reduces dataset size for user queries
+*   **Caching Friendly:** Arc-specific content enables effective caching strategies
+*   **Storage Optimization:** Only current and accessible arcs need to be loaded for users
+
+### 8. Key Relationships and Data Flow
+
+#### 8.1 Web Deployment (Supabase)
 *   **User and Keys:** A `user` has a `subscription_tier`. For `free_byok` users, encrypted API keys are stored in `user_api_keys` table.
-*   **Processing Logic:** Background workers query Supabase for user keys, decrypt them in memory, and use them for LLM calls.
-*   **Progress Tracking:** User reading progress is persistently tracked for spoiler prevention.
+*   **Arc Processing:** Background workers process stories arc-by-arc, updating `story_arcs` and generating `wiki_articles`
+*   **Progress Tracking:** User reading progress determines `accessible_arc_id` for spoiler-free wiki access
+*   **Enhanced Reading:** `enhanced_chapters` provide wiki-linked reading experience per arc
 
-#### 7.2 Local Deployment (In-Memory)
+#### 8.2 Local Deployment (In-Memory)
 *   **No User Accounts:** Direct API usage without user registration
 *   **Temporary Keys:** API keys managed in memory only during processing
-*   **Immediate Processing:** Stories processed synchronously without background tasks
+*   **Arc-Based Processing:** Same arc logic applied to in-memory data structures
+*   **File Export:** Arc-specific wikis can be exported to file system for persistence
 *   **Optional Export:** Generated wikis can be exported to files
 
 ### 8. Configuration and Switching

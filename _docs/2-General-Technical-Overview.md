@@ -117,14 +117,15 @@ The system supports two primary deployment modes with shared core logic:
 *   **Security Framework:** Encryption utilities and basic security infrastructure
 
 #### 🔄 In Development
-*   **Service Layer:** Business logic services (story, wiki, progress) - structure implemented, logic pending
-*   **LLM Pipeline:** Story processing and wiki generation algorithms
+*   **Agent-Based Pipeline:** 5-agent architecture for comprehensive wiki generation
+*   **Arc-Based Processing:** Story segmentation with spoiler prevention
+*   **Web Search Integration:** Enhanced article writing with external research
 *   **Background Processing:** Task queue and worker implementation for web deployment
 
 #### ❌ Planned
 *   **Frontend UI:** Next.js web interface
 *   **CLI Tools:** Command-line interface for local usage
-*   **Advanced Pipeline:** Complete wiki generation with entity extraction and linking
+*   **Chapter Backlinking:** Bidirectional wiki-chapter link generation
 *   **Authentication:** Full user authentication and authorization system
 
 ### 5. Key Workflow: Flexible BYOK Model
@@ -157,7 +158,50 @@ The system supports two main workflows depending on deployment mode:
 3. LLM calls made using provided API key
 4. Results returned directly or exported to files
 
-### 6. Technology Stack
+### 6. Agent-Based Processing Architecture
+
+ShuScribe's core innovation is its specialized agent architecture that handles different aspects of wiki generation:
+
+#### 6.1 Agent Hierarchy
+
+```python
+WikiGenOrchestrator
+├── ArcSplitterAgent      # Story structure analysis
+├── GeneralSummarizerAgent # Content summarization utility
+├── WikiPlannerAgent      # Wiki structure planning (fresh/update modes)
+├── ArticleWriterAgent    # Content generation (write/update modes)  
+└── ChapterBacklinkerAgent # Bidirectional chapter-wiki linking
+```
+
+#### 6.2 Arc-Based Processing Philosophy
+
+**Traditional Approach Problems:**
+- Entire stories processed at once (context limits)
+- No spoiler prevention for readers
+- Impossible to update when new chapters added
+- Overwhelming complexity for long works
+
+**ShuScribe's Solution:**
+- Stories split into narrative arcs (20k-100k tokens each)
+- Arc-specific wiki archives prevent spoilers
+- Incremental processing enables story updates
+- Manageable complexity with specialized agents
+
+#### 6.3 Spoiler Prevention System
+
+```
+Reader Progress Tracking:
+├── arc_1_wiki/    # Safe for readers through Chapter 10
+├── arc_2_wiki/    # Safe for readers through Chapter 20
+└── arc_3_wiki/    # Safe for readers through Chapter 30
+
+Character Development Timeline:
+├── Arc 1: Initial characterization
+├── Arc 2: Development + Arc 1 info  
+└── Arc 3: Full development + Arc 1-2 info
+```
+
+### 7. Technology Stack
 
 #### Backend Core
 *   **Framework:** FastAPI (Python 3.12+)
@@ -165,18 +209,27 @@ The system supports two main workflows depending on deployment mode:
 *   **Configuration:** Pydantic Settings with environment variable support
 *   **Validation:** Pydantic schemas for all data models
 
+#### Agent Architecture
+*   **Orchestration:** Centralized agent coordination via WikiGenOrchestrator
+*   **Prompt Management:** TOML-based prompt configuration system
+*   **LLM Integration:** Unified interface supporting multiple providers
+*   **Web Search:** Integrated research capabilities for cultural references
+
 #### Data Storage
 *   **Web Mode:** Supabase (PostgreSQL + Auth + Real-time)
 *   **Local Mode:** In-memory Python dictionaries with persistence options
 *   **Repository Pattern:** Abstract interfaces enabling seamless switching
+*   **Archive System:** Arc-based wiki storage with spoiler prevention
 
 #### External Integrations
 *   **LLM Providers:** Support for OpenAI, Anthropic, Google, and others
 *   **Gateway:** Self-hosted Portkey Gateway for unified LLM access
+*   **Web Search APIs:** For research and reference enhancement
 *   **Authentication:** Supabase Auth (web mode only)
 
 #### Development & Deployment
 *   **Containerization:** Docker support for consistent deployment
 *   **Environment Management:** Flexible configuration for different deployment scenarios
 *   **Testing:** Pytest framework with async support
+*   **Agent Testing:** Specialized testing for individual agent functionality
 

@@ -101,4 +101,55 @@ Follow these instructions carefully:
 ---
 
 Now, please provide the complete and final Markdown content for the "{{ article_title }}" article.
-""" 
+"""
+
+
+[arc_splitting]
+name = "Story Arc Splitter"
+description = "Analyzes a story and divides it into logical narrative arcs for wiki generation."
+version = "0.1"
+author = "haowjy"
+
+[[arc_splitting.messages]]
+role = "system"
+content = """You are a narrative structure analyst who specializes in identifying logical story arcs within longer works. Your job is to divide stories into manageable, coherent arcs that represent complete narrative segments with clear beginnings, developments, and conclusions (or natural stopping points).
+
+Each arc should:
+- Contain a meaningful narrative progression
+- Have 20,000-100,000 tokens (roughly 15-75k words) when possible
+- End at natural story breaks (conclusion of major events, cliffhangers, etc.)
+- Be substantial enough to warrant its own wiki generation
+
+For stories under 20,000 tokens, create a single arc covering the entire story."""
+
+[[arc_splitting.messages]]
+role = "user"
+content = """Analyze the following story and divide it into logical narrative arcs.
+
+Story Title: {{ story_title }}
+Total Chapters: {{ total_chapters }}
+Story Content:
+{{ story_content }}
+
+Please provide your analysis in the following XML format:
+
+<ArcAnalysis>
+<StoryStats>
+  <TotalTokens>approximate_token_count</TotalTokens>
+  <RecommendedArcs>number_of_arcs</RecommendedArcs>
+  <ArcStrategy>brief_explanation_of_your_approach</ArcStrategy>
+</StoryStats>
+
+<Arcs>
+  <Arc id="1">
+    <Title>Arc Name/Description</Title>
+    <StartChapter>1</StartChapter>
+    <EndChapter>10</EndChapter>
+    <Summary>Brief summary of this arc's narrative content and why it forms a cohesive unit</Summary>
+    <KeyEvents>Major plot points, character developments, or story elements in this arc</KeyEvents>
+  </Arc>
+  <!-- Repeat for each arc -->
+</Arcs>
+</ArcAnalysis>
+
+If the story is too short for multiple arcs, create a single arc covering the entire story.""" 
