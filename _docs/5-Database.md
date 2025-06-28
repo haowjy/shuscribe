@@ -9,9 +9,10 @@ The architecture is designed to support:
 *   **Multi-tenancy:** Cleanly separating data for different users and stories (web deployment).
 *   **Hybrid API Key Model (BYOK):** Securely storing user-provided API keys in persistent storage (web) or managing them in-memory (local).
 *   **Content Versioning:** Storing raw chapter content allows for easy reprocessing.
-*   **Structured Wiki Data:** Modeling the wiki as a collection of interlinked articles.
-*   **Spoiler Prevention:** Tracking user progress is a first-class concern (web deployment).
+*   **Structured Wiki Data:** Modeling the wiki as a collection of versioned article snapshots.
+*   **Spoiler Prevention:** Chapter-based article versioning prevents spoilers without user progress tracking.
 *   **Local Development:** Supporting immediate local usage without requiring database setup.
+*   **Shared Universe Support:** Articles can be referenced across multiple stories with story-specific versions.
 
 ### 2. Dual Storage Architecture
 
@@ -75,16 +76,27 @@ This schema applies to the Supabase deployment and reflects the current database
 └──────────────┘    │ └────────────────┘      └─────┬────┘     │└─────┬─────┘
       ▲             │                               │          │      │
       │             │                               ▼          │      ▼
-┌─────┴────────┐    │                      ┌─────────────┐     │ ┌─────────────────┐
-│ user_progress│────┘                      │ story_arcs  │◀────┘ │enhanced_chapters│
-└──────────────┘                           └──────┬──────┘       └─────────────────┘
-                                                  │
-                                                  ▼
-                                           ┌─────────────────┐
-                                           │  wiki_articles  │
-                                           └─────────────────┘
-                                                 ▲      │
-                                                 └──────┘ (Self-referencing via Wikilinks)
+      │             │                      ┌─────────────┐     │ ┌─────────────────┐
+      │             │                      │ story_arcs  │◀────┘ │enhanced_chapters│
+      │             │                      └─────────────┘       └─────────────────┘
+      │             │                               │
+      │             │                               ▼
+      │             │                      ┌─────────────┐      ┌─────────────────┐
+      │             │                      │ wiki_pages  │      │    articles     │
+      │             │                      └──────┬──────┘      └─────┬───────────┘
+      │             │                             │                   │
+      │             │                             ▼                   ▼
+      │             │                   ┌───────────────────┐ ┌──────────────────┐
+      └─────────────┼───────────────────│ wiki_page_article │ │ article_snapshots│
+                    │                   │      _links       │ └─────┬────────────┘
+                    │                   └───────────────────┘       │
+                    │                             ▲                 │
+                    │                             └─────────────────┘
+                    │
+                    ▼
+           ┌─────────────────────┐
+           │ article_story_assoc │
+           └─────────────────────┘
 ```
 
 ---
@@ -162,43 +174,86 @@ Tracks the arc boundaries and metadata for each story.
 | `created_at` | `TIMESTAMPTZ` | Timestamp of arc creation. |
 | `updated_at` | `TIMESTAMPTZ` | Timestamp of last arc update. |
 
-#### 5.6. `wiki_articles`
-The core table for the generated wiki. Each row is a single, self-contained wiki page.
+#### 5.6. `wiki_pages`
+Collections of article snapshots at specific spoiler-safety levels for a story.
 
 | Column Name | Data Type | Description |
 | :--- | :--- | :--- |
 | `id` | `UUID` | **Primary Key.** |
 | `story_id` | `UUID` | **Foreign Key** to `stories.id`. |
-| `arc_id` | `UUID` | **Foreign Key** to `story_arcs.id`. The arc this article version belongs to. |
-| `title` | `TEXT` | The human-readable title of the article (e.g., "Dr. Aris"). This is used for `[[Wikilinks]]`. |
-| `slug` | `TEXT` | A unique, URL-friendly identifier (e.g., "dr-aris"). **Unique per `story_id`**. |
-| `article_type` | `TEXT` | Type of article (`main`, `character`, `location`, `concept`, `event`). |
-| `content` | `TEXT` | The full article body in **Markdown format**, containing `[[Wikilinks]]` to other articles. |
-| `preview` | `TEXT` | Short preview text for hover tooltips and quick reference. |
-| `metadata` | `JSONB` | Structured data about the entity (e.g., `{"type": "Character", "significance": "Major", "aliases": ["The Doctor"]}`). |
-| `embedding` | `vector(1536)` | **(Using `pgvector` extension)**. Vector embedding of the article's content for semantic search. |
-| `created_at` | `TIMESTAMPTZ` | Timestamp of the article's first generation. |
-| `updated_at` | `TIMESTAMPTZ` | Timestamp of the article's last update. |
+| `title` | `TEXT` | Display title for the wiki page (e.g., "Early Story Wiki"). |
+| `description` | `TEXT` | Description of the wiki page contents and safety level. |
+| `safe_through_chapter` | `INTEGER` | Maximum chapter number safe to read without spoilers. |
+| `is_public` | `BOOLEAN` | Whether this wiki page is publicly accessible. |
+| `creator_id` | `UUID` | **Foreign Key** to `users.id`. The user who created this wiki page. |
+| `created_at` | `TIMESTAMPTZ` | Timestamp of wiki page creation. |
+| `updated_at` | `TIMESTAMPTZ` | Timestamp of last wiki page update. |
 
-**Note:** The `arc_id` enables spoiler prevention by creating separate article versions for each arc.
-
-#### 5.7. `user_progress`
-Tracks how far each user has read in each story, enabling spoiler prevention with arc-based wiki access.
+#### 5.7. `articles`
+Base article entities that can be shared across stories (characters, locations, concepts).
 
 | Column Name | Data Type | Description |
 | :--- | :--- | :--- |
-| `user_id` | `UUID` | **Composite Primary Key, Foreign Key** to `users.id`. |
-| `story_id` | `UUID` | **Composite Primary Key, Foreign Key** to `stories.id`. |
-| `last_read_chapter` | `INTEGER` | The number of the last chapter the user has completed. |
-| `accessible_arc_id` | `UUID` | **Foreign Key** to `story_arcs.id`. The highest arc the user can safely access. |
-| `updated_at` | `TIMESTAMPTZ` | Timestamp of the last progress update. |
+| `id` | `UUID` | **Primary Key.** |
+| `title` | `TEXT` | The human-readable title of the article (e.g., "Dr. Aris"). |
+| `slug` | `TEXT` | A unique, URL-friendly identifier (e.g., "dr-aris"). **Globally unique**. |
+| `article_type` | `TEXT` | Type of article (`character`, `location`, `concept`, `event`, `other`). |
+| `canonical_name` | `TEXT` | The canonical name used for references and linking. |
+| `creator_id` | `UUID` | **Foreign Key** to `users.id`. The user who created this article. |
+| `metadata` | `JSONB` | Structured data about the entity (e.g., tags, aliases, categories). |
+| `created_at` | `TIMESTAMPTZ` | Timestamp of the article's creation. |
+| `updated_at` | `TIMESTAMPTZ` | Timestamp of the article's last update. |
+
+#### 5.8. `article_snapshots`
+Versioned content for articles tied to specific stories and spoiler-safety levels.
+
+| Column Name | Data Type | Description |
+| :--- | :--- | :--- |
+| `id` | `UUID` | **Primary Key.** |
+| `article_id` | `UUID` | **Foreign Key** to `articles.id`. The base article this is a version of. |
+| `content` | `TEXT` | The full article content in **Markdown format** with `[[Wikilinks]]`. |
+| `preview` | `TEXT` | Short preview text for hover tooltips and quick reference. |
+| `last_safe_chapter` | `INTEGER` | Last chapter number safe to read without spoilers. |
+| `source_story_id` | `UUID` | **Foreign Key** to `stories.id`. The story that generated this version. |
+| `version_number` | `INTEGER` | Version number within the source story (1, 2, 3...). |
+| `parent_snapshot_id` | `UUID` | **Foreign Key** to `article_snapshots.id`. Previous version for history tracking. |
+| `embedding` | `vector(1536)` | **(Using `pgvector` extension)**. Vector embedding for semantic search. |
+| `created_at` | `TIMESTAMPTZ` | Timestamp of snapshot creation. |
+| `updated_at` | `TIMESTAMPTZ` | Timestamp of snapshot update. |
+
+**Note:** Article snapshots enable spoiler prevention by creating story-specific versions at different safety levels.
+
+#### 5.9. `wiki_page_article_links`
+Links wiki pages to specific article snapshots with display metadata.
+
+| Column Name | Data Type | Description |
+| :--- | :--- | :--- |
+| `id` | `UUID` | **Primary Key.** |
+| `wiki_page_id` | `UUID` | **Foreign Key** to `wiki_pages.id`. |
+| `article_snapshot_id` | `UUID` | **Foreign Key** to `article_snapshots.id`. |
+| `display_order` | `INTEGER` | Order in which articles appear on the wiki page. |
+| `is_featured` | `BOOLEAN` | Whether this article is featured prominently on the page. |
+| `created_at` | `TIMESTAMPTZ` | Timestamp of link creation. |
+
+#### 5.10. `article_story_associations`
+Tracks which articles are referenced by which stories for cross-story relationships.
+
+| Column Name | Data Type | Description |
+| :--- | :--- | :--- |
+| `id` | `UUID` | **Primary Key.** |
+| `article_id` | `UUID` | **Foreign Key** to `articles.id`. |
+| `story_id` | `UUID` | **Foreign Key** to `stories.id`. |
+| `association_type` | `TEXT` | Type of association (`referenced`, `originated`, `shared_universe`). |
+| `context_metadata` | `JSONB` | Additional context about how the article relates to the story. |
+| `created_at` | `TIMESTAMPTZ` | Timestamp of association creation. |
 
 **Spoiler Prevention Logic:**
-- Users can only access wiki articles where `arc_id <= accessible_arc_id`
-- `accessible_arc_id` is updated based on `last_read_chapter` and arc boundaries
-- This ensures readers only see wiki content up to their current progress
+- Spoiler prevention is handled through chapter-based article snapshots
+- Frontend applications track user reading progress locally
+- Wiki pages are filtered by `safe_through_chapter` on the client side
+- This ensures readers only see wiki content appropriate for their progress
 
-#### 5.8. `enhanced_chapters`
+#### 5.11. `enhanced_chapters`
 Stores chapter content enhanced with wiki-style backlinks.
 
 | Column Name | Data Type | Description |
@@ -236,40 +291,48 @@ class InMemoryUserRepository:
 - **Consistent:** Same data models and relationships as persistent storage
 - **Optional Persistence:** Can export/import data to/from JSON files for continuity
 
-### 7. Arc-Based Data Architecture Benefits
+### 7. Chapter-Based Article Versioning Benefits
 
-#### 7.1 Spoiler Prevention Through Data Design
-*   **Arc-Specific Articles:** Each `wiki_article` is tied to a specific `arc_id`, enabling progressive disclosure
-*   **Enhanced Chapter Versions:** Multiple `enhanced_chapters` per original chapter with arc-appropriate linking
-*   **User Progress Tracking:** `accessible_arc_id` in `user_progress` determines safe wiki access level
-*   **Query Filtering:** Simple `WHERE arc_id <= user.accessible_arc_id` prevents spoiler access
+#### 7.1 Spoiler Prevention Through Article Snapshots
+*   **Chapter-Specific Versions:** Each `article_snapshot` has a `last_safe_chapter`, enabling progressive disclosure
+*   **Story-Specific Content:** Articles can have different versions across stories while sharing base entities
+*   **Client-Side Filtering:** Frontend applications filter content based on user's current reading progress
+*   **Flexible Safety Levels:** Wiki pages can be created for any chapter threshold (e.g., "Safe through Chapter 5")
 
-#### 7.2 Incremental Processing Support
-*   **Arc Boundaries:** `story_arcs` table tracks processing units and their status
-*   **Versioned Content:** Wiki articles can be updated arc-by-arc without affecting previous versions
+#### 7.2 Shared Universe Support
+*   **Base Articles:** `articles` table contains shared entities (characters, locations) across stories
+*   **Story-Specific Snapshots:** Each story generates its own versions of shared articles
+*   **Cross-Story References:** `article_story_associations` track how articles relate to different stories
+*   **Version History:** `parent_snapshot_id` maintains evolution history within each story
+
+#### 7.3 Incremental Processing Support
+*   **Arc Boundaries:** `story_arcs` table still tracks processing units and their status
+*   **Versioned Content:** Article snapshots can be updated chapter-by-chapter as processing progresses
 *   **Processing State:** Each arc maintains independent processing status for robust error handling
-*   **Content Evolution:** Character development and story progression tracked across arc versions
+*   **Content Evolution:** Character development tracked through snapshot versions with parent relationships
 
-#### 7.3 Scalability and Performance
-*   **Parallel Processing:** Different arcs can be processed concurrently (future enhancement)
-*   **Efficient Queries:** Arc-based filtering reduces dataset size for user queries
-*   **Caching Friendly:** Arc-specific content enables effective caching strategies
-*   **Storage Optimization:** Only current and accessible arcs need to be loaded for users
+#### 7.4 Scalability and Performance
+*   **Parallel Processing:** Different arcs and stories can be processed concurrently
+*   **Efficient Queries:** Chapter-based filtering reduces dataset size for user queries
+*   **Caching Friendly:** Snapshot-based content enables effective caching strategies per safety level
+*   **Storage Optimization:** Only relevant snapshots need to be loaded based on user progress
 
 ### 8. Key Relationships and Data Flow
 
 #### 8.1 Web Deployment (Supabase)
 *   **User and Keys:** A `user` has a `subscription_tier`. For `free_byok` users, encrypted API keys are stored in `user_api_keys` table.
-*   **Arc Processing:** Background workers process stories arc-by-arc, updating `story_arcs` and generating `wiki_articles`
-*   **Progress Tracking:** User reading progress determines `accessible_arc_id` for spoiler-free wiki access
+*   **Story Processing:** Background workers process stories arc-by-arc, updating `story_arcs` and generating `article_snapshots`
+*   **Wiki Composition:** `wiki_pages` link to appropriate `article_snapshots` based on `safe_through_chapter` thresholds
+*   **Article Evolution:** `article_snapshots` track content changes through `parent_snapshot_id` relationships
+*   **Cross-Story Sharing:** `articles` can be referenced across multiple stories via `article_story_associations`
 *   **Enhanced Reading:** `enhanced_chapters` provide wiki-linked reading experience per arc
 
 #### 8.2 Local Deployment (In-Memory)
-*   **No User Accounts:** Direct API usage without user registration
-*   **Temporary Keys:** API keys managed in memory only during processing
-*   **Arc-Based Processing:** Same arc logic applied to in-memory data structures
-*   **File Export:** Arc-specific wikis can be exported to file system for persistence
-*   **Optional Export:** Generated wikis can be exported to files
+*   **No User Accounts:** Direct API usage without user registration or authentication
+*   **Temporary Keys:** API keys managed in memory only during processing session
+*   **Arc-Based Processing:** Same arc and snapshot logic applied to in-memory data structures
+*   **File Export:** Wiki pages and article snapshots can be exported to file system for persistence
+*   **Optional Sharing:** Generated articles can be shared across local story processing sessions
 
 ### 8. Configuration and Switching
 
@@ -301,11 +364,21 @@ For local mode, schema changes are handled through code updates:
 
 The indexing strategy for Supabase deployment includes:
 
+**Core Tables:**
 *   **`users`:** Primary key on `id`, unique index on `email`
 *   **`user_api_keys`:** Composite primary key on `(user_id, provider)`
 *   **`stories`:** Primary key on `id`, index on `owner_id`, index on `status`
 *   **`chapters`:** Primary key on `id`, composite index on `(story_id, chapter_number)`
-*   **`wiki_articles`:** Primary key on `id`, unique index on `(story_id, slug)`, index on `story_id`, GIN index on `embedding` for vector search
-*   **`user_progress`:** Composite primary key on `(user_id, story_id)`
+*   **`story_arcs`:** Primary key on `id`, index on `story_id`, composite index on `(story_id, arc_number)`
 
-In-memory storage achieves optimal performance through direct dictionary lookups without requiring explicit indexing.
+**Wiki Tables:**
+*   **`articles`:** Primary key on `id`, unique index on `slug`, index on `article_type`, index on `creator_id`
+*   **`article_snapshots`:** Primary key on `id`, index on `article_id`, composite index on `(source_story_id, last_safe_chapter)`, GIN index on `embedding` for vector search
+*   **`wiki_pages`:** Primary key on `id`, index on `story_id`, index on `creator_id`, composite index on `(story_id, safe_through_chapter)`
+*   **`wiki_page_article_links`:** Primary key on `id`, index on `wiki_page_id`, index on `article_snapshot_id`, composite index on `(wiki_page_id, display_order)`
+*   **`article_story_associations`:** Primary key on `id`, composite index on `(article_id, story_id)`, index on `story_id`
+
+**Enhanced Content:**
+*   **`enhanced_chapters`:** Primary key on `id`, index on `chapter_id`, index on `arc_id`, composite index on `(chapter_id, arc_id)`
+
+In-memory storage achieves optimal performance through direct dictionary lookups and relationship indexes without requiring explicit database indexing.
