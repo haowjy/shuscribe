@@ -3,10 +3,11 @@
 LLM Service - handles secure per-request LLM operations with self-hosted Portkey Gateway
 """
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, AsyncIterator
 from uuid import UUID
 
 from portkey_ai import AsyncPortkey
+# from portkey_ai.types.chat import ChatCompletion, ChatCompletionChunk # Removed problematic import
 
 from src.config import settings
 # CHANGED: Import all LLM configuration details from the new core catalog module
@@ -19,7 +20,7 @@ from src.core.llm.catalog import (
     get_all_ai_model_families, # For getting all AI model families
 )
 from src.core.exceptions import LLMError, ValidationError
-from src.database.repositories.user import UserRepository
+from src.database.repositories.user_abc import AbstractUserRepository
 # NEW: Import Pydantic models from their new schema locations
 from src.schemas.llm.models import LLMMessage, LLMResponse
 from src.schemas.llm.config import LLMCapability, HostedModelInstance, LLMProvider, AIModelFamily
@@ -37,7 +38,7 @@ class LLMService:
     Never stores decrypted keys persistently or exposes them.
     """
     
-    def __init__(self, user_repository: "UserRepository"):
+    def __init__(self, user_repository: Optional[AbstractUserRepository] = None):
         self.user_repository = user_repository
         
         # Validate self-hosted Portkey Gateway is configured
@@ -46,32 +47,36 @@ class LLMService:
     
     async def chat_completion(
         self,
-        user_id: UUID,
         provider: str, # The provider ID (e.g., 'openai')
         model: str,    # The exact hosted model name (e.g., 'gpt-4o', 'claude-3-opus-20240229')
         messages: List[LLMMessage],
+        user_id: Optional[UUID] = None,  # Optional when using direct API key
+        api_key: Optional[str] = None,   # Optional direct API key (bypasses database)
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         trace_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        stream: bool = False,
         **kwargs
-    ) -> LLMResponse:
+    ) -> LLMResponse | AsyncIterator[LLMResponse]:
         """
         Generate chat completion using user's API key through self-hosted Portkey Gateway
         
         Args:
-            user_id: UUID of the user making the request
             provider: LLM provider ID (e.g., 'openai', 'anthropic')
             model: Exact hosted model name to use (e.g., 'gpt-4o')
             messages: List of messages for the conversation
+            user_id: UUID of the user making the request (required if using database)
+            api_key: Direct API key (bypasses database lookup if provided)
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
             trace_id: Optional trace ID for debugging
             metadata: Optional metadata for the request
+            stream: Whether to return a stream of responses
             **kwargs: Additional parameters for the LLM
             
         Returns:
-            LLMResponse with the completion
+            LLMResponse with the completion or AsyncIterator[LLMResponse] for streaming
             
         Raises:
             LLMError: If the LLM request fails
@@ -84,22 +89,41 @@ class LLMService:
         if not hosted_model_config:
             raise ValidationError(f"Model '{model}' not found for provider '{provider}' in the LLM catalog.")
 
+        # Validate input parameters
+        if not api_key and not user_id:
+            raise ValidationError("Either 'api_key' or 'user_id' must be provided.")
+        
+        if not api_key and not self.user_repository:
+            raise ValidationError("UserRepository is required when using user_id for API key lookup.")
+
         decrypted_key = None
         try:
-            # 1. Get user's encrypted API key for this provider
-            user_api_key_record = await self.user_repository.get_api_key(user_id, provider)
-            if not user_api_key_record:
-                raise ValidationError(f"No API key found for provider '{provider}' for user '{user_id}'. Please add it via settings.")
+            # 1. Get API key (either direct or from database)
+            if api_key:
+                # Use direct API key
+                decrypted_key = api_key
+                logger.info(f"Using direct API key for provider={provider}, model={model}")
+            else:
+                # Get user's encrypted API key from database
+                if not self.user_repository:
+                    raise ValidationError("UserRepository is required when using user_id for API key lookup.")
+                if not user_id:
+                    raise ValidationError("user_id is required when not using direct API key.")
+                
+                user_api_key_record = await self.user_repository.get_api_key(user_id, provider)
+                if not user_api_key_record:
+                    raise ValidationError(f"No API key found for provider '{provider}' for user '{user_id}'. Please add it via settings.")
+                
+                # Decrypt the key (only in memory, temporarily)
+                decrypted_key = decrypt_api_key(str(user_api_key_record.encrypted_api_key))
+                logger.info(f"Using database API key for provider={provider}, model={model}, user={user_id}")
             
-            # 2. Decrypt the key (only in memory, temporarily)
-            decrypted_key = decrypt_api_key(str(user_api_key_record.encrypted_api_key))
-            
-            # 3. Create fresh Portkey client for this request - pointing to self-hosted gateway
+            # 2. Create fresh Portkey client for this request - pointing to self-hosted gateway
             portkey_client = AsyncPortkey(
                 base_url=settings.PORTKEY_BASE_URL
             )
             
-            # 4. Configure request headers for Portkey to use the user's key
+            # 3. Configure request headers for Portkey to use the API key
             portkey_options: Dict[str, Any] = {
                 "provider": provider,
                 "Authorization": f"Bearer {decrypted_key}",
@@ -109,25 +133,30 @@ class LLMService:
             if trace_id:
                 portkey_options["trace_id"] = trace_id
             
-            final_metadata = { "user_id": str(user_id), "shuscribe_version": "0.1.0" }
+            final_metadata = { 
+                "shuscribe_version": "0.1.0",
+                "auth_method": "direct_api_key" if api_key else "database_lookup"
+            }
+            if user_id:
+                final_metadata["user_id"] = str(user_id)
             if metadata:
                 final_metadata.update(metadata)
             portkey_options["metadata"] = final_metadata
             
-            # 5. Convert messages to OpenAI format (Portkey's standard for chat completions)
+            # 4. Convert messages to OpenAI format (Portkey's standard for chat completions)
             openai_messages = [
                 {"role": msg.role, "content": msg.content}
                 for msg in messages
             ]
             
-            # 6. Make the request through self-hosted Portkey
-            logger.info(f"Making LLM request: provider={provider}, model={model}, user={user_id}, gateway={settings.PORTKEY_BASE_URL}")
+            # 5. Make the request through self-hosted Portkey
+            logger.info(f"Making LLM request: provider={provider}, model={model}, gateway={settings.PORTKEY_BASE_URL}")
             
             create_kwargs: Dict[str, Any] = {
                 "model": model,
                 "messages": openai_messages,
                 "temperature": temperature,
-                "stream": False,
+                "stream": stream,
                 **kwargs,
             }
             if max_tokens is not None:
@@ -137,24 +166,35 @@ class LLMService:
                 **portkey_options
             ).chat.completions.create(**create_kwargs)
             
-            # 7. Return standardized response
-            return LLMResponse(
-                content=response.choices[0].message.content, # type: ignore
-                model=response.model, # type: ignore
-                usage=response.usage.dict() if response.usage else None, # type: ignore
-                metadata={
-                    "provider": provider,
-                    "gateway": "self-hosted",
-                    "portkey_request_id": getattr(response, 'id', None),
-                    "trace_id": trace_id,
-                }
-            )
+            # 6. Return standardized response
+            if stream:
+                return self._stream_response_to_llm_response(
+                    response,
+                    provider,
+                    trace_id
+                )
+            else:
+                # Ensure non-streaming response is correctly handled, assuming it's not a stream
+                # If Portkey's non-streaming response is truly ChatCompletion, it should work.
+                # Otherwise, further inspection of Portkey's non-streaming return type is needed.
+                return LLMResponse(
+                    content=response.choices[0].message.content, # type: ignore
+                    model=response.model, # type: ignore
+                    usage=response.usage.dict() if response.usage else None, # type: ignore
+                    metadata={
+                        "provider": provider,
+                        "gateway": "self-hosted",
+                        "portkey_request_id": getattr(response, 'id', None),
+                        "trace_id": trace_id,
+                        "auth_method": "direct_api_key" if api_key else "database_lookup"
+                    }
+                )
             
         except ValidationError as e:
             raise e
         except Exception as e:
             logger.error(f"LLM request failed: {e}", exc_info=True, extra={
-                "user_id": str(user_id),
+                "user_id": str(user_id) if user_id else "direct_api_key",
                 "provider": provider, 
                 "model": model,
                 "gateway_url": settings.PORTKEY_BASE_URL
@@ -165,74 +205,35 @@ class LLMService:
                 details={
                     "model": model,
                     "provider": provider,
-                    "user_id": str(user_id)
+                    "user_id": str(user_id) if user_id else "direct_api_key"
                 }
             )
         finally:
-            if decrypted_key is not None:
+            # Only clear decrypted_key if it came from database (not direct API key)
+            if decrypted_key is not None and not api_key:
                 del decrypted_key
     
-    async def validate_api_key(
+    async def _stream_response_to_llm_response(
         self,
+        portkey_stream_response: Any, # Changed to Any to resolve import issues
         provider: str,
-        api_key: str,
-        test_model: Optional[str] = None # This is now the exact hosted model name
-    ) -> Dict[str, Any]:
+        trace_id: Optional[str],
+    ) -> AsyncIterator[LLMResponse]:
         """
-        Validate a user's raw API key by making a minimal test request through self-hosted Portkey Gateway.
-        
-        Args:
-            provider: The ID of the LLM provider (e.g., 'openai').
-            api_key: The raw API key provided by the user.
-            test_model: An optional specific *hosted model name* to test against.
-            
-        Returns:
-            A dictionary indicating validation status and details.
+        Converts a Portkey streaming response into an AsyncIterator of LLMResponse objects.
         """
-        
-        try:
-            # Use a default test model if none provided
-            if not test_model:
-                # CHANGED: Use the catalog helper function to get the default test model name
-                test_model = get_default_test_model_name_for_provider(provider)
-                if not test_model:
-                    raise ValidationError(f"No suitable default test model configured for provider '{provider}'.")
-            
-            portkey_client = AsyncPortkey(
-                base_url=settings.PORTKEY_BASE_URL
+        async for chunk in portkey_stream_response:
+            yield LLMResponse(
+                content=chunk.choices[0].delta.content if chunk.choices and chunk.choices[0].delta.content else "",
+                model=chunk.model, # type: ignore
+                usage=chunk.usage.dict() if hasattr(chunk, 'usage') and chunk.usage else None, # Handle optional usage
+                metadata={
+                    "provider": provider,
+                    "gateway": "self-hosted",
+                    "portkey_request_id": getattr(chunk, 'id', None),
+                    "trace_id": trace_id,
+                }
             )
-            
-            test_messages = [{"role": "user", "content": "Hello"}]
-            
-            validation_response = await portkey_client.with_options(
-                provider=provider,
-                Authorization=f"Bearer {api_key}"
-            ).chat.completions.create(
-                model=test_model,
-                messages=test_messages,
-                max_tokens=5,
-                temperature=0.0,
-                stream=False,
-            )
-            
-            return {
-                "valid": True,
-                "provider": provider,
-                "test_model": test_model,
-                "response_model": validation_response.model, # type: ignore
-                "gateway": "self-hosted",
-                "message": "API key successfully validated."
-            }
-            
-        except Exception as e:
-            logger.warning(f"API key validation failed for provider '{provider}': {e}")
-            return {
-                "valid": False,
-                "provider": provider,
-                "gateway": "self-hosted",
-                "error": str(e),
-                "message": "API key validation failed. Please check your key or provider."
-            }
     
     def get_all_llm_providers(self) -> List[LLMProvider]:
         """Returns a list of all configured LLM providers with their hosted models."""
@@ -247,12 +248,13 @@ class LLMService:
         return get_all_ai_model_families()
 
     def get_capabilities_for_hosted_model(self, provider_id: str, model_name: str) -> List[LLMCapability]:
-        """
-        Returns the capabilities of a specific hosted model instance by looking up its
-        AI Model Family.
-        """
+        """Returns the list of capabilities for a specific hosted model."""
         return get_capabilities_for_hosted_model(provider_id, model_name)
+
+    def get_default_test_model_name_for_provider(self, provider_id: str) -> Optional[str]:
+        """Gets the default model name for a provider, for API key validation."""
+        return get_default_test_model_name_for_provider(provider_id)
     
     def get_hosted_model_details(self, provider_id: str, model_name: str) -> Optional[HostedModelInstance]:
-        """Returns the full HostedModelInstance object for a specific provider and model name."""
+        """Returns detailed information for a specific hosted model instance."""
         return get_hosted_model_instance(provider_id, model_name)

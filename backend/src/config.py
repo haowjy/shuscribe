@@ -31,9 +31,14 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     SECRET_KEY: str = "change-me-in-production"
     
-    # Database
+    # Database - Supabase Configuration
+    SUPABASE_URL: str = "https://your-project.supabase.co"
+    SUPABASE_KEY: str = "your-anon-key-here"
+    SUPABASE_SERVICE_KEY: Optional[str] = None  # For admin operations
+    SKIP_DATABASE: bool = False # <-- Set to True to skip database connection and use in-memory repositories
+    
+    # Legacy SQLAlchemy URL (kept for compatibility during migration)
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/shuscribe"
-    SKIP_DATABASE: bool = False # <-- NEW: Set to True to skip database connection
     
     # CORS
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]

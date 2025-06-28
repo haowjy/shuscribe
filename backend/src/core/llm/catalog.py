@@ -121,6 +121,17 @@ AI_MODEL_FAMILIES: List[AIModelFamily] = [
     
     # GOOGLE
     AIModelFamily(
+        family_id="gemini-2.0-flash",
+        display_name="Gemini 2.0 Flash",
+        description="Gemini 2.0 Flash is Google's experimental preview model with significant speed improvements, native image generation, controllable text-to-speech, and enhanced agentic capabilities. Features improved multimodal understanding, coding, and function calling.",
+        capabilities=[
+            LLMCapability.SEARCH,
+            LLMCapability.VISION,
+            LLMCapability.TOOL_USE,
+            LLMCapability.STRUCTURED_OUTPUT,
+        ],
+    ),
+    AIModelFamily(
         family_id="gemini-2.5-pro",
         display_name="Gemini 2.5 Pro",
         description="Gemini 2.5 Pro is designed to tackle increasingly complex problems.",
@@ -228,7 +239,7 @@ LLM_PROVIDERS: List[LLMProvider] = [
         provider_id="google",
         display_name="Google",
         api_key_format_hint="AIza...",
-        default_model_name="gemini-2.5-flash",
+        default_model_name="gemini-2.0-flash-001",
         hosted_models=[
             HostedModelInstance(
                 model_family_id="gemini-2.5-pro", model_name="gemini-2.5-pro", provider_id="google",
@@ -248,7 +259,12 @@ LLM_PROVIDERS: List[LLMProvider] = [
             HostedModelInstance(
                 model_family_id="gemini-2.5-flash-lite", model_name="gemini-2.5-flash-lite-preview-06-17", provider_id="google",
                 input_token_limit=1_048_576, output_token_limit=65_536,
-                input_cost_per_million_tokens=0.08, output_cost_per_million_tokens=2.50,
+                input_cost_per_million_tokens=0.08, output_cost_per_million_tokens=0.40,
+            ),
+            HostedModelInstance(
+                model_family_id="gemini-2.0-flash", model_name="gemini-2.0-flash-001", provider_id="google",
+                input_token_limit=1_048_576, output_token_limit=8_192,
+                input_cost_per_million_tokens=0.10, output_cost_per_million_tokens=0.40,
             ),
             # Add other hosted models for Google
         ],
