@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+when running python commands in the terminal, make sure to activate the environment first `source .venv/bin/activate`

@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from supabase import Client
 
 from src.schemas.user import User, UserAPIKey, UserCreate, UserAPIKeyCreate
-from src.database.repositories.user_abc import AbstractUserRepository
+from src.database.repositories.user.user_abc import AbstractUserRepository
 from src.core.exceptions import ShuScribeException
 
 

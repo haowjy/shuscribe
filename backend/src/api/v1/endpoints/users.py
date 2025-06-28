@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 
 from src.api.dependencies import get_user_repository_dependency, get_current_user_id
-from src.database.repositories.user_abc import AbstractUserRepository
+from src.database.repositories.user.user_abc import AbstractUserRepository
 from src.services.llm.llm_service import LLMService
 from src.schemas.user import APIKeyRequest, APIKeyResponse
 

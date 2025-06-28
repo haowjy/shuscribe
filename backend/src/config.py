@@ -54,10 +54,11 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = _extra_mode # <-- Dynamically set based on CURRENT_ENVIRONMENT
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra=_extra_mode  # <-- Dynamically set based on CURRENT_ENVIRONMENT
+    )
 
 # Global settings instance
 settings = Settings()

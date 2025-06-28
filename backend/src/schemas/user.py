@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 from src.schemas.base import BaseSchema, TimestampSchema
 from src.core.constants import SubscriptionTier
@@ -34,7 +34,7 @@ class User(UserBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserAPIKeyBase(BaseModel):
@@ -65,7 +65,7 @@ class UserAPIKey(UserAPIKeyBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 # API request/response schemas

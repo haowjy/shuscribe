@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 from uuid import UUID
 
 from src.schemas.user import User, UserAPIKey
-from src.database.repositories.user_abc import AbstractUserRepository
+from src.database.repositories.user.user_abc import AbstractUserRepository
 from src.core.exceptions import ShuScribeException
 
 

@@ -7,7 +7,7 @@ from uuid import UUID
 
 from src.database.supabase_connection import get_supabase_client
 from src.database.repositories import get_user_repository
-from src.database.repositories.user_abc import AbstractUserRepository
+from src.database.repositories.user.user_abc import AbstractUserRepository
 from src.core.security import get_current_user_id
 
 def get_user_repository_dependency() -> AbstractUserRepository:

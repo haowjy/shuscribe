@@ -20,7 +20,7 @@ from src.core.llm.catalog import (
     get_all_ai_model_families, # For getting all AI model families
 )
 from src.core.exceptions import LLMError, ValidationError
-from src.database.repositories.user_abc import AbstractUserRepository
+from src.database.repositories.user.user_abc import AbstractUserRepository
 # NEW: Import Pydantic models from their new schema locations
 from src.schemas.llm.models import LLMMessage, LLMResponse
 from src.schemas.llm.config import LLMCapability, HostedModelInstance, LLMProvider, AIModelFamily
