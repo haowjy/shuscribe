@@ -28,9 +28,10 @@ from uuid import UUID
 # from src.schemas.wiki import WikiArticle, LinkMapping
 from src.services.llm.llm_service import LLMService
 from src.prompts import prompt_manager
+from src.agents.base_agent import BaseAgent
 
 
-class ChapterBacklinkerAgent:
+class ChapterBacklinkerAgent(BaseAgent):
     """
     Creates bidirectional links between story chapters and wiki articles.
     
@@ -38,14 +39,25 @@ class ChapterBacklinkerAgent:
     with corresponding wiki articles in a contextual, spoiler-aware manner.
     """
     
-    def __init__(self, llm_service: LLMService):
+    def __init__(
+        self, 
+        llm_service: LLMService,
+        default_provider: str = "google",
+        default_model: str = "gemini-2.0-flash-001"
+    ):
         """
-        Initializes agent with LLM service.
+        Initializes agent with LLM service and default model.
         
         Args:
             llm_service: LLM service for link analysis and placement
+            default_provider: Default LLM provider for backlinking
+            default_model: Default model optimized for link analysis and insertion
         """
-        self.llm_service = llm_service
+        super().__init__(
+            llm_service=llm_service,
+            default_provider=default_provider,
+            default_model=default_model
+        )
     
     async def create_chapter_links(
         self,
@@ -53,8 +65,9 @@ class ChapterBacklinkerAgent:
         wiki_articles: List[Any],  # TODO: List[WikiArticle]
         current_arc_id: int,
         user_id: UUID,
-        provider: str,
-        model: str,
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
         max_links_per_chapter: int = 15
     ) -> List[Any]:  # TODO: List[EnhancedChapter]
         """
@@ -75,8 +88,9 @@ class ChapterBacklinkerAgent:
             wiki_articles: Available wiki articles for linking
             current_arc_id: Current arc ID for spoiler prevention
             user_id: UUID of the user making the request
-            provider: LLM provider ID (e.g., 'openai')
-            model: LLM model name (e.g., 'gpt-4')
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override (uses default if not provided)
+            model: Optional LLM model override (uses default if not provided)
             max_links_per_chapter: Maximum links to add per chapter
             
         Returns:
@@ -95,8 +109,9 @@ class ChapterBacklinkerAgent:
         chapter_content: str,
         available_articles: List[Any],  # TODO: List[WikiArticle]
         user_id: UUID,
-        provider: str,
-        model: str
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None
     ) -> List[Tuple[str, Any, List[int]]]:  # TODO: List[Tuple[str, WikiArticle, List[int]]]
         """
         Identifies entities in chapter content that have corresponding wiki articles.
@@ -111,8 +126,9 @@ class ChapterBacklinkerAgent:
             chapter_content: Text content of the chapter
             available_articles: Wiki articles available for linking
             user_id: User making the request
-            provider: LLM provider
-            model: LLM model
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override
+            model: Optional LLM model override
             
         Returns:
             List of tuples (entity_name, article, character_positions)
@@ -266,4 +282,13 @@ class ChapterBacklinkerAgent:
         # TODO: Implement prompt loading
         # linking_prompts = prompt_manager.get_group("wikigen.linking")
         # Render with chapter and article context
-        return [] 
+        return []
+    
+    # Implementation of BaseAgent's abstract method
+    async def execute(self, *args, **kwargs):
+        """
+        Execute the chapter backlinking process.
+        
+        This is a convenience method that calls create_chapter_links with the provided arguments.
+        """
+        return await self.create_chapter_links(*args, **kwargs) 

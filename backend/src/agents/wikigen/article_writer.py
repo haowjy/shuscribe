@@ -32,9 +32,10 @@ from src.services.llm.llm_service import LLMService
 # TODO: Import when web search service is implemented
 # from src.services.web_search.web_search_service import WebSearchService
 from src.prompts import prompt_manager
+from src.agents.base_agent import BaseAgent
 
 
-class ArticleWriterAgent:
+class ArticleWriterAgent(BaseAgent):
     """
     Generates actual wiki article content from planning specifications.
     
@@ -42,15 +43,27 @@ class ArticleWriterAgent:
     cultural references and proper wiki-style formatting.
     """
     
-    def __init__(self, llm_service: LLMService, web_search_service: Any):  # TODO: WebSearchService when available
+    def __init__(
+        self, 
+        llm_service: LLMService, 
+        web_search_service: Any = None,  # TODO: WebSearchService when available
+        default_provider: str = "google",
+        default_model: str = "gemini-2.0-flash-001"
+    ):
         """
-        Initializes agent with required services.
+        Initializes agent with required services and default model.
         
         Args:
             llm_service: LLM service for content generation
             web_search_service: Web search service for reference lookup
+            default_provider: Default LLM provider for article writing
+            default_model: Default model optimized for content generation
         """
-        self.llm_service = llm_service
+        super().__init__(
+            llm_service=llm_service,
+            default_provider=default_provider,
+            default_model=default_model
+        )
         self.web_search_service = web_search_service
     
     async def write_articles(
@@ -59,8 +72,9 @@ class ArticleWriterAgent:
         arc_content: str,
         story_metadata: Dict[str, Any],
         user_id: UUID,
-        provider: str,
-        model: str,
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
         include_web_search: bool = True
     ) -> List[Any]:  # TODO: List[WikiArticle]
         """
@@ -82,8 +96,9 @@ class ArticleWriterAgent:
             arc_content: Source text content for the arc
             story_metadata: Story title, genre, etc.
             user_id: UUID of the user making the request
-            provider: LLM provider ID (e.g., 'openai')
-            model: LLM model name (e.g., 'gpt-4')
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override (uses default if not provided)
+            model: Optional LLM model override (uses default if not provided)
             include_web_search: Whether to perform web searches for references
             
         Returns:
@@ -105,8 +120,9 @@ class ArticleWriterAgent:
         arc_content: str,
         context: Dict[str, Any],
         user_id: UUID,
-        provider: str,
-        model: str
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None
     ) -> Any:  # TODO: WikiArticle
         """
         Generates content for a single article from its plan.
@@ -124,8 +140,9 @@ class ArticleWriterAgent:
             arc_content: Source content from arc
             context: Additional context (story metadata, etc.)
             user_id: User making the request
-            provider: LLM provider
-            model: LLM model
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override
+            model: Optional LLM model override
             
         Returns:
             WikiArticle object with complete content
@@ -272,3 +289,12 @@ class ArticleWriterAgent:
         # writing_prompts = prompt_manager.get_group(f"wikigen.writing.{article_type}")
         # Render with context
         return []
+    
+    # Implementation of BaseAgent's abstract method
+    async def execute(self, *args, **kwargs):
+        """
+        Execute the article writing process.
+        
+        This is a convenience method that calls write_articles with the provided arguments.
+        """
+        return await self.write_articles(*args, **kwargs)

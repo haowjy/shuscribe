@@ -27,9 +27,10 @@ from uuid import UUID
 # from src.schemas.wiki import Summary, SummaryType
 from src.services.llm.llm_service import LLMService
 from src.prompts import prompt_manager
+from src.agents.base_agent import BaseAgent
 
 
-class GeneralSummarizerAgent:
+class GeneralSummarizerAgent(BaseAgent):
     """
     General-purpose summarization agent for various content types.
     
@@ -37,14 +38,25 @@ class GeneralSummarizerAgent:
     based on the specific needs of the workflow step.
     """
     
-    def __init__(self, llm_service: LLMService):
+    def __init__(
+        self, 
+        llm_service: LLMService,
+        default_provider: str = "google",
+        default_model: str = "gemini-2.0-flash-001"
+    ):
         """
-        Initializes agent with LLM service.
+        Initializes agent with LLM service and default model.
         
         Args:
             llm_service: LLM service for making summarization calls
+            default_provider: Default LLM provider for summarization
+            default_model: Default model optimized for summarization tasks
         """
-        self.llm_service = llm_service
+        super().__init__(
+            llm_service=llm_service,
+            default_provider=default_provider,
+            default_model=default_model
+        )
     
     async def summarize_arc(
         self,
@@ -52,8 +64,9 @@ class GeneralSummarizerAgent:
         arc_metadata: Dict[str, Any],
         summary_type: str,  # "brief", "detailed", "progressive"
         user_id: UUID,
-        provider: str,
-        model: str,
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
         previous_arcs: Optional[List[Any]] = None  # TODO: List[ArcSummary]
     ) -> Any:  # TODO: Replace with ArcSummary type
         """
@@ -76,8 +89,9 @@ class GeneralSummarizerAgent:
             arc_metadata: Arc title, boundaries, etc.
             summary_type: Type of summary to create
             user_id: UUID of the user making the request
-            provider: LLM provider ID (e.g., 'openai')
-            model: LLM model name (e.g., 'gpt-4')
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override (uses default if not provided)
+            model: Optional LLM model override (uses default if not provided)
             previous_arcs: Previous arc summaries for progressive mode
             
         Returns:
@@ -91,8 +105,9 @@ class GeneralSummarizerAgent:
         chapters: List[Any],  # TODO: List[Chapter]
         summary_length: str,  # "brief", "standard", "detailed"
         user_id: UUID,
-        provider: str,
-        model: str
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None
     ) -> List[Any]:  # TODO: List[ChapterSummary]
         """
         Creates summaries for individual chapters.
@@ -104,8 +119,9 @@ class GeneralSummarizerAgent:
             chapters: List of chapter objects to summarize
             summary_length: Length of summaries to create
             user_id: UUID of the user making the request
-            provider: LLM provider ID
-            model: LLM model name
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override
+            model: Optional LLM model override
             
         Returns:
             List of ChapterSummary objects
@@ -119,8 +135,9 @@ class GeneralSummarizerAgent:
         arc_content: str,
         character_name: str,
         user_id: UUID,
-        provider: str,
-        model: str
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None
     ) -> Any:  # TODO: CharacterDevelopmentSummary
         """
         Creates focused summary of character development within an arc.
@@ -133,8 +150,9 @@ class GeneralSummarizerAgent:
             arc_content: Full arc content for context
             character_name: Name of character to focus on
             user_id: UUID of the user making the request
-            provider: LLM provider ID
-            model: LLM model name
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override
+            model: Optional LLM model override
             
         Returns:
             CharacterDevelopmentSummary object
@@ -217,4 +235,14 @@ class GeneralSummarizerAgent:
         # TODO: Implement prompt loading
         # prompts = prompt_manager.get_group(f"wikigen.summarization.{summary_type}")
         # Render with context including content_type
-        return [] 
+        return []
+    
+    # Implementation of BaseAgent's abstract method
+    async def execute(self, *args, **kwargs):
+        """
+        Execute the summarization process.
+        
+        This is a convenience method that calls summarize_arc with the provided arguments.
+        For other summarization tasks, use the specific methods directly.
+        """
+        return await self.summarize_arc(*args, **kwargs) 

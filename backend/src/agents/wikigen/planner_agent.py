@@ -30,9 +30,10 @@ from uuid import UUID
 # from src.schemas.wiki import WikiPlan, ArticlePlan, EntityAnalysis
 from src.services.llm.llm_service import LLMService
 from src.prompts import prompt_manager
+from src.agents.base_agent import BaseAgent
 
 
-class WikiPlannerAgent:
+class WikiPlannerAgent(BaseAgent):
     """
     Plans wiki structure and article organization for optimal user experience.
     
@@ -40,14 +41,25 @@ class WikiPlannerAgent:
     how they should be structured, and how they should reference each other.
     """
     
-    def __init__(self, llm_service: LLMService):
+    def __init__(
+        self, 
+        llm_service: LLMService,
+        default_provider: str = "google",
+        default_model: str = "gemini-2.0-flash-001"
+    ):
         """
-        Initializes agent with LLM service.
+        Initializes agent with LLM service and default model.
         
         Args:
             llm_service: LLM service for making planning calls
+            default_provider: Default LLM provider for wiki planning
+            default_model: Default model optimized for planning and organization
         """
-        self.llm_service = llm_service
+        super().__init__(
+            llm_service=llm_service,
+            default_provider=default_provider,
+            default_model=default_model
+        )
     
     async def create_plan(
         self,
@@ -55,8 +67,9 @@ class WikiPlannerAgent:
         story_metadata: Dict[str, Any],
         mode: str,  # "fresh" or "update"
         user_id: UUID,
-        provider: str,
-        model: str,
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
         previous_summaries: Optional[List[Any]] = None,  # TODO: List[ArcSummary]
         existing_wiki: Optional[Any] = None  # TODO: WikiArchive
     ) -> Any:  # TODO: Replace with WikiPlan type
@@ -84,8 +97,9 @@ class WikiPlannerAgent:
             story_metadata: Story title, genre, etc.
             mode: "fresh" for new wikis, "update" for existing
             user_id: UUID of the user making the request
-            provider: LLM provider ID (e.g., 'openai')
-            model: LLM model name (e.g., 'gpt-4')
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override (uses default if not provided)
+            model: Optional LLM model override (uses default if not provided)
             previous_summaries: Summaries from previous arcs (update mode)
             existing_wiki: Previous wiki archive (update mode)
             
@@ -214,4 +228,13 @@ class WikiPlannerAgent:
         # TODO: Implement prompt loading
         # planning_prompts = prompt_manager.get_group("wikigen.planning")
         # Render with mode-specific context
-        return [] 
+        return []
+    
+    # Implementation of BaseAgent's abstract method
+    async def execute(self, *args, **kwargs):
+        """
+        Execute the wiki planning process.
+        
+        This is a convenience method that calls create_plan with the provided arguments.
+        """
+        return await self.create_plan(*args, **kwargs) 

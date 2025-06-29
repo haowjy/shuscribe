@@ -58,6 +58,7 @@ build/
 # Testing related
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 
 # MyPy cache

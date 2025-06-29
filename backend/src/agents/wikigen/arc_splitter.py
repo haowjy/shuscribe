@@ -29,9 +29,10 @@ from uuid import UUID
 # from src.schemas.wiki import ArcAnalysis, Arc
 from src.services.llm.llm_service import LLMService
 from src.prompts import prompt_manager
+from src.agents.base_agent import BaseAgent
 
 
-class ArcSplitterAgent:
+class ArcSplitterAgent(BaseAgent):
     """
     Analyzes story structure and determines optimal arc boundaries for wiki generation.
     
@@ -39,14 +40,25 @@ class ArcSplitterAgent:
     appropriately sized for effective wiki generation.
     """
     
-    def __init__(self, llm_service: LLMService):
+    def __init__(
+        self, 
+        llm_service: LLMService,
+        default_provider: str = "google",
+        default_model: str = "gemini-2.0-flash-001"
+    ):
         """
-        Initializes agent with LLM service.
+        Initializes agent with LLM service and default model.
         
         Args:
             llm_service: LLM service for making analysis calls
+            default_provider: Default LLM provider for arc analysis
+            default_model: Default model optimized for story structure analysis
         """
-        self.llm_service = llm_service
+        super().__init__(
+            llm_service=llm_service,
+            default_provider=default_provider,
+            default_model=default_model
+        )
     
     async def analyze_story(
         self,
@@ -54,8 +66,9 @@ class ArcSplitterAgent:
         story_content: str,
         total_chapters: int,
         user_id: UUID,
-        provider: str,
-        model: str,
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
         genre: Optional[str] = None
     ) -> Any:  # TODO: Replace with ArcAnalysis type
         """
@@ -76,8 +89,9 @@ class ArcSplitterAgent:
             story_content: Full story text content
             total_chapters: Number of chapters in story
             user_id: UUID of the user making the request
-            provider: LLM provider ID (e.g., 'openai')
-            model: LLM model name (e.g., 'gpt-4')
+            api_key: Optional API key for direct usage
+            provider: Optional LLM provider override (uses default if not provided)
+            model: Optional LLM model override (uses default if not provided)
             genre: Optional story genre for context
             
         Returns:
@@ -183,4 +197,13 @@ class ArcSplitterAgent:
         # message_templates = splitting_prompts.get("messages")
         # render_kwargs = {...}
         # return rendered messages
-        return [] 
+        return []
+    
+    # Implementation of BaseAgent's abstract method
+    async def execute(self, *args, **kwargs):
+        """
+        Execute the arc splitting analysis.
+        
+        This is a convenience method that calls analyze_story with the provided arguments.
+        """
+        return await self.analyze_story(*args, **kwargs) 
