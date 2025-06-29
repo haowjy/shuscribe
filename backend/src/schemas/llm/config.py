@@ -55,6 +55,11 @@ class HostedModelInstance(BaseModel):
     input_token_limit: Optional[int] = Field(default=None, description="The maximum number of input tokens for this instance.")
     output_token_limit: Optional[int] = Field(default=None, description="The maximum number of output tokens for this instance.")
     
+    # Thinking/Reasoning budget configuration for models that support it
+    thinking_budget_min: Optional[int] = Field(default=None, description="Minimum thinking budget tokens for reasoning models (None if not supported).")
+    thinking_budget_max: Optional[int] = Field(default=None, description="Maximum thinking budget tokens for reasoning models (None if not supported).")
+    thinking_budget_default: Optional[int] = Field(default=None, description="Default thinking budget (-1 for dynamic, 0 for disabled, specific count, or None if not supported).")
+    
     # Optional: Pricing information (can be useful for frontend or internal cost tracking)
     input_cost_per_million_tokens: Optional[float] = Field(default=None, description="Estimated input cost in USD per 1M tokens for this instance.")
     output_cost_per_million_tokens: Optional[float] = Field(default=None, description="Estimated output cost in USD per 1M tokens for this instance.")

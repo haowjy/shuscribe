@@ -12,6 +12,8 @@ from src.schemas.llm.config import (
     LLMProvider,
     LLMCapability,
 )
+# Import settings for configurable thinking budget percentages
+from src.config import settings
 
 
 # --- 1. Define AI Model Families (Abstract Models) ---
@@ -217,21 +219,25 @@ LLM_PROVIDERS: List[LLMProvider] = [
                 model_family_id="gemini-2.5-pro", model_name="gemini-2.5-pro", provider_id="google",
                 input_token_limit=1_048_576, output_token_limit=65_536,
                 input_cost_per_million_tokens=2.50, output_cost_per_million_tokens=15.00,
+                thinking_budget_min=128, thinking_budget_max=32768, thinking_budget_default=-1,
             ),
             HostedModelInstance(
                 model_family_id="gemini-2.5-pro", model_name="gemini-2.5-pro-preview-05-06", provider_id="google",
                 input_token_limit=1_048_576, output_token_limit=65_536,
                 input_cost_per_million_tokens=2.50, output_cost_per_million_tokens=15.00,
+                thinking_budget_min=128, thinking_budget_max=32768, thinking_budget_default=-1,
             ),
             HostedModelInstance(
                 model_family_id="gemini-2.5-flash", model_name="gemini-2.5-flash", provider_id="google",
                 input_token_limit=1_048_576, output_token_limit=64_000,
                 input_cost_per_million_tokens=0.30, output_cost_per_million_tokens=2.50,
+                thinking_budget_min=0, thinking_budget_max=24576, thinking_budget_default=-1,
             ),
             HostedModelInstance(
                 model_family_id="gemini-2.5-flash-lite", model_name="gemini-2.5-flash-lite-preview-06-17", provider_id="google",
                 input_token_limit=1_048_576, output_token_limit=65_536,
-                input_cost_per_million_tokens=0.08, output_cost_per_million_tokens=0.40,
+                input_cost_per_million_tokens=0.10, output_cost_per_million_tokens=0.40,
+                thinking_budget_min=512, thinking_budget_max=24576, thinking_budget_default=0,
             ),
             HostedModelInstance(
                 model_family_id="gemini-2.0-flash", model_name="gemini-2.0-flash-001", provider_id="google",
@@ -251,11 +257,15 @@ LLM_PROVIDERS: List[LLMProvider] = [
                 model_family_id="claude-opus-4", model_name="claude-opus-4-20250514", provider_id="anthropic",
                 input_token_limit=200_000, output_token_limit=32_000,
                 input_cost_per_million_tokens=15.00, output_cost_per_million_tokens=75.00,
+                # Claude Opus 4: Extended thinking with 1024 min, ~32k practical max
+                thinking_budget_min=1024, thinking_budget_max=32000, thinking_budget_default=-1,
             ),
             HostedModelInstance(
                 model_family_id="claude-sonnet-4", model_name="claude-sonnet-4-20250514", provider_id="anthropic",
                 input_token_limit=200_000, output_token_limit=64_000,
                 input_cost_per_million_tokens=3.00, output_cost_per_million_tokens=15.00,
+                # Claude Sonnet 4: Extended thinking with 1024 min, ~32k practical max  
+                thinking_budget_min=1024, thinking_budget_max=32000, thinking_budget_default=-1,
             ),
             HostedModelInstance(
                 model_family_id="claude-3-5-sonnet", model_name="claude-3-5-sonnet-20241022", provider_id="anthropic",
@@ -339,3 +349,178 @@ def get_default_test_model_name_for_provider(provider_id: str) -> str:
         raise ValueError(f"Provider {provider_id} not found in catalog")
     # else the first model in the provider's hosted models
     return provider.default_model_name if provider.default_model_name else provider.hosted_models[0].model_name
+
+
+def get_thinking_budget_config(provider_id: str, model_name: str) -> Optional[Tuple[int, int, int]]:
+    """
+    Gets thinking budget configuration for a specific model.
+    
+    Note: This is for Google/Anthropic models that use token budgets. 
+    OpenAI models use reasoning_effort (low/medium/high) instead.
+    
+    Args:
+        provider_id: Provider ID (e.g., 'google', 'anthropic') 
+        model_name: Model name (e.g., 'gemini-2.5-pro')
+        
+    Returns:
+        Tuple of (min_budget, max_budget, default_budget) or None if model doesn't support thinking budgets
+        default_budget meanings:
+        - -1: Dynamic thinking (model decides)
+        - 0: Thinking disabled by default
+        - >0: Specific default token count
+    """
+    instance = get_hosted_model_instance(provider_id, model_name)
+    if not instance or not all([
+        instance.thinking_budget_min is not None,
+        instance.thinking_budget_max is not None,
+        instance.thinking_budget_default is not None
+    ]):
+        return None
+    
+    # These are guaranteed to be int after the None check above
+    assert instance.thinking_budget_min is not None
+    assert instance.thinking_budget_max is not None
+    assert instance.thinking_budget_default is not None
+    
+    return (
+        instance.thinking_budget_min, 
+        instance.thinking_budget_max, 
+        instance.thinking_budget_default
+    )
+
+
+def calculate_thinking_budget_tokens(
+    provider_id: str, 
+    model_name: str, 
+    thinking_level: str
+) -> Optional[int]:
+    """
+    Calculates thinking budget tokens based on model's range and thinking level.
+    Uses configurable percentages from settings.
+    
+    Note: This is for Google/Anthropic models that use token budgets.
+    OpenAI models use reasoning_effort parameter instead.
+    
+    Args:
+        provider_id: Provider ID 
+        model_name: Model name
+        thinking_level: "low", "medium", or "high"
+        
+    Returns:
+        Token count for the thinking budget, or None if model doesn't support thinking budgets
+        
+    Calculation:
+        - low: THINKING_BUDGET_LOW_PERCENT of max budget (or min budget if calculated < min)
+        - medium: THINKING_BUDGET_MEDIUM_PERCENT of max budget  
+        - high: THINKING_BUDGET_HIGH_PERCENT of max budget
+    """
+    budget_config = get_thinking_budget_config(provider_id, model_name)
+    if not budget_config:
+        return None
+    
+    min_budget, max_budget, default_budget = budget_config
+    
+    # Calculate percentage-based budget using configurable values from settings
+    if thinking_level == "low":
+        calculated = int(max_budget * (settings.THINKING_BUDGET_LOW_PERCENT / 100))
+    elif thinking_level == "medium":
+        calculated = int(max_budget * (settings.THINKING_BUDGET_MEDIUM_PERCENT / 100))
+    elif thinking_level == "high":
+        calculated = int(max_budget * (settings.THINKING_BUDGET_HIGH_PERCENT / 100))
+    else:
+        raise ValueError(f"Invalid thinking level: {thinking_level}. Must be 'low', 'medium', or 'high'")
+    
+    # Ensure calculated value is within model's supported range
+    return max(min_budget, min(calculated, max_budget))
+
+
+def model_supports_thinking(provider_id: str, model_name: str) -> bool:
+    """
+    Checks if a model supports thinking/reasoning mode.
+    
+    Args:
+        provider_id: Provider ID
+        model_name: Model name
+        
+    Returns:
+        True if model supports thinking mode, False otherwise
+    """
+    model_capabilities = get_capabilities_for_hosted_model(provider_id, model_name)
+    return LLMCapability.REASONING in model_capabilities
+
+
+def model_supports_temperature(provider_id: str, model_name: str, is_thinking: bool = False) -> bool:
+    """
+    Checks if a model supports custom temperature parameter.
+    
+    Args:
+        provider_id: Provider ID (e.g., 'openai', 'anthropic', 'google')
+        model_name: Model name
+        is_thinking: Whether thinking/reasoning mode is enabled
+        
+    Returns:
+        True if model supports custom temperature, False otherwise
+    """
+    # Get model capabilities to determine if it's a reasoning model
+    model_capabilities = get_capabilities_for_hosted_model(provider_id, model_name)
+    is_reasoning_model = LLMCapability.REASONING in model_capabilities
+    
+    # OpenAI reasoning models never support custom temperature
+    if provider_id.lower() == "openai" and is_reasoning_model:
+        return False
+    
+    # Anthropic reasoning models only support temperature when thinking is disabled
+    if provider_id.lower() == "anthropic" and is_reasoning_model and is_thinking:
+        return False
+    
+    # All other models support temperature
+    return True
+
+
+def get_temperature_restriction_message(provider_id: str, model_name: str, is_thinking: bool, temperature: float) -> Optional[str]:
+    """
+    Gets a warning message if temperature will be ignored for a model.
+    
+    Args:
+        provider_id: Provider ID
+        model_name: Model name  
+        is_thinking: Whether thinking/reasoning mode is enabled
+        temperature: Requested temperature value
+        
+    Returns:
+        Warning message if temperature will be ignored, None if temperature is supported
+    """
+    if model_supports_temperature(provider_id, model_name, is_thinking):
+        return None
+    
+    # Get model capabilities to provide specific messages
+    model_capabilities = get_capabilities_for_hosted_model(provider_id, model_name)
+    is_reasoning_model = LLMCapability.REASONING in model_capabilities
+    
+    if provider_id.lower() == "openai" and is_reasoning_model:
+        if temperature != 1.0:
+            return f"OpenAI reasoning model {model_name} always uses fixed temperature=1.0. Custom temperature={temperature} will be ignored."
+    
+    elif provider_id.lower() == "anthropic" and is_reasoning_model and is_thinking:
+        if temperature != 1.0:
+            return f"Anthropic reasoning model {model_name} doesn't support custom temperature in thinking mode. Temperature={temperature} will be ignored."
+    
+    return None
+
+
+def should_use_completion_tokens_param(provider_id: str, model_name: str) -> bool:
+    """
+    Checks if a model should use max_completion_tokens instead of max_tokens.
+    
+    Args:
+        provider_id: Provider ID
+        model_name: Model name
+        
+    Returns:
+        True if should use max_completion_tokens, False if should use max_tokens
+    """
+    # OpenAI reasoning models use max_completion_tokens
+    model_capabilities = get_capabilities_for_hosted_model(provider_id, model_name)
+    is_reasoning_model = LLMCapability.REASONING in model_capabilities
+    
+    return provider_id.lower() == "openai" and is_reasoning_model

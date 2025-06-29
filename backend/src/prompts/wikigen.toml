@@ -36,24 +36,51 @@ content = """You are a narrative structure analyst who specializes in identifyin
 **Required Output Fields**:
 - **story_prediction**: Detailed analysis of likely future story developments and plot directions (minimum 50 characters)
 - **growth_assessment**: Assessment of how the story is likely to expand and evolve (minimum 20 characters)  
-- **consolidation_reasoning**: Explanation of why fewer arcs were chosen to accommodate future growth (minimum 20 characters)
 - **arc_strategy**: Explanation of the arc division approach
 - **arcs**: List of identified story arcs with full details"""
 
 [[arc_splitting.messages]]
 role = "user"
-content = """Analyze the following story and divide it into logical narrative arcs, with strong emphasis on accommodating future growth.
+content = """Analyze the following story content and divide it into logical narrative arcs, with strong emphasis on accommodating future growth.
 
 Story Title: {{ story_title }}
-Total Chapters: {{ total_chapters }}
+Total Chapters in Story: {{ total_chapters }}
 Genre: {{ genre }}
-Story Content:
-{{ story_content }}
+This content chunk covers chapters: {{ chunk_start_chapter }} to {{ chunk_end_chapter }}.
+
+{% if previous_arcs_json %}
+**CONTINUATION MODE**: You are analyzing a new chunk of a story that is being processed in parts. You have already defined arcs up to chapter {{ last_processed_chapter }}.
+
+**Previously Defined Arcs (for context only)**:
+```json
+{{ previous_arcs_json }}
+```
+
+**Instructions for Continuation**:
+- Review the previous arcs. The last arc may have `is_finalized: false`, meaning it is incomplete.
+- Your primary task is to analyze the new `story_content_chunk` and determine if it continues the last incomplete arc or starts a new one.
+- If it continues the last arc, your response should begin with that *modified* arc (using the same `id`, but with an updated `end_chapter`, `summary`, `key_events`, etc.).
+- If it starts a new arc, your new arcs must have sequential `id`s that continue from the previous ones.
+- **Your response should ONLY contain new or modified arcs for the current chunk.** Do not repeat finalized arcs from the previous set.
+
+{% else %}
+**FRESH ANALYSIS MODE**: You are analyzing the first chunk of the story.
+{% endif %}
+
+**Story Content Chunk**:
+{{ story_content_chunk }}
+
+**CRITICAL INSTRUCTIONS for `is_finalized` flag**:
+- This flag is essential for chunked processing.
+- For the **very last arc** you output in this response:
+  - You **MUST** set `is_finalized: false` IF its `end_chapter` is the same as the current chunk's end chapter ({{ chunk_end_chapter }}) AND this is **NOT** the final chunk of the story (i.e., `is_final_chunk` is false).
+  - In ALL other cases, you **MUST** set `is_finalized: true`. This includes any arcs that don't end on the chunk boundary, or any arc if this is the final chunk of the story.
+**Is this the final chunk of the story? {{ is_final_chunk }}**
 
 {% if is_short_story %}
 **SHORT STORY MODE**: This story is under 15,000 words.
 **Instructions**:
-- Create a single comprehensive arc covering the entire story (chapters 1-{{ total_chapters }})
+- Create a single comprehensive arc covering the chapters in this chunk (chapters {{ chunk_start_chapter }}-{{ chunk_end_chapter }})
 - Perform detailed analysis of the story's structure, themes, and key events
 - Analyze likely future developments and story direction
 - Provide meaningful summaries and identify important plot points

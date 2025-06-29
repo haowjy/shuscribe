@@ -4,12 +4,13 @@ Defines schemas for input stories, processed stories, and story processing workf
 """
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Iterator, Tuple
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
 from src.schemas.base import BaseSchema, TimestampSchema, UUIDSchema
+from src.utils import count_tokens
 
 
 class StoryStatus(str, Enum):
@@ -63,9 +64,98 @@ class InputStory(BaseSchema):
     chapters: List[RawChapter] = Field(default_factory=list)
     source_path: Optional[str] = Field(None, description="Original source directory or file")
     
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._cached_total_tokens: Optional[int] = None
+    
     @property
     def total_chapters(self) -> int:
         return len(self.chapters)
+    
+    @property
+    def word_count(self) -> int:
+        """Calculate total word count across all chapters."""
+        return sum(len(chapter.content.split()) for chapter in self.chapters)
+    
+    @property
+    def total_tokens(self) -> int:
+        """Calculate total token count across all chapters (cached)."""
+        if not hasattr(self, '_cached_total_tokens') or self._cached_total_tokens is None:
+            full_content = self.get_full_content()
+            self._cached_total_tokens = count_tokens(full_content)
+        return self._cached_total_tokens
+    
+    @property
+    def is_short_story(self) -> bool:
+        """Determine if this is a short story (< 15,000 words)."""
+        return self.word_count < 15000
+    
+    def get_content_chunks(self, chunk_token_limit: int) -> Iterator[Tuple[List[RawChapter], str, int]]:
+        """
+        Yield chunks of chapters that fit within the token limit.
+        
+        Args:
+            chunk_token_limit: Maximum tokens per chunk
+            
+        Yields:
+            Tuple of (chapters_in_chunk, formatted_content, actual_token_count)
+        """
+        if not self.chapters:
+            return
+            
+        sorted_chapters = sorted(self.chapters, key=lambda c: c.chapter_number)
+        current_chunk_chapters = []
+        current_chunk_tokens = 0
+        
+        for chapter in sorted_chapters:
+            # Format chapter content
+            chapter_content = f"# Chapter {chapter.chapter_number}: {chapter.title}\n\n{chapter.content}"
+            chapter_tokens = count_tokens(chapter_content)
+            
+            # Check if adding this chapter would exceed the limit
+            if current_chunk_tokens + chapter_tokens > chunk_token_limit and current_chunk_chapters:
+                # Yield current chunk and start a new one
+                chunk_content = "\n\n".join([
+                    f"# Chapter {c.chapter_number}: {c.title}\n\n{c.content}" 
+                    for c in current_chunk_chapters
+                ])
+                yield (current_chunk_chapters, chunk_content, current_chunk_tokens)
+                
+                # Start new chunk with current chapter
+                current_chunk_chapters = [chapter]
+                current_chunk_tokens = chapter_tokens
+            else:
+                # Add chapter to current chunk
+                current_chunk_chapters.append(chapter)
+                current_chunk_tokens += chapter_tokens
+        
+        # Yield the final chunk if it has content
+        if current_chunk_chapters:
+            chunk_content = "\n\n".join([
+                f"# Chapter {c.chapter_number}: {c.title}\n\n{c.content}" 
+                for c in current_chunk_chapters
+            ])
+            yield (current_chunk_chapters, chunk_content, current_chunk_tokens)
+    
+    def get_full_content(self) -> str:
+        """
+        Get the complete story content formatted with chapter headers.
+        
+        Returns:
+            Concatenated content of all chapters with chapter headers
+        """
+        if not self.chapters:
+            return ""
+        
+        content_parts = []
+        for chapter in sorted(self.chapters, key=lambda c: c.chapter_number):
+            chapter_header = f"# Chapter {chapter.chapter_number}"
+            if chapter.title:
+                chapter_header += f": {chapter.title}"
+            
+            content_parts.append(f"{chapter_header}\n\n{chapter.content}")
+        
+        return "\n\n".join(content_parts)
     
     def get_chapter_content_range(self, start: int, count: int) -> str:
         """Get concatenated content for a range of chapters (more efficient than full_content)"""

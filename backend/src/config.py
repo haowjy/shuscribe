@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     
+    # Thinking Configuration - Budget Token Percentages
+    # These percentages are used to calculate budget_tokens for thinking models
+    # based on the model's context window or a reasonable default
+    THINKING_BUDGET_LOW_PERCENT: float = 15.0      # 15% of available tokens for low thinking
+    THINKING_BUDGET_MEDIUM_PERCENT: float = 50.0   # 50% of available tokens for medium thinking  
+    THINKING_BUDGET_HIGH_PERCENT: float = 100.0     # 100% of available tokens for high thinking
+    THINKING_BUDGET_DEFAULT_TOKENS: int = 2048     # Default budget when context window unknown
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,

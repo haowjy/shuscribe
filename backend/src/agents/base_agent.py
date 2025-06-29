@@ -11,10 +11,45 @@ Provides common functionality for all WikiGen agents including:
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, Type, Union, AsyncIterator
 from uuid import UUID
+from dataclasses import dataclass, field
 from pydantic import BaseModel
 
 from src.services.llm.llm_service import LLMService
-from src.schemas.llm.models import LLMResponse
+from src.schemas.llm.models import LLMResponse, ThinkingEffort, ChunkType
+
+
+@dataclass
+class WindowContentAccumulator:
+    """Accumulates content from streaming chunks by type for a processing window."""
+    thinking: str = ""
+    content: str = ""
+    unknown: str = ""
+    
+    def add_chunk(self, chunk: LLMResponse) -> None:
+        """Add a streaming chunk's content to the appropriate accumulator."""
+        if chunk.chunk_type == ChunkType.THINKING:
+            self.thinking += chunk.content
+        elif chunk.chunk_type == ChunkType.CONTENT:
+            self.content += chunk.content
+        elif chunk.chunk_type == ChunkType.UNKNOWN:
+            self.unknown += chunk.content
+
+
+@dataclass  
+class WindowProcessingResult:
+    """Result of processing a single window of content (e.g., a group of chapters)."""
+    window_number: int
+    start_chapter: int
+    end_chapter: int
+    is_final_window: bool
+    raw_content: WindowContentAccumulator = field(default_factory=WindowContentAccumulator)
+    parsed_result: Optional[Any] = None
+    error: Optional[str] = None
+    
+    @property
+    def chapters_range(self) -> str:
+        """Human-readable chapter range."""
+        return f"{self.start_chapter}-{self.end_chapter}"
 
 
 class BaseAgent(ABC):
@@ -29,6 +64,9 @@ class BaseAgent(ABC):
         llm_service: LLMService,
         default_provider: str = "google",
         default_model: str = "gemini-2.0-flash-001",
+        temperature: float = 0.7,
+        max_tokens: int = 8000,
+        thinking: Optional[ThinkingEffort] = None,
         **kwargs
     ):
         """
@@ -38,11 +76,17 @@ class BaseAgent(ABC):
             llm_service: LLM service for making API calls
             default_provider: Default LLM provider ID (e.g., 'openai', 'anthropic')
             default_model: Default model name for this agent
+            temperature: Default temperature for LLM calls
+            max_tokens: Default maximum tokens for LLM responses
+            thinking: Default thinking effort for models that support thinking modes
             **kwargs: Additional agent-specific configuration
         """
         self.llm_service = llm_service
         self.default_provider = default_provider
         self.default_model = default_model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.thinking = thinking
         
         # Store additional configuration
         self.config = kwargs
@@ -100,6 +144,7 @@ class BaseAgent(ABC):
         model: Optional[str] = None,
         stream: bool = False,
         response_format: Optional[Type[BaseModel]] = None,
+        thinking: Optional[ThinkingEffort] = None,
         **llm_kwargs
     ) -> Union[LLMResponse, AsyncIterator[LLMResponse]]:
         """
@@ -113,7 +158,8 @@ class BaseAgent(ABC):
             model: Optional model override
             stream: Whether to return streaming response
             response_format: Optional pydantic model type for structured output
-            **llm_kwargs: Additional LLM parameters
+            thinking: Optional thinking effort override
+            **llm_kwargs: Additional LLM parameters (will use agent defaults for temperature/max_tokens if not provided)
             
         Returns:
             LLMResponse object for non-streaming, AsyncIterator[LLMResponse] for streaming
@@ -131,6 +177,18 @@ class BaseAgent(ABC):
         """
         final_provider, final_model = self._get_model_params(provider, model)
         
+        # Use agent defaults for temperature, max_tokens, and thinking if not provided
+        final_kwargs = {
+            'temperature': self.temperature,
+            'max_tokens': self.max_tokens,
+            **llm_kwargs  # Explicit kwargs override defaults
+        }
+        
+        # Add thinking effort if specified (either from parameter or agent default)
+        final_thinking = thinking or self.thinking
+        if final_thinking is not None:
+            final_kwargs['thinking'] = final_thinking
+        
         try:
             response = await self.llm_service.chat_completion(
                 provider=final_provider,
@@ -140,7 +198,7 @@ class BaseAgent(ABC):
                 api_key=api_key,
                 stream=stream,
                 response_format=response_format,
-                **llm_kwargs
+                **final_kwargs
             )
             
             return response
@@ -163,6 +221,9 @@ class BaseAgent(ABC):
             "agent_name": self.agent_name,
             "default_provider": self.default_provider,
             "default_model": self.default_model,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "thinking": self.thinking.value if self.thinking else None,
             "config": self.config
         }
     

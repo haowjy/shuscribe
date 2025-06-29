@@ -19,6 +19,10 @@ class Arc(BaseModel):
     end_chapter: int = Field(..., ge=1, description="Last chapter number in this arc")
     summary: str = Field(..., min_length=10, description="Brief summary of this arc's narrative content")
     key_events: str = Field(..., min_length=5, description="Major plot points and character developments")
+    is_finalized: bool = Field(
+        default=True,
+        description="Indicates if an arc's end is definitive. Set to false if it ends on a chunk boundary and might be extended by the next chunk of the story."
+    )
     
     def model_post_init(self, __context: Any) -> None:
         """Validate that end_chapter >= start_chapter"""

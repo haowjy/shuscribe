@@ -33,7 +33,7 @@
         <Chapter ref="6.xml" title="[Chapter 6] Scientist Fuji" />
         <Chapter ref="7.xml" title="[Chapter 7] Side Quests Galore" />
         <Chapter ref="8.xml" title="[Chapter 8] Start of an Unpaid Side Quest" />
-        <Chapter ref="9.xml" title="[Chapter 9] Side Quest: Trade Secrets" />
+        <!-- <Chapter ref="9.xml" title="[Chapter 9] Side Quest: Trade Secrets" />
         <Chapter ref="10.xml" title="[Chapter 10] Side Quest: Complete!" />
         <Chapter ref="11.xml" title="[Chapter 11] Pallet Town" />
         <Chapter ref="12.xml" title="[Chapter 12] A Very Reasonable Man" />
@@ -41,7 +41,7 @@
         <Chapter ref="14.xml" title="[Chapter 14] Flowers for Delia" />
         <Chapter ref="15.xml" title="[Chapter 15] Magmar v Electabuzz" />
         <Chapter ref="16.xml" title="[Chapter 16] Dr. Fuji v Professor Oak" />
-        <Chapter ref="17.xml" title="[Chapter 17] The Eye of the Storm" />
+        <Chapter ref="17.xml" title="[Chapter 17] The Eye of the Storm" /> -->
         <!-- Add more Chapter elements as you write them -->
     </Chapters>
 </StoryMetadata>
