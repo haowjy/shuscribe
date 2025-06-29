@@ -178,7 +178,7 @@ LLM_PROVIDERS: List[LLMProvider] = [
         provider_id="openai",
         display_name="OpenAI",
         api_key_format_hint="sk-...",
-        default_model_name="gpt-4.1-mini",
+        default_model_name="gpt-4.1-nano",
         hosted_models=[
             HostedModelInstance(
                 model_family_id="gpt-4.1", model_name="gpt-4.1", provider_id="openai",
@@ -204,34 +204,6 @@ LLM_PROVIDERS: List[LLMProvider] = [
                 model_family_id="o4-mini", model_name="o4-mini", provider_id="openai",
                 input_token_limit=200_000, output_token_limit=100_000,
                 input_cost_per_million_tokens=1.10, output_cost_per_million_tokens=4.40,
-            ),
-        ],
-    ),
-    LLMProvider(
-        provider_id="anthropic",
-        display_name="Anthropic",
-        api_key_format_hint="sk-ant-api03-...",
-        default_model_name="claude-3-5-haiku-latest",
-        hosted_models=[
-            HostedModelInstance(
-                model_family_id="claude-opus-4", model_name="claude-opus-4-20250514", provider_id="anthropic",
-                input_token_limit=200_000, output_token_limit=32_000,
-                input_cost_per_million_tokens=15.00, output_cost_per_million_tokens=75.00,
-            ),
-            HostedModelInstance(
-                model_family_id="claude-sonnet-4", model_name="claude-sonnet-4-20250514", provider_id="anthropic",
-                input_token_limit=200_000, output_token_limit=64_000,
-                input_cost_per_million_tokens=3.00, output_cost_per_million_tokens=15.00,
-            ),
-            HostedModelInstance(
-                model_family_id="claude-3-5-sonnet", model_name="claude-3-5-sonnet-20241022", provider_id="anthropic",
-                input_token_limit=200_000, output_token_limit=8192,
-                input_cost_per_million_tokens=3.00, output_cost_per_million_tokens=15.00,
-            ),
-            HostedModelInstance(
-                model_family_id="claude-3-5-haiku", model_name="claude-3-5-haiku-latest", provider_id="anthropic",
-                input_token_limit=200_000, output_token_limit=8192,
-                input_cost_per_million_tokens=0.08, output_cost_per_million_tokens=4.00,
             ),
         ],
     ),
@@ -267,6 +239,34 @@ LLM_PROVIDERS: List[LLMProvider] = [
                 input_cost_per_million_tokens=0.10, output_cost_per_million_tokens=0.40,
             ),
             # Add other hosted models for Google
+        ],
+    ),
+    LLMProvider(
+        provider_id="anthropic",
+        display_name="Anthropic",
+        api_key_format_hint="sk-ant-api03-...",
+        default_model_name="claude-3-5-haiku-latest",
+        hosted_models=[
+            HostedModelInstance(
+                model_family_id="claude-opus-4", model_name="claude-opus-4-20250514", provider_id="anthropic",
+                input_token_limit=200_000, output_token_limit=32_000,
+                input_cost_per_million_tokens=15.00, output_cost_per_million_tokens=75.00,
+            ),
+            HostedModelInstance(
+                model_family_id="claude-sonnet-4", model_name="claude-sonnet-4-20250514", provider_id="anthropic",
+                input_token_limit=200_000, output_token_limit=64_000,
+                input_cost_per_million_tokens=3.00, output_cost_per_million_tokens=15.00,
+            ),
+            HostedModelInstance(
+                model_family_id="claude-3-5-sonnet", model_name="claude-3-5-sonnet-20241022", provider_id="anthropic",
+                input_token_limit=200_000, output_token_limit=8192,
+                input_cost_per_million_tokens=3.00, output_cost_per_million_tokens=15.00,
+            ),
+            HostedModelInstance(
+                model_family_id="claude-3-5-haiku", model_name="claude-3-5-haiku-latest", provider_id="anthropic",
+                input_token_limit=200_000, output_token_limit=8192,
+                input_cost_per_million_tokens=0.08, output_cost_per_million_tokens=4.00,
+            ),
         ],
     ),
     # Add other providers (e.g., Groq, Mistral, Cohere)
@@ -329,10 +329,13 @@ def get_hosted_instances_for_family(model_family_id: str) -> List[HostedModelIns
     """Returns all hosted model instances that belong to a specific AI Model Family."""
     return _hosted_models_by_family.get(model_family_id, [])
 
-def get_default_test_model_name_for_provider(provider_id: str) -> Optional[str]:
+def get_default_test_model_name_for_provider(provider_id: str) -> str:
     """
     Gets a default model name for a provider, which can be used for API key validation.
     Prefers the cheapest and fastest models.
     """
     provider = _providers_by_id.get(provider_id)
-    return provider.default_model_name if provider else None 
+    if not provider:
+        raise ValueError(f"Provider {provider_id} not found in catalog")
+    # else the first model in the provider's hosted models
+    return provider.default_model_name if provider.default_model_name else provider.hosted_models[0].model_name

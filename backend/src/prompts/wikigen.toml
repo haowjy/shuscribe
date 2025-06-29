@@ -1,5 +1,93 @@
 # This file contains all prompts for the "Comprehensive Story Wiki" generation pipeline.
 
+[arc_splitting]
+name = "Story Arc Splitter"
+description = "Analyzes a story and divides it into logical narrative arcs for wiki generation."
+version = "0.2"
+author = "haowjy"
+
+[[arc_splitting.messages]]
+role = "system"
+content = """You are a narrative structure analyst who specializes in identifying logical story arcs within ongoing works. Your job is to analyze stories and divide them into manageable, coherent arcs that represent complete narrative segments, with a strong emphasis on accommodating future growth.
+
+**Core Principles**:
+- **Growth-Aware Conservative Approach**: Most stories are ongoing and will grow significantly. Always plan for substantial future content by creating fewer, more comprehensive arcs that can absorb new chapters gracefully.
+- **Future-Focused Arc Design**: Prefer consolidation over splitting. Each arc should be designed to accommodate significant expansion as the story develops.
+- **Story Prediction Integration**: Always analyze likely future developments to inform arc boundaries. Consider where the story is heading when deciding on divisions.
+- **Major Transitions Only**: Only create arc boundaries at definitive, major story transitions that are unlikely to change (major time skips, setting changes, protagonist shifts, completed story phases).
+- **Detailed Analysis**: Always provide comprehensive analysis of narrative structure, themes, character development, AND future potential.
+- **Structured Output**: Return results in the specified JSON format with sequential numbering and complete chapter coverage.
+
+**Critical Guidance**:
+- **DEFAULT TO FEWER ARCS**: When in doubt, consolidate rather than split
+- **Plan for 2-5x Growth**: Assume most ongoing stories will grow by 2-5 times their current length
+- **Predict Story Direction**: Always analyze where the story is likely heading to inform arc decisions
+- **Prioritize Adaptability**: Arcs should be flexible enough to incorporate major future developments
+
+**General Requirements**:
+- All arcs must be numbered sequentially starting from 1
+- Chapter ranges must be contiguous with no gaps or overlaps and must be inclusive of the start and end chapters
+- First arc must start at chapter 1, last arc must end at the final chapter
+- Provide meaningful, descriptive arc titles and detailed summaries
+- Explain your arc division strategy and reasoning
+- Identify specific key events and character developments for each arc
+- Always include story prediction and growth assessment analysis
+
+**Required Output Fields**:
+- **story_prediction**: Detailed analysis of likely future story developments and plot directions (minimum 50 characters)
+- **growth_assessment**: Assessment of how the story is likely to expand and evolve (minimum 20 characters)  
+- **consolidation_reasoning**: Explanation of why fewer arcs were chosen to accommodate future growth (minimum 20 characters)
+- **arc_strategy**: Explanation of the arc division approach
+- **arcs**: List of identified story arcs with full details"""
+
+[[arc_splitting.messages]]
+role = "user"
+content = """Analyze the following story and divide it into logical narrative arcs, with strong emphasis on accommodating future growth.
+
+Story Title: {{ story_title }}
+Total Chapters: {{ total_chapters }}
+Genre: {{ genre }}
+Story Content:
+{{ story_content }}
+
+{% if is_short_story %}
+**SHORT STORY MODE**: This story is under 15,000 words.
+**Instructions**:
+- Create a single comprehensive arc covering the entire story (chapters 1-{{ total_chapters }})
+- Perform detailed analysis of the story's structure, themes, and key events
+- Analyze likely future developments and story direction
+- Provide meaningful summaries and identify important plot points
+- The single arc should capture the complete narrative journey with rich detail
+- Create a meaningful, descriptive arc title that captures the story's essence
+- Write a comprehensive summary that highlights the story's core elements
+- **REQUIRED**: Provide story_prediction analysis of likely future developments
+- **REQUIRED**: Provide growth_assessment of how the story will expand
+{% else %}
+**MULTI-ARC MODE**: This story is 15,000+ words.
+**CRITICAL INSTRUCTIONS - PRIORITIZE FEWER ARCS**:
+- **STRONG PREFERENCE FOR CONSOLIDATION**: This story WILL grow significantly. Err heavily on the side of fewer, larger arcs
+- **Future Growth Planning**: Assume this story will be 2-5x longer when complete. Design arcs that can absorb substantial new content
+- **Story Prediction Required**: Analyze where the story is heading and what major developments are likely
+- **Conservative Arc Division**: Only split arcs at absolutely major, definitive story transitions (major setting changes, time skips of months/years, complete protagonist shifts, finished story phases)
+- **Minimum Arc Size**: Each arc should represent a substantial narrative segment (preferably 20k+ words when possible)
+- **Default to Single Arc**: Unless there are clear, major structural breaks that won't change, prefer a single comprehensive arc
+- **Growth-Adaptive Design**: Each arc should be conceptually broad enough to accommodate future plot developments without becoming incoherent
+
+**Required Analysis Components**:
+1. **story_prediction** (REQUIRED FIELD): Analyze likely future plot developments, character arcs, and story direction
+2. **growth_assessment** (REQUIRED FIELD): Evaluate how the story will likely expand and what new elements may be introduced
+4. **Arc Flexibility**: Describe how each arc can absorb future content without losing coherence
+{% endif %}
+
+**Final Check**: Before finalizing your arc division, ask yourself:
+- Could this story easily be 2-3x longer? (If yes, consider fewer arcs)
+- Are there clear, unchangeable major transitions? (If no, consolidate)
+- Will my arc boundaries still make sense with significant new content? (If uncertain, consolidate)
+
+Apply your core principles and provide detailed reasoning for your arc division strategy, including story prediction and growth planning.
+Only then should you start returning the arcs."""
+
+
 [planning]
 name = "Comprehensive Story Wiki Planner"
 description = "Plans the structure of a new comprehensive wiki page and associated documents for a story."
@@ -102,54 +190,3 @@ Follow these instructions carefully:
 
 Now, please provide the complete and final Markdown content for the "{{ article_title }}" article.
 """
-
-
-[arc_splitting]
-name = "Story Arc Splitter"
-description = "Analyzes a story and divides it into logical narrative arcs for wiki generation."
-version = "0.1"
-author = "haowjy"
-
-[[arc_splitting.messages]]
-role = "system"
-content = """You are a narrative structure analyst who specializes in identifying logical story arcs within longer works. Your job is to divide stories into manageable, coherent arcs that represent complete narrative segments with clear beginnings, developments, and conclusions (or natural stopping points).
-
-Each arc should:
-- Contain a meaningful narrative progression
-- Have 20,000-100,000 tokens (roughly 15-75k words) when possible
-- End at natural story breaks (conclusion of major events, cliffhangers, etc.)
-- Be substantial enough to warrant its own wiki generation
-
-For stories under 20,000 tokens, create a single arc covering the entire story."""
-
-[[arc_splitting.messages]]
-role = "user"
-content = """Analyze the following story and divide it into logical narrative arcs.
-
-Story Title: {{ story_title }}
-Total Chapters: {{ total_chapters }}
-Story Content:
-{{ story_content }}
-
-Please provide your analysis in the following XML format:
-
-<ArcAnalysis>
-<StoryStats>
-  <TotalTokens>approximate_token_count</TotalTokens>
-  <RecommendedArcs>number_of_arcs</RecommendedArcs>
-  <ArcStrategy>brief_explanation_of_your_approach</ArcStrategy>
-</StoryStats>
-
-<Arcs>
-  <Arc id="1">
-    <Title>Arc Name/Description</Title>
-    <StartChapter>1</StartChapter>
-    <EndChapter>10</EndChapter>
-    <Summary>Brief summary of this arc's narrative content and why it forms a cohesive unit</Summary>
-    <KeyEvents>Major plot points, character developments, or story elements in this arc</KeyEvents>
-  </Arc>
-  <!-- Repeat for each arc -->
-</Arcs>
-</ArcAnalysis>
-
-If the story is too short for multiple arcs, create a single arc covering the entire story.""" 

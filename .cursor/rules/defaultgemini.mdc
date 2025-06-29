@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When testing LLM models, the default should always be provider="google" model="gemini-2.0-flash-001" to save on costs.

@@ -20,6 +20,15 @@ backend/src/agents/
 ├── future_workflow/      # Future workflows
 │   ├── orchestrator.py
 │   └── specific_agents.py
+├── base_agent.py         # Base agent class
+├── prompts/              # Prompt templates
+│   ├── wikigen.toml      # Main workflow prompts
+│   └── wikigen/          # Workflow-specific prompts
+│       ├── _common/      # Shared templates
+│       ├── specialized_prompts.toml
+│       └── extended_prompts.toml
+├── tests/                # Test files
+│   └── test_wikigen.py   # Test for WikiGen workflow
 ```
 
 ### **Agent vs Orchestrator**
