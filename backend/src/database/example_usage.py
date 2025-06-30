@@ -20,8 +20,8 @@ async def example_usage():
     print("🚀 ShuScribe Database Example")
     print("=" * 40)
     
-    # Get in-memory repositories for testing
-    repos = get_repositories(backend="memory")
+    # Get file-based repositories for testing
+    repos = get_repositories(backend="file")
     user_repo = repos.user
     workspace_repo = repos.workspace
     story_repo = repos.story

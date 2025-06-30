@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID
 from enum import Enum
 
-from pydantic import BaseModel, Field, ConfigDict, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, validator
 
 
 class WikiArticleType(str, Enum):
@@ -31,11 +31,16 @@ class ArticleConnectionCreate(BaseModel):
     description: Optional[str] = None
     strength: float = Field(default=1.0, ge=0.0, le=1.0, description="Connection strength (0.0-1.0)")
     
-    @validator('to_article_id')
-    def validate_no_self_connection(cls, v, values):
-        if 'from_article_id' in values and v == values['from_article_id']:
-            raise ValueError('cannot connect article to itself')
-        return v
+    @field_validator("to_article_id", mode="after")
+    def validate_no_self_connection(cls, to_id, info):
+        """
+        Ensure `to_article_id` is not the same as `from_article_id`.
+        `info.data` holds the other fields' values.
+        """
+        from_id = info.data.get("from_article_id")
+        if from_id == to_id:
+            raise ValueError("cannot connect article to itself")
+        return to_id
     
     model_config = ConfigDict(from_attributes=True)
 
