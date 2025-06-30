@@ -28,17 +28,44 @@ class ProcessingMode(str, Enum):
     REPROCESS = "reprocess"  # Reprocess entire story
 
 
-# Input Story Schemas (from file upload or directory loading)
-class RawChapter(BaseSchema):
-    """Raw chapter data from input source"""
+# Unified Chapter Model
+class Chapter(BaseSchema):
+    """Unified chapter model for both file loading and database storage"""
     chapter_number: int
     title: str = ""
     content: str = ""
-    ref: Optional[str] = Field(None, description="File reference (e.g., '1.xml')")
+    
+    # Database fields (optional - only when persisted)
+    id: Optional[UUID] = None
+    story_id: Optional[UUID] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    # File loading fields (optional)
+    ref: Optional[str] = Field(default=None, description="File reference (e.g., '1.xml')")
+
+    @property
+    def is_persisted(self) -> bool:
+        return self.id is not None
+    
+    @property
+    def word_count(self) -> int:
+        return len(self.content.split())
+    
+    @classmethod
+    def create_empty(cls) -> 'Chapter':
+        """Create an empty chapter instance"""
+        return cls(
+            chapter_number=0,
+            title="",
+            content=""
+        )
 
 
-class RawStoryMetadata(BaseSchema):
-    """Raw story metadata from input source (_meta.xml)"""
+# Unified Story Model  
+class Story(BaseSchema):
+    """Unified story model for both file loading and database storage"""
+    # Core metadata (always present)
     title: str = ""
     author: str = ""
     synopsis: str = ""
@@ -49,24 +76,28 @@ class RawStoryMetadata(BaseSchema):
     genres: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
 
-    @classmethod
-    def create_empty(cls) -> 'RawStoryMetadata':
-        """Create an empty metadata instance"""
-        return cls(
-            title="Untitled Story",
-            author="Unknown Author"
-        )
-
-
-class InputStory(BaseSchema):
-    """Complete input story with metadata and chapters"""
-    metadata: RawStoryMetadata
-    chapters: List[RawChapter] = Field(default_factory=list)
+    # Content (always present)
+    chapters: List[Chapter] = Field(default_factory=list)
+    
+    # Database fields (optional - only when persisted)
+    id: Optional[UUID] = None
+    owner_id: Optional[UUID] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    processing_status: StoryStatus = StoryStatus.PENDING
+    processing_plan: Optional[Dict[str, Any]] = None
+    
+    # File loading fields (optional)
     source_path: Optional[str] = Field(None, description="Original source directory or file")
     
     def __init__(self, **data):
         super().__init__(**data)
         self._cached_total_tokens: Optional[int] = None
+    
+    # Rich functionality (always available)
+    @property
+    def is_persisted(self) -> bool:
+        return self.id is not None
     
     @property
     def total_chapters(self) -> int:
@@ -75,7 +106,7 @@ class InputStory(BaseSchema):
     @property
     def word_count(self) -> int:
         """Calculate total word count across all chapters."""
-        return sum(len(chapter.content.split()) for chapter in self.chapters)
+        return sum(chapter.word_count for chapter in self.chapters)
     
     @property
     def total_tokens(self) -> int:
@@ -90,7 +121,7 @@ class InputStory(BaseSchema):
         """Determine if this is a short story (< 15,000 words)."""
         return self.word_count < 15000
     
-    def get_content_chunks(self, chunk_token_limit: int) -> Iterator[Tuple[List[RawChapter], str, int]]:
+    def get_content_chunks(self, chunk_token_limit: int) -> Iterator[Tuple[List[Chapter], str, int]]:
         """
         Yield chunks of chapters that fit within the token limit.
         
@@ -163,81 +194,52 @@ class InputStory(BaseSchema):
         return "\n\n".join([f"# Chapter {ch.chapter_number}: {ch.title}\n\n{ch.content}" for ch in selected_chapters])
 
     @classmethod
-    def create_empty(cls, source_path: Optional[str] = None) -> 'InputStory':
+    def create_empty(cls, owner_id: Optional[UUID] = None, source_path: Optional[str] = None) -> 'Story':
         """Create an empty story instance"""
         return cls(
-            metadata=RawStoryMetadata.create_empty(),
+            title="Untitled Story",
+            author="Unknown Author",
             chapters=[],
+            owner_id=owner_id,
             source_path=source_path
         )
 
+    @classmethod
+    def from_file_data(cls, title: str, author: str, chapters_data: List[dict], source_path: Optional[str] = None) -> 'Story':
+        """Create story from file loading data"""
+        chapters = [Chapter(**ch_data) for ch_data in chapters_data]
+        return cls(
+            title=title,
+            author=author,
+            chapters=chapters,
+            source_path=source_path
+        )
 
-# Database/Processed Story Schemas
-class StoryBase(BaseSchema):
-    """Base story schema for database storage"""
-    title: str = ""
-    author: str = ""
-    status: StoryStatus = StoryStatus.PENDING
-
-
-class StoryCreate(StoryBase):
-    """Schema for creating a new story"""
+# Create schemas for database operations
+class StoryCreate(BaseSchema):
+    """Schema for creating a new story in database"""
+    title: str
+    author: str
+    synopsis: str = ""
+    genres: List[str] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
     owner_id: UUID
     processing_plan: Optional[Dict[str, Any]] = None
-
 
 class StoryUpdate(BaseSchema):
-    """Schema for updating a story"""
-    status: StoryStatus
+    """Schema for updating a story in database"""
+    title: Optional[str] = None
+    author: Optional[str] = None
+    synopsis: Optional[str] = None
+    processing_status: Optional[StoryStatus] = None
     processing_plan: Optional[Dict[str, Any]] = None
 
-
-class Story(StoryBase, UUIDSchema, TimestampSchema):
-    """Complete processed story with database fields"""
-    owner_id: UUID
-    processing_plan: Optional[Dict[str, Any]] = None
-
-    @classmethod
-    def create_empty(cls, owner_id: UUID) -> 'Story':
-        """Create an empty story instance"""
-        return cls(
-            title="",
-            author="",
-            status=StoryStatus.PENDING,
-            owner_id=owner_id,
-            id=UUID(int=0),
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
-        )
-
-
-class ChapterBase(BaseSchema):
-    """Base chapter schema for database storage"""
+class ChapterCreate(BaseSchema):
+    """Schema for creating a new chapter in database"""
     chapter_number: int
     title: str
-    raw_content: str
-
-
-class ChapterCreate(ChapterBase):
-    """Schema for creating a new chapter"""
+    content: str
     story_id: UUID
-
-
-class Chapter(ChapterBase, UUIDSchema, TimestampSchema):
-    """Complete chapter with database fields"""
-    story_id: UUID
-    
-    @classmethod
-    def create_empty(cls) -> 'Chapter':
-        """Create an empty chapter instance"""
-        return cls(
-            id=UUID(int=0),
-            story_id=UUID(int=0),
-            chapter_number=0,
-            title="",
-            raw_content="",
-            created_at=datetime.now(timezone.utc)
-        )
 
 
 # Arc Processing Schemas

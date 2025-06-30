@@ -11,7 +11,7 @@ from src.core.story_loading import StoryLoaderFactory, StoryLoadingError
 from src.database.repositories import get_story_repository
 from src.database.repositories.wikipage import get_wikipage_repository
 from src.database.repositories.writing import get_writing_repository
-from src.schemas.story import InputStory, Story, Chapter, RawChapter, RawStoryMetadata
+from src.schemas.story import Story, Chapter
 from src.schemas.wiki import WikiPage, WikiPageCreate
 
 
@@ -35,9 +35,9 @@ class LazyChapter:
                 raise StoryLoadingError(f"Could not read chapter file {self.file_path}: {e}")
         return self._content
     
-    def to_raw_chapter(self) -> RawChapter:
-        """Convert to RawChapter schema"""
-        return RawChapter(
+    def to_chapter(self) -> Chapter:
+        """Convert to Chapter schema"""
+        return Chapter(
             chapter_number=self.chapter_number,
             title=self.title,
             content=self.content,  # This triggers lazy loading
@@ -81,12 +81,12 @@ class ChapterRange:
         selected_numbers = chapter_numbers[start_idx:start_idx + count]
         return [self._lazy_chapters[num] for num in selected_numbers]
     
-    def to_raw_chapters(self, chapter_numbers: Optional[List[int]] = None) -> List[RawChapter]:
-        """Convert to RawChapter schemas, optionally filtering by chapter numbers"""
+    def to_chapters(self, chapter_numbers: Optional[List[int]] = None) -> List[Chapter]:
+        """Convert to Chapter schemas, optionally filtering by chapter numbers"""
         if chapter_numbers is None:
-            return [ch.to_raw_chapter() for ch in self]
+            return [ch.to_chapter() for ch in self]
         else:
-            return [self._lazy_chapters[num].to_raw_chapter() for num in chapter_numbers if num in self._lazy_chapters]
+            return [self._lazy_chapters[num].to_chapter() for num in chapter_numbers if num in self._lazy_chapters]
 
 
 class StoryWorkspace:
@@ -131,12 +131,12 @@ class StoryWorkspace:
         self.writing_directory = workspace_root / "writing"
 
     @property
-    def story_metadata(self) -> 'RawStoryMetadata':
+    def story_metadata(self) -> Story:
         """Get story metadata (lazy loaded) - always returns valid metadata"""
         if self._story_metadata is None:
             self._load_story_metadata()
         # Always return valid metadata, even if loading failed
-        return self._story_metadata or RawStoryMetadata.create_empty()
+        return self._story_metadata or Story.create_empty()
 
     @property
     def chapters(self) -> ChapterRange:
@@ -151,8 +151,8 @@ class StoryWorkspace:
         """Load story metadata from directory"""
         try:
             loader = StoryLoaderFactory.create_loader(self.story_directory)
-            input_story = loader.load_story()
-            self._story_metadata = input_story.metadata
+            story = loader.load_story()
+            self._story_metadata = story
         except Exception as e:
             raise StoryLoadingError(f"Failed to load story metadata: {e}")
 
@@ -160,22 +160,22 @@ class StoryWorkspace:
         """Load chapter file references (lazy loading)"""
         try:
             loader = StoryLoaderFactory.create_loader(self.story_directory)
-            input_story = loader.load_story()
+            story = loader.load_story()
             
             # Create lazy chapters
             lazy_chapters = []
-            for raw_chapter in input_story.chapters:
-                if raw_chapter.ref:
-                    chapter_file = self.story_directory / raw_chapter.ref
+            for chapter in story.chapters:
+                if chapter.ref:
+                    chapter_file = self.story_directory / chapter.ref
                 else:
                     # Fallback to chapter number if no ref
-                    chapter_file = self.story_directory / f"{raw_chapter.chapter_number}.xml"
+                    chapter_file = self.story_directory / f"{chapter.chapter_number}.xml"
                 
                 lazy_chapter = LazyChapter(
-                    chapter_number=raw_chapter.chapter_number,
-                    title=raw_chapter.title,
+                    chapter_number=chapter.chapter_number,
+                    title=chapter.title,
                     file_path=chapter_file,
-                    ref=raw_chapter.ref
+                    ref=chapter.ref
                 )
                 lazy_chapters.append(lazy_chapter)
             
@@ -188,11 +188,11 @@ class StoryWorkspace:
     async def create_story_in_repository(self) -> Story:
         """Create the story in the repository if it doesn't exist"""
         if self._story_id is None:
-            # Load all chapters and create InputStory
-            input_story = self.get_input_story()
-            story = await self._story_repo.store_input_story(input_story, self.owner_id)
-            self._story_id = story.id
-            return story
+            # Load complete story and store in repository
+            story = self.get_story()
+            stored_story = await self._story_repo.store_story(story, self.owner_id)
+            self._story_id = stored_story.id
+            return stored_story
         else:
             return await self._story_repo.get_story(self._story_id)
 
@@ -206,25 +206,25 @@ class StoryWorkspace:
         
         # Get the requested chapter range
         lazy_chapters = self.chapters.get_chunk(start, count)
-        raw_chapters = [ch.to_raw_chapter() for ch in lazy_chapters]
+        chapters = [ch.to_chapter() for ch in lazy_chapters]
         
         # Check if chapters already exist in repository
         existing_chapters = await self._story_repo.get_chapters(self._story_id)
         existing_numbers = {ch.chapter_number for ch in existing_chapters}
         
         # Only load chapters that don't exist
-        new_raw_chapters = [ch for ch in raw_chapters if ch.chapter_number not in existing_numbers]
+        new_chapters = [ch for ch in chapters if ch.chapter_number not in existing_numbers]
         
-        if new_raw_chapters:
+        if new_chapters:
             from src.schemas.story import ChapterCreate
             chapters_create = [
                 ChapterCreate(
                     story_id=self._story_id,
                     chapter_number=ch.chapter_number,
                     title=ch.title,
-                    raw_content=ch.content
+                    content=ch.content
                 )
-                for ch in new_raw_chapters
+                for ch in new_chapters
             ]
             await self._story_repo.create_chapters_bulk(chapters_create)
         
@@ -233,13 +233,22 @@ class StoryWorkspace:
         requested_numbers = {ch.chapter_number for ch in lazy_chapters}
         return [ch for ch in all_chapters if ch.chapter_number in requested_numbers]
 
-    def get_input_story(self, chapter_numbers: Optional[List[int]] = None) -> InputStory:
-        """Get InputStory with specified chapters (or all if None)"""
-        raw_chapters = self.chapters.to_raw_chapters(chapter_numbers)
+    def get_story(self, chapter_numbers: Optional[List[int]] = None) -> Story:
+        """Get Story with specified chapters (or all if None)"""
+        metadata = self.story_metadata
+        chapters = self.chapters.to_chapters(chapter_numbers)
         
-        return InputStory(
-            metadata=self.story_metadata,
-            chapters=raw_chapters,
+        return Story(
+            title=metadata.title,
+            author=metadata.author,
+            synopsis=metadata.synopsis,
+            status=metadata.status,
+            date_created=metadata.date_created,
+            last_updated=metadata.last_updated,
+            copyright=metadata.copyright,
+            genres=metadata.genres,
+            tags=metadata.tags,
+            chapters=chapters,
             source_path=str(self.workspace_root)
         )
 
@@ -252,9 +261,10 @@ class StoryWorkspace:
     async def create_wiki_page_in_repository(self) -> WikiPage:
         """Create the wiki page in the repository if it doesn't exist"""
         if self._wiki_page_id is None:
+            metadata = self.story_metadata
             wiki_page_create = WikiPageCreate(
-                title=f"{self.story_metadata.title} Wiki",
-                description=f"Wiki for {self.story_metadata.title} by {self.story_metadata.author}",
+                title=f"{metadata.title} Wiki",
+                description=f"Wiki for {metadata.title} by {metadata.author}",
                 is_public=False,
                 safe_through_chapter=0,
                 creator_id=self.owner_id

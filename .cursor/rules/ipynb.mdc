@@ -1,0 +1,6 @@
+---
+description: 
+globs: *ipynb
+alwaysApply: false
+---
+Never try to edit an ipynb notebook directly (other files are fine). Just output and write the updated cell(s) in markdown format. Code changes should be wrapped in code blocks, while markdown changes should be wrapped in *** ***

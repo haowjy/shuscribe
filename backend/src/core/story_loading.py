@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-from src.schemas.story import InputStory, RawStoryMetadata, RawChapter
+from src.schemas.story import Story, Chapter
 
 
 class StoryLoadingError(Exception):
@@ -41,7 +41,7 @@ class DirectoryStoryLoader:
 
         self.story_directory = story_directory
 
-    def load_story(self, strip_xml_wrapper: bool = True) -> InputStory:
+    def load_story(self, strip_xml_wrapper: bool = True) -> Story:
         """
         Load complete story with metadata and chapters.
 
@@ -49,20 +49,28 @@ class DirectoryStoryLoader:
             strip_xml_wrapper: Whether to strip <Chapter> XML wrapper from content
             
         Returns:
-            InputStory: Complete story data
+            Story: Complete story data with unified schema
             
         Raises:
             StoryLoadingError: If loading fails
         """
         try:
             # Load metadata
-            metadata = self._load_metadata()
+            metadata_dict = self._load_metadata()
             
             # Load chapters
-            chapters = self._load_chapters(metadata, strip_xml_wrapper)
+            chapters = self._load_chapters(strip_xml_wrapper)
             
-            return InputStory(
-                metadata=metadata,
+            return Story(
+                title=metadata_dict.get("title", ""),
+                author=metadata_dict.get("author", ""),
+                synopsis=metadata_dict.get("synopsis", ""),
+                status=metadata_dict.get("status", ""),
+                date_created=metadata_dict.get("date_created"),
+                last_updated=metadata_dict.get("last_updated"),
+                copyright=metadata_dict.get("copyright"),
+                genres=metadata_dict.get("genres", []),
+                tags=metadata_dict.get("tags", []),
                 chapters=chapters,
                 source_path=str(self.story_directory)
             )
@@ -70,7 +78,7 @@ class DirectoryStoryLoader:
         except Exception as e:
             raise StoryLoadingError(f"Failed to load story from {self.story_directory}: {e}")
 
-    def _load_metadata(self) -> RawStoryMetadata:
+    def _load_metadata(self) -> Dict[str, Any]:
         """Load and parse story metadata from _meta.xml"""
         meta_file_path = self.story_directory / "_meta.xml"
         if not meta_file_path.is_file():
@@ -113,12 +121,12 @@ class DirectoryStoryLoader:
             else:
                 metadata_dict["tags"] = []
 
-            return RawStoryMetadata(**metadata_dict)
+            return metadata_dict
 
         except ET.ParseError as e:
             raise StoryLoadingError(f"Error parsing '_meta.xml': {e}")
 
-    def _load_chapters(self, metadata: RawStoryMetadata, strip_xml_wrapper: bool) -> List[RawChapter]:
+    def _load_chapters(self, strip_xml_wrapper: bool) -> List[Chapter]:
         """Load chapters based on metadata chapter references"""
         chapters = []
         
@@ -130,7 +138,7 @@ class DirectoryStoryLoader:
             # Use metadata chapter references
             for chapter_info in chapter_refs:
                 content = self._load_chapter_content(chapter_info["ref"], strip_xml_wrapper)
-                chapters.append(RawChapter(
+                chapters.append(Chapter(
                     chapter_number=len(chapters) + 1,  # Sequential numbering
                     title=chapter_info["title"],
                     content=content,
@@ -145,7 +153,7 @@ class DirectoryStoryLoader:
                 # Try to extract title from content or use filename
                 title = self._extract_title_from_content(content) or f"Chapter {i}"
                 
-                chapters.append(RawChapter(
+                chapters.append(Chapter(
                     chapter_number=i,
                     title=title,
                     content=content,
@@ -233,7 +241,7 @@ class StoryLoaderFactory:
             raise StoryLoadingError(f"Unsupported source type: {source_path}")
     
     @staticmethod
-    def load_story(source_path: Path, **kwargs) -> InputStory:
+    def load_story(source_path: Path, **kwargs) -> Story:
         """
         Convenience method to load story from path.
         
@@ -242,45 +250,7 @@ class StoryLoaderFactory:
             **kwargs: Additional arguments passed to loader
             
         Returns:
-            InputStory: Loaded story data
+            Story: Loaded story data with unified schema
         """
         loader = StoryLoaderFactory.create_loader(source_path)
-        return loader.load_story(**kwargs)
-
-
-# Backward compatibility - keeping the old StoryLoader interface
-class StoryLoader:
-    """
-    Legacy StoryLoader interface for backward compatibility.
-    Wraps the new DirectoryStoryLoader.
-    """
-    
-    def __init__(self, story_folder: Path):
-        self._loader = DirectoryStoryLoader(story_folder)
-        self._story: Optional[InputStory] = None
-        
-    def _ensure_loaded(self):
-        """Ensure story is loaded"""
-        if self._story is None:
-            self._story = self._loader.load_story()
-    
-    def get_metadata(self) -> Optional[Dict[str, Any]]:
-        """Get story metadata as dict (legacy interface)"""
-        self._ensure_loaded()
-        if self._story:
-            return self._story.metadata.model_dump()
-        return None
-    
-    def get_chapters_list(self) -> List[Dict[str, str]]:
-        """Get chapters list (legacy interface)"""
-        self._ensure_loaded()
-        if self._story:
-            return [
-                {"ref": ch.ref or f"{ch.chapter_number}.xml", "title": ch.title}
-                for ch in self._story.chapters
-            ]
-        return []
-    
-    def load_chapter(self, chapter_ref: str, strip_xml_wrapper: bool = False) -> str:
-        """Load chapter content (legacy interface)"""
-        return self._loader._load_chapter_content(chapter_ref, strip_xml_wrapper) 
+        return loader.load_story(**kwargs) 

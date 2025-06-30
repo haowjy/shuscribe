@@ -1,530 +1,601 @@
-# Repository Architecture and Implementation
+# ShuScribe Storage Architecture v3.0 (Simplified)
 
-## Table of Contents
-1. [Repository Abstraction Pattern](#repository-abstraction-pattern)
-2. [Current Repository Implementation](#current-repository-implementation)
-3. [Data Relationships and Architecture](#data-relationships-and-architecture)
-4. [Spoiler Prevention Through Article Snapshots](#spoiler-prevention-through-article-snapshots)
-5. [Implementation Details](#implementation-details)
+## Overview
 
----
+ShuScribe implements a **workspace-centric storage architecture** with **domain-specific repositories** that supports both file-based local development and Supabase-backed web deployment. The system is built around **workspaces** containing **content** with **chapter-based versioning** for spoiler prevention and **user-guided content evolution**.
 
-## Repository Abstraction Pattern
+## Repository Domains
 
-### Philosophy
+The storage architecture is organized around five core domains:
 
-ShuScribe implements a **dual-mode storage architecture** using the Repository pattern to abstract data persistence. This design enables the same application logic to work seamlessly in both local development and web deployment environments without code changes.
+1. **`user`** - User profiles, authentication, BYOK API keys
+2. **`workspace`** - Workspace management, arcs, processing state  
+3. **`story`** - All story content: published chapters, drafts, chapter versions, story metadata
+4. **`wiki`** - AI-generated articles with versioning, connections, spoiler protection
+5. **`writing`** - Author workspace tools: AI conversations, research notes, outlines, writing prompts, planning tools
 
-### Core Benefits
+This domain separation eliminates circular imports and provides clear boundaries for implementation backends (memory, file, supabase).
 
-1. **Environment Flexibility**: Switch between local development and production deployment
-2. **Testing Simplicity**: In-memory repositories enable fast, isolated tests
-3. **Consistent Interface**: Same API regardless of underlying storage mechanism
-4. **Future Extensibility**: Easy to add new storage backends (e.g., different databases)
+## Core Concepts
 
-### Architecture Overview
+### 1. Workspace
+A **workspace** is the top-level container for a complete story project. Each workspace contains all content, metadata, and generated artifacts for a single story.
 
-```python
-# Abstract Interface
-class AbstractStoryRepository(ABC):
-    async def create_story(self, story_create: StoryCreate) -> Story:
-        pass
-    
-    async def get_story(self, story_id: UUID) -> Optional[Story]:
-        pass
-    
-    # ... other methods
-
-# In-Memory Implementation (Local/CLI)
-class InMemoryStoryRepository(AbstractStoryRepository):
-    def __init__(self):
-        self._stories: Dict[UUID, Story] = {}
-        self._chapters: Dict[UUID, Chapter] = {}
-        # ... other collections
-    
-    async def create_story(self, story_create: StoryCreate) -> Story:
-        # Implementation using Python dictionaries
-        pass
-
-# Supabase Implementation (Web)
-class SupabaseStoryRepository(AbstractStoryRepository):
-    def __init__(self, supabase_client: Client):
-        self.client = supabase_client
-    
-    async def create_story(self, story_create: StoryCreate) -> Story:
-        # Implementation using Supabase client
-        pass
-
-# Factory Function
-def get_story_repository() -> AbstractStoryRepository:
-    if settings.SKIP_DATABASE:
-        return InMemoryStoryRepository()  # Local mode
-    else:
-        return SupabaseStoryRepository(supabase_client)  # Web mode
-```
-
-### Configuration-Driven Selection
-
-The storage backend is automatically selected based on the `SKIP_DATABASE` environment variable:
-
-- **`SKIP_DATABASE=true`**: Uses in-memory repositories (local/CLI mode)
-- **`SKIP_DATABASE=false`**: Uses Supabase repositories (web deployment)
-
----
-
-## Current Repository Implementation
-
-Our system implements three main repository abstractions:
-
-### 1. Story Repository
-Manages stories, chapters, story arcs, and enhanced chapters.
-
-### 2. Wiki Page Repository  
-Manages wiki pages, articles, article snapshots, and their relationships.
-
-### 3. User Repository
-Manages users, API keys, and user progress (web mode only).
-
----
-
-## Data Relationships and Architecture
-
-### Core Entity Relationships
-
-```mermaid
-erDiagram
-    User {
-        UUID id
-        TEXT email
-        TEXT subscription_tier
-        TIMESTAMPTZ created_at
-        TIMESTAMPTZ updated_at
-    }
-    
-    UserAPIKey {
-        UUID user_id
-        TEXT provider
-        TEXT encrypted_api_key
-        JSONB provider_metadata
-        TEXT validation_status
-        TIMESTAMPTZ last_validated_at
-        TIMESTAMPTZ created_at
-        TIMESTAMPTZ updated_at
-    }
-    
-    Story {
-        UUID id
-        UUID owner_id
-        TEXT title
-        TEXT author
-        TEXT status
-        JSONB processing_plan
-        TIMESTAMPTZ created_at
-        TIMESTAMPTZ updated_at
-    }
-    
-    Chapter {
-        UUID id
-        UUID story_id
-        INTEGER chapter_number
-        TEXT title
-        TEXT raw_content
-        TIMESTAMPTZ created_at
-    }
-    
-    StoryArc {
-        UUID id
-        UUID story_id
-        INTEGER arc_number
-        TEXT title
-        INTEGER start_chapter
-        INTEGER end_chapter
-        TEXT summary
-        JSONB key_events
-        INTEGER token_count
-        TEXT processing_status
-        TIMESTAMPTZ created_at
-        TIMESTAMPTZ updated_at
-    }
-    
-    EnhancedChapter {
-        UUID id
-        UUID chapter_id
-        UUID arc_id
-        TEXT enhanced_content
-        JSONB link_metadata
-        TIMESTAMPTZ created_at
-        TIMESTAMPTZ updated_at
-    }
-    
-    WikiPage {
-        UUID id
-        UUID story_id
-        TEXT title
-        TEXT description
-        INTEGER safe_through_chapter
-        BOOLEAN is_public
-        UUID creator_id
-        TIMESTAMPTZ created_at
-        TIMESTAMPTZ updated_at
-    }
-    
-    Article {
-        UUID id
-        TEXT title
-        TEXT slug
-        TEXT article_type
-        TEXT canonical_name
-        UUID creator_id
-        JSONB metadata
-        TIMESTAMPTZ created_at
-        TIMESTAMPTZ updated_at
-    }
-    
-    ArticleSnapshot {
-        UUID id
-        UUID article_id
-        TEXT content
-        TEXT preview
-        INTEGER last_safe_chapter
-        UUID source_story_id
-        INTEGER version_number
-        UUID parent_snapshot_id
-        TIMESTAMPTZ created_at
-        TIMESTAMPTZ updated_at
-    }
-    
-    WikiPageArticleLink {
-        UUID id
-        UUID wiki_page_id
-        UUID article_snapshot_id
-        INTEGER display_order
-        BOOLEAN is_featured
-        TIMESTAMPTZ created_at
-    }
-    
-    ArticleStoryAssociation {
-        UUID id
-        UUID article_id
-        UUID story_id
-        TEXT association_type
-        JSONB context_metadata
-        TIMESTAMPTZ created_at
-    }
-    
-    User ||--o{ UserAPIKey : "has API keys"
-    User ||--o{ Story : "owns stories"
-    User ||--o{ WikiPage : "creates wiki pages"
-    User ||--o{ Article : "creates articles"
-    
-    Story ||--o{ Chapter : "contains chapters"
-    Story ||--o{ StoryArc : "divided into arcs"
-    Story ||--o{ WikiPage : "has wiki pages"
-    Story ||--o{ ArticleSnapshot : "generates snapshots"
-    Story ||--o{ ArticleStoryAssociation : "references articles"
-    
-    Chapter ||--o{ EnhancedChapter : "enhanced versions"
-    StoryArc ||--o{ EnhancedChapter : "arc-specific enhancement"
-    
-    Article ||--o{ ArticleSnapshot : "versioned as snapshots"
-    Article ||--o{ ArticleStoryAssociation : "associated with stories"
-    
-    ArticleSnapshot ||--o{ WikiPageArticleLink : "linked to wiki pages"
-    ArticleSnapshot ||--o{ ArticleSnapshot : "parent-child versions"
-    
-    WikiPage ||--o{ WikiPageArticleLink : "contains article links"
-```
-
-The above diagram shows the complete data model and relationships in our repository system.
-
-### Key Architectural Concepts
-
-#### 1. **Story Processing Flow**
-```
-Raw Story → Chapters → Story Arcs → Wiki Articles → Article Snapshots → Wiki Pages
-```
-
-- **Stories** are divided into **Chapters** (raw content)
-- **Story Arcs** group chapters for processing (e.g., Arc 1: Chapters 1-5)
-- **Articles** represent wiki entities (characters, locations, concepts)
-- **Article Snapshots** are versioned content tied to specific chapter safety levels
-- **Wiki Pages** collect appropriate snapshots for spoiler-safe viewing
-
-#### 2. **Separation of Content and Presentation**
-- **Articles**: Base entities (characters, locations, etc.) that can be shared across stories
-- **Article Snapshots**: Story-specific versions with appropriate spoiler levels
-- **Wiki Pages**: Curated collections of snapshots for specific reading progress
-
-#### 3. **Multi-Story Universe Support**
-- Articles can be referenced by multiple stories via **ArticleStoryAssociation**
-- Each story generates its own snapshots of shared articles
-- Wiki pages are story-specific but can reference shared article entities
-
----
-
-## Spoiler Prevention Through Article Snapshots
-
-### The Spoiler Problem
-
-When generating wikis for ongoing stories, we face a fundamental challenge:
-- Early chapters introduce characters with basic information
-- Later chapters reveal major plot points, secrets, or character deaths
-- Readers at different points need different levels of information
-
-### Solution: Versioned Article Snapshots
-
-Our system solves this through **Article Snapshots** - versioned content tied to specific chapter safety levels:
+### 2. Content Types
+All content is classified by type using standardized enums:
 
 ```python
-class ArticleSnapshot(BaseModel):
-    id: UUID
-    article_id: UUID                    # Which article this is a version of
-    content: str                        # Full article content at this spoiler level
-    preview: str                        # Short preview for tooltips
-    last_safe_chapter: int              # Safe to read through this chapter
-    source_story_id: UUID               # Which story generated this version
-    version_number: int                 # Version within this story
-    parent_snapshot_id: Optional[UUID]  # Previous version (for history)
+class ContentType(Enum):
+    STORY_CHAPTER = "story_chapter"
+    WIKI_ARTICLE = "wiki_article"
+    CHARACTER_PROFILE = "character_profile"
+    LOCATION_GUIDE = "location_guide"
+    TIMELINE_ENTRY = "timeline_entry"
+    CONCEPT_ARTICLE = "concept_article"
+    USER_NOTES = "user_notes"
+    OTHER = "other"
+    USER_DEFINED = "user_defined"
 ```
 
-### Example: Character Article Evolution
+### 3. Chapter-Based Versioning
+Two orthogonal versioning systems:
 
-Consider a character "Dr. Aris" across 10 chapters:
+- **Chapter-Safe Versioning**: Article content evolves as story progresses, with versions safe through specific chapters (spoiler prevention)
+- **Edit Versioning**: Track author changes to any chapter-safe version (content history)
 
-```python
-# Chapter 2 version - Basic introduction
-ArticleSnapshot(
-    article_id=dr_aris_id,
-    content="Dr. Aris is a mysterious scientist who appears in Chapter 1...",
-    last_safe_chapter=2,
-    version_number=1
-)
+### 4. Living Current Version
+Each article maintains a "current working version" that incorporates user notes and guidance for future AI generation.
 
-# Chapter 5 version - More background revealed
-ArticleSnapshot(
-    article_id=dr_aris_id,
-    content="Dr. Aris is a former government researcher who was fired for...",
-    last_safe_chapter=5,
-    version_number=2,
-    parent_snapshot_id=version_1_id
-)
+## Simplified Workspace Structure
 
-# Chapter 8 version - Major spoiler revealed
-ArticleSnapshot(
-    article_id=dr_aris_id,
-    content="Dr. Aris is actually the protagonist's father and the main villain...",
-    last_safe_chapter=8,
-    version_number=3,
-    parent_snapshot_id=version_2_id
-)
+```
+workspace_name/
+├── content/           # All user-visible content
+│   ├── story/         # Story chapters
+│   ├── wiki/          # Wiki articles (current versions)
+│   └── notes/         # User notes and research
+└── _system/           # System data
+    ├── versions/      # Chapter-safe versions and edit history
+    ├── connections/   # Article relationships
+    ├── processing/    # Arc processing state
+    └── metadata/      # Workspace metadata
 ```
 
-### Wiki Page Safety Filtering
+## Content Versioning System
 
-**Wiki Pages** act as spoiler-safe collections by linking to appropriate snapshots:
+### Chapter-Safe Versions (Spoiler Prevention)
 
 ```python
-# Wiki for readers through Chapter 3
-wiki_early = WikiPage(
-    title="Early Story Wiki",
-    safe_through_chapter=3,
-    # Links to version 1 of Dr. Aris (safe through chapter 2)
-)
+@dataclass
+class ChapterVersion:
+    """Version of content safe through specific chapter"""
+    article_id: str
+    content_type: ContentType
+    chapter: int                # Safe through this chapter
+    content: str               # Full content (no diffs)
+    created_at: datetime
+    created_by: str           # "arc_processing" or "user_edit"
+    edit_version: int = 1     # Latest edit version number
 
-# Wiki for readers through Chapter 6  
-wiki_mid = WikiPage(
-    title="Mid Story Wiki", 
-    safe_through_chapter=6,
-    # Links to version 2 of Dr. Aris (safe through chapter 5)
-)
+@dataclass
+class CurrentVersion:
+    """Living working version with user guidance"""
+    article_id: str
+    content_type: ContentType
+    content: str
+    user_notes: List[str]                    # User corrections/additions
+    next_update_guidance: str                # Guidance for next AI generation
+    last_updated: datetime
+    last_updated_by: str
 ```
 
-### Query Safety
-
-Repository methods enforce spoiler safety:
+### Edit Versions (Content History)
 
 ```python
-# Get wiki snapshots safe for reader at chapter 4
-snapshots = await wiki_repo.get_wiki_page_snapshots(
-    wiki_page_id=wiki_id,
-    max_safe_chapter=4  # Only returns snapshots with last_safe_chapter <= 4
-)
+@dataclass
+class EditVersion:
+    """Author edit of a specific chapter-safe version"""
+    article_id: str
+    chapter: int              # Which chapter version this edits
+    edit_number: int          # 1, 2, 3...
+    content: str             # Full edited content
+    edit_summary: str        # "Fixed typo", "Added backstory"
+    created_at: datetime
+    created_by: str          # Author ID
 ```
 
----
+## Wikigen Pipeline Integration
 
-## Implementation Details
+### Arc Processing Creates Chapter Versions
 
-### Repository Method Categories
-
-#### Story Repository Methods
-
-**Story Management:**
-- `create_story()`, `get_story()`, `update_story()`, `delete_story()`, `list_stories()`
-
-**Chapter Management:**
-- `create_chapter()`, `get_chapters()`, `update_chapter()`, `delete_chapter()`
-- `get_chapters_for_story()` - Get all chapters for a story
-
-**Story Arc Management:**
-- `create_story_arc()`, `get_story_arcs()`, `update_story_arc()`, `delete_story_arc()`
-- Arc-based processing tracking for incremental wiki generation
-
-**Enhanced Chapter Management:**
-- `create_enhanced_chapter()`, `get_enhanced_chapters()`
-- Chapters with wiki links added by processing agents
-
-#### Wiki Page Repository Methods
-
-**Wiki Page Management:**
-- `create_wiki_page()`, `get_wiki_page()`, `update_wiki_page()`, `delete_wiki_page()`
-- `list_wiki_pages()` - Get all wiki pages for a user/story
-
-**Article Management:**
-- `create_article()`, `get_article()`, `update_article()`, `delete_article()`
-- `search_articles()` - Search with filters (type, tags, etc.)
-
-**Article Snapshot Management:**
-- `create_article_snapshot()`, `get_article_snapshots()`, `update_article_snapshot()`
-- `get_article_snapshots(article_id, story_id)` - Get all versions for article in story
-
-**Association Management:**
-- `create_article_story_association()` - Link articles to stories
-- `get_article_stories()`, `get_story_articles()` - Query associations
-
-**Wiki Page Composition:**
-- `create_page_snapshot_link()` - Add snapshot to wiki page
-- `get_wiki_page_snapshots()` - Get all snapshots for a wiki page
-- `get_page_snapshot_links()` - Get link metadata
-
-### In-Memory Implementation Details
-
-#### Data Storage Structure
 ```python
-class InMemoryStoryRepository:
-    def __init__(self):
-        # Primary collections
-        self._stories: Dict[UUID, Story] = {}
-        self._chapters: Dict[UUID, Chapter] = {}
-        self._story_arcs: Dict[UUID, StoryArc] = {}
-        self._enhanced_chapters: Dict[UUID, EnhancedChapter] = {}
+def process_arc(self, arc: Arc):
+    """Process arc and create chapter-level versions"""
+    
+    # 1. Generate content for whole arc using current versions + user notes
+    arc_articles = {}
+    for article_id in self.get_affected_articles(arc):
+        current = self.get_current_version(article_id)
+        user_guidance = current.user_notes + current.next_update_guidance
         
-        # Indexes for efficient lookups
-        self._chapters_by_story: Dict[UUID, List[UUID]] = defaultdict(list)
-        self._arcs_by_story: Dict[UUID, List[UUID]] = defaultdict(list)
-        self._enhanced_by_story: Dict[UUID, List[UUID]] = defaultdict(list)
-        self._enhanced_by_arc: Dict[UUID, List[UUID]] = defaultdict(list)
-```
-
-#### Relationship Management
-The in-memory implementation maintains referential integrity through:
-- **Automatic indexing**: When entities are created, they're automatically indexed by relationships
-- **Cascade operations**: Deleting a story removes all related chapters, arcs, etc.
-- **Constraint enforcement**: Foreign key relationships are validated
-
-#### Performance Optimizations
-- **Dictionary lookups**: O(1) access to entities by ID
-- **Index maintenance**: Relationship indexes updated on mutations
-- **Lazy loading**: Related entities loaded only when requested
-
-### Testing Strategy
-
-#### Repository Testing Approach
-```python
-# Abstract test class for both implementations
-class AbstractStoryRepositoryTest:
-    @pytest.fixture
-    def repo(self) -> AbstractStoryRepository:
-        raise NotImplementedError  # Implemented by concrete test classes
+        updated_content = self.ai_generate_article_update(
+            arc_content=arc.content,
+            existing_content=current.content,
+            user_guidance=user_guidance
+        )
+        
+        arc_articles[article_id] = updated_content
     
-    async def test_create_story(self, repo):
-        # Test implementation independent of storage backend
-        pass
-
-# Concrete test implementations
-class TestInMemoryStoryRepository(AbstractStoryRepositoryTest):
-    @pytest.fixture
-    def repo(self):
-        return InMemoryStoryRepository()
-
-class TestSupabaseStoryRepository(AbstractStoryRepositoryTest):
-    @pytest.fixture  
-    def repo(self):
-        return SupabaseStoryRepository(supabase_client)
+    # 2. Create chapter-safe versions for each chapter in arc
+    for chapter_num in range(arc.start_chapter, arc.end_chapter + 1):
+        for article_id, article_content in arc_articles.items():
+            
+            # Filter content to be safe through this chapter
+            chapter_safe_content = self.filter_content_for_chapter(
+                article_content, chapter_num
+            )
+            
+            # Store chapter version
+            self.save_chapter_version(
+                article_id=article_id,
+                chapter=chapter_num,
+                content=chapter_safe_content,
+                created_by=f"arc_{arc.id}_processing"
+            )
+    
+    # 3. Update current versions for next arc
+    for article_id, updated_content in arc_articles.items():
+        self.update_current_version(article_id, updated_content)
 ```
 
-This approach ensures both implementations behave identically.
-
-### Factory Functions and Dependency Injection
-
-Repository factories automatically select implementations:
+### Reader Experience
 
 ```python
-# Factory functions in __init__.py files
-def get_story_repository() -> AbstractStoryRepository:
-    if settings.SKIP_DATABASE:
-        return InMemoryStoryRepository()
-    else:
-        return SupabaseStoryRepository(get_supabase_client())
-
-def get_wikipage_repository() -> AbstractWikiPageRepository:
-    if settings.SKIP_DATABASE:
-        return InMemoryWikiPageRepository()
-    else:
-        return SupabaseWikiPageRepository(get_supabase_client())
-
-# Usage in application code
-story_repo = get_story_repository()  # Automatically gets correct implementation
-wiki_repo = get_wikipage_repository()
+def get_article_for_reader(self, article_id: str, reader_chapter: int) -> Optional[str]:
+    """Get article version safe for reader's progress"""
+    
+    # Get latest chapter version safe for this reader
+    version = db.query("""
+        SELECT content FROM chapter_versions 
+        WHERE article_id = ? AND chapter <= ? 
+        ORDER BY chapter DESC 
+        LIMIT 1
+    """, article_id, reader_chapter)
+    
+    return version.content if version else None
 ```
 
-### Migration and Schema Evolution
+## User Editing System
 
-#### Supabase Migrations
-- SQL migration files for schema changes
-- Version-controlled database evolution
-- Automated deployment through CI/CD
+### Types of User Edits
 
-#### In-Memory Schema Changes
-- Python data model updates
-- No migration scripts needed
-- Backward compatibility through code
+```python
+class EditType(Enum):
+    CORRECT_CHAPTER_VERSION = "correct_chapter_version"  # Fix specific chapter version
+    UPDATE_CURRENT_VERSION = "update_current_version"    # Edit current working version
+    ADD_USER_NOTES = "add_user_notes"                    # Add guidance for AI
+    SET_UPDATE_GUIDANCE = "set_update_guidance"          # Set next update instructions
 
-### Performance Characteristics
+def handle_user_edit(self, article_id: str, edit_type: EditType, content: str, chapter: int = None):
+    """Handle different types of user edits"""
+    
+    if edit_type == EditType.CORRECT_CHAPTER_VERSION:
+        # Create new edit version of specific chapter version
+        self.create_edit_version(
+            article_id=article_id,
+            chapter=chapter,
+            content=content,
+            edit_summary="User correction"
+        )
+        
+        # Queue for correction propagation
+        self.queue_correction_propagation(article_id, chapter, content)
+        
+    elif edit_type == EditType.UPDATE_CURRENT_VERSION:
+        # Update current working version directly
+        self.update_current_version(article_id, content)
+        
+    elif edit_type == EditType.ADD_USER_NOTES:
+        # Add user guidance
+        current = self.get_current_version(article_id)
+        current.user_notes.append(content)
+        self.save_current_version(current)
+```
 
-#### In-Memory Performance
-- **Reads**: O(1) for primary key lookups, O(n) for searches
-- **Writes**: O(1) for creates/updates, plus index maintenance
-- **Memory Usage**: All data held in RAM, efficient for development/testing
-- **Scalability**: Limited by available system memory
+### Correction Propagation Agent
 
-#### Supabase Performance  
-- **Reads**: Optimized through database indexes and caching
-- **Writes**: ACID transactions with PostgreSQL performance
-- **Memory Usage**: Minimal application memory footprint
-- **Scalability**: Horizontal scaling through managed PostgreSQL
+```python
+class CorrectionPropagationAgent:
+    """Intelligently propagates user corrections to current version"""
+    
+    async def propagate_correction(self, article_id: str, corrected_chapter: int, correction: str):
+        """Apply correction to current version and future chapter versions"""
+        
+        current = self.get_current_version(article_id)
+        corrected_version = self.get_chapter_version(article_id, corrected_chapter)
+        
+        # Use AI to intelligently merge correction
+        propagated_content = await self.ai_merge_correction(
+            current_content=current.content,
+            correction=correction,
+            correction_context=corrected_version.content
+        )
+        
+        # Update current version
+        current.content = propagated_content
+        current.user_notes.append(f"Auto-propagated correction from chapter {corrected_chapter}")
+        self.save_current_version(current)
+        
+        # Mark for regeneration in next arc processing
+        self.mark_for_regeneration(article_id, reason="user_correction_propagated")
+```
 
-### Future Extensibility
+## Storage Implementation
 
-The repository pattern enables future enhancements:
+### Database Schema (Domain-Organized)
 
-1. **Additional Storage Backends**: Redis, MongoDB, etc.
-2. **Caching Layers**: Repository decorators for caching
-3. **Event Sourcing**: Audit trails and change history
-4. **Multi-tenancy**: Tenant-aware repository implementations
-5. **Read Replicas**: Read-only repository implementations for scaling
+```sql
+-- User Domain
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email VARCHAR UNIQUE NOT NULL,
+    subscription_tier VARCHAR DEFAULT 'free_byok', -- 'local', 'free_byok', 'premium', 'enterprise'
+    display_name VARCHAR,
+    preferences JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
+CREATE TABLE user_api_keys (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    provider VARCHAR NOT NULL,
+    encrypted_api_key TEXT NOT NULL,
+    provider_metadata JSONB DEFAULT '{}',
+    validation_status VARCHAR DEFAULT 'pending',
+    last_validated_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, provider)
+);
+
+-- Workspace Domain
+CREATE TABLE workspaces (
+    id UUID PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR DEFAULT 'active',
+    last_processed_chapter INTEGER DEFAULT 0,
+    processing_state JSONB DEFAULT '{}',
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE arcs (
+    id UUID PRIMARY KEY,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    start_chapter INTEGER NOT NULL,
+    end_chapter INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Story Domain
+CREATE TABLE chapters (
+    id UUID PRIMARY KEY,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    chapter_number INTEGER NOT NULL,
+    title VARCHAR NOT NULL,
+    content TEXT NOT NULL,
+    status VARCHAR DEFAULT 'draft', -- draft, published, archived
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    published_at TIMESTAMPTZ,
+    UNIQUE(workspace_id, chapter_number)
+);
+
+CREATE TABLE story_metadata (
+    workspace_id UUID PRIMARY KEY REFERENCES workspaces(id) ON DELETE CASCADE,
+    title VARCHAR NOT NULL,
+    author VARCHAR NOT NULL,
+    synopsis TEXT DEFAULT '',
+    genres JSONB DEFAULT '[]',
+    tags JSONB DEFAULT '[]',
+    total_chapters INTEGER DEFAULT 0,
+    published_chapters INTEGER DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Wiki Domain
+CREATE TABLE wiki_chapter_versions (
+    id UUID PRIMARY KEY,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    article_id VARCHAR NOT NULL,
+    article_type VARCHAR NOT NULL,
+    chapter INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by VARCHAR NOT NULL,
+    edit_version INTEGER DEFAULT 1,
+    UNIQUE(workspace_id, article_id, chapter)
+);
+
+CREATE TABLE wiki_current_versions (
+    id UUID PRIMARY KEY,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    article_id VARCHAR NOT NULL,
+    article_type VARCHAR NOT NULL,
+    content TEXT NOT NULL,
+    user_notes JSONB DEFAULT '[]',
+    next_update_guidance TEXT DEFAULT '',
+    last_updated TIMESTAMPTZ DEFAULT NOW(),
+    last_updated_by VARCHAR NOT NULL,
+    UNIQUE(workspace_id, article_id)
+);
+
+CREATE TABLE wiki_connections (
+    id UUID PRIMARY KEY,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    source_article_id VARCHAR NOT NULL,
+    target_article_id VARCHAR NOT NULL,
+    connection_type VARCHAR NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Writing Domain
+CREATE TABLE ai_conversations (
+    id UUID PRIMARY KEY,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    conversation_type VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
+    messages JSONB DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE author_notes (
+    id UUID PRIMARY KEY,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    title VARCHAR NOT NULL,
+    content TEXT NOT NULL,
+    tags JSONB DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE writing_prompts (
+    id UUID PRIMARY KEY,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    title VARCHAR NOT NULL,
+    template TEXT NOT NULL,
+    variables JSONB DEFAULT '{}',
+    usage_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### File-Based Storage (Desktop-Optimized)
+
+```
+my-story-project/                    # Workspace root
+├── .shuscribe/                      # System directory (hidden)
+│   ├── config.json                  # User config + API keys (encrypted)
+│   ├── workspace.json               # Workspace metadata
+│   ├── processing.json              # Arc processing state
+│   └── connections.json             # Wiki article connections
+├── story/                           # Story content
+│   ├── metadata.json                # Story metadata  
+│   ├── chapters/                    # Published chapters
+│   │   ├── 01-beginning.md
+│   │   ├── 02-discovery.md
+│   │   └── ...
+│   └── drafts/                      # Draft chapters
+│       ├── 03-draft.md
+│       └── outline.md
+├── wiki/                            # Current wiki articles (user-visible)
+│   ├── characters/
+│   │   ├── protagonist.md
+│   │   ├── dr-aris.md
+│   │   └── general-kaelen.md
+│   ├── locations/
+│   │   ├── capital-city.md
+│   │   └── research-facility.md
+│   └── concepts/
+│       ├── temporal-mechanics.md
+│       └── the-resonator.md
+├── wiki-versions/                   # Chapter-specific versions (spoiler prevention)
+│   ├── characters/
+│   │   ├── protagonist/
+│   │   │   ├── ch01.md
+│   │   │   ├── ch03.md
+│   │   │   └── ch05.md
+│   │   └── dr-aris/
+│   │       ├── ch02.md
+│   │       ├── ch04.md
+│   │       └── ch06.md
+│   └── locations/
+│       └── capital-city/
+│           ├── ch01.md
+│           └── ch04.md
+├── notes/                           # Author notes and research
+│   ├── character-development.md
+│   ├── world-building.md
+│   └── plot-outline.md
+└── conversations/                   # AI conversation history
+    ├── character-chat-2024-01.json
+    ├── plotting-session-2024-01.json
+    └── worldbuilding-2024-01.json
+```
+
+### Key Benefits of Desktop-Optimized Structure
+
+1. **User-Friendly Organization**: Content is organized in intuitive directories (`story/`, `wiki/`, `notes/`) that make sense for local file browsing
+2. **Hidden System Files**: All implementation details are kept in `.shuscribe/` directory, maintaining a clean user experience
+3. **Flatter Hierarchy**: Reduces nesting complexity while maintaining all core functionality
+4. **Spoiler Prevention**: `wiki-versions/` directory maintains chapter-based versioning for spoiler-safe content
+5. **Same Repository Interfaces**: File structure is an implementation detail - all repository interfaces remain unchanged
+
+### File Content Examples
+
+#### Chapter-Specific Version (Spoiler Prevention)
+```markdown
+<!-- wiki-versions/characters/dr-aris/ch03.md -->
+---
+article_id: "characters/dr-aris"
+chapter: 3
+created_at: "2024-01-01T00:00:00Z"
+created_by: "arc_1_processing"
+content_type: "character_profile"
 ---
 
-## Summary
+# Dr. Aris
 
-Our repository architecture provides:
+Dr. Aris is a mysterious scientist who first appears in Chapter 1. He works at the Temporal Research Institute and seems to be observing the protagonist's activities.
 
-- **Flexibility**: Same code works in local and production environments
-- **Testability**: Fast, isolated testing with in-memory storage
-- **Consistency**: Identical behavior across storage backends
-- **Complexity Management**: Clean separation of business logic from storage concerns
-- **Spoiler Safety**: Sophisticated versioning system prevents story spoilers
-- **Scalability**: Foundation for future performance and feature enhancements
+## Background
+- First appearance: Chapter 1
+- Occupation: Temporal research scientist
+- Current status: Active observer
 
-The combination of the Repository pattern with versioned Article Snapshots creates a robust system for managing complex story wikis with spoiler prevention while maintaining development velocity and deployment flexibility.
+## Related Articles
+- [[Temporal Research Institute]]
+- [[The Protagonist]]
+```
+
+#### Current Working Version (User-Visible)
+```markdown
+<!-- wiki/characters/dr-aris.md -->
+---
+article_id: "characters/dr-aris"
+last_updated: "2024-01-20T10:30:00Z"
+last_updated_by: "author_123"
+user_notes:
+  - "User correction: He worked at Temporal Institute, not Physics Lab"
+  - "User addition: Should mention his daughter Sarah in next update"
+  - "User preference: Focus more on his relationship with protagonist"
+next_update_guidance: "Incorporate relationship dynamics and family connections when processing arc 3. Emphasize the father-figure aspect and his protective instincts."
+---
+
+# Dr. Aris
+
+Dr. Aris is a former government researcher who was fired from the Temporal Research Institute for conducting unauthorized experiments on temporal mechanics. He has a complex relationship with the protagonist and harbors secret motivations.
+
+## Background
+- Former employee of the Temporal Research Institute
+- Specializes in quantum chronodynamics  
+- Has a hidden agenda involving the protagonist
+- Father figure with complicated past
+
+## Appearances
+- Chapter 1: First appearance as mysterious observer
+- Chapter 3: Revealed as former government scientist
+- Chapter 5: Backstory revealed through flashbacks
+- Chapter 7: Confrontation with protagonist
+
+## Related Articles
+- [[Temporal Research Institute]]
+- [[Quantum Chronodynamics]]
+- [[The Protagonist]]
+```
+
+#### Local Configuration File
+```json
+// .shuscribe/config.json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "workspace_name": "My Story Project",
+  "display_name": "Local Author",
+  "email": "author@example.com",
+  "subscription_tier": "local",
+  "api_keys": {
+    "openai": {
+      "encrypted_key": "gAAAAABh...",
+      "provider_metadata": {
+        "model": "gpt-4",
+        "max_tokens": 4000
+      },
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  "preferences": {
+    "default_provider": "openai",
+    "encrypt_keys": true
+  },
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+## Core APIs (High-Level)
+
+### Domain Manager APIs
+
+Each domain provides focused management interfaces:
+
+- **`UserManager`** - User CRUD, BYOK API key management with validation
+- **`WorkspaceManager`** - Workspace lifecycle, arc processing, user ownership
+- **`StoryManager`** - Chapter management, draft/publish workflow, story metadata
+- **`WikiManager`** - Article versioning, spoiler prevention, connection management
+- **`WritingManager`** - AI conversation tracking, note organization, prompt management
+
+### Core Operations
+
+**Spoiler-Safe Reading**:
+- `get_article_for_reader(article_id, max_chapter)` - Returns content safe through reader's progress
+- `get_published_chapters(workspace_id, max_chapter)` - Returns story content for reader
+
+**Content Evolution**:
+- `process_arc(workspace_id, arc)` - Generate chapter-safe versions for arc range
+- `update_current_version(article_id, content, user_notes)` - Update working version with guidance
+- `propagate_correction(article_id, chapter, correction)` - Intelligent correction propagation
+
+**User-Guided AI**:
+- `add_user_notes(article_id, notes)` - Add guidance for future AI generation
+- `create_conversation(workspace_id, type, title)` - Start AI conversation session
+- `validate_api_key(user_id, provider)` - BYOK key validation and storage
+
+## Benefits of Simplified Architecture
+
+### User Experience
+- **Perfect spoiler prevention**: Chapter-granular content filtering
+- **User-guided evolution**: Authors can correct and guide AI generation
+- **Simple editing**: Clear distinction between current and historical versions
+- **Intuitive versioning**: "I'm on chapter 5" → get chapter 5 safe content
+
+### Developer Experience
+- **Simple storage**: Full content per version, no complex diff application
+- **Easy queries**: Single SELECT with simple WHERE clause
+- **Clear data model**: Only 4 main tables instead of 7+ repositories
+- **Testable**: Easy to create test workspaces and verify behavior
+
+### System Architecture
+- **Scalable**: Chapter-based versions scale linearly with story length
+- **Maintainable**: Minimal complexity, clear separation of concerns
+- **Flexible**: Easy to add new content types via enum
+- **Storage efficient**: ~300MB for 300-chapter, 200-article story (~$0.02/month)
+
+## Migration Strategy
+
+### Phase 1: Core Infrastructure
+1. **Workspace Manager**: Create/manage workspaces
+2. **Content Manager**: Store/retrieve content with versioning
+3. **Chapter Versioning**: Implement chapter-safe version storage
+4. **Basic Reader Experience**: Get spoiler-safe content
+
+### Phase 2: Wikigen Integration
+1. **Arc Processing**: Integrate with existing wikigen pipeline
+2. **Chapter Version Creation**: Generate chapter-safe versions during arc processing
+3. **Current Version Management**: Maintain living current versions
+
+### Phase 3: User Editing
+1. **Edit Interfaces**: Allow user corrections and guidance
+2. **Correction Propagation**: Agent to merge corrections intelligently
+3. **User Notes System**: Capture user guidance for AI generation
+
+### Phase 4: Advanced Features
+1. **Incremental Chapter Processing**: Add chapters one-by-one after initial arcs
+2. **Advanced Connections**: Rich relationship modeling between content
+3. **Collaboration Features**: Multi-user editing and review
+
+This simplified architecture provides the same core functionality with 80% less complexity while maintaining all the essential features for spoiler prevention and user-guided content evolution.

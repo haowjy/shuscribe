@@ -79,3 +79,8 @@ frontend/.turbo/         # If using Turborepo or similar monorepo tooling
 # ----------------------------------------------------------- #
 # No specific files usually need ignoring here as volumes are managed by Docker
 # and intermediate build artifacts are temporary.
+
+# ----------------------------------------------------------- #
+# Other Ignored Files
+# ----------------------------------------------------------- #
+temp/

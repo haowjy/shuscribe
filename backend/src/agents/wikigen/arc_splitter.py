@@ -29,7 +29,7 @@ from uuid import UUID, uuid4
 from src.services.llm.llm_service import LLMService
 from src.schemas.llm.models import LLMMessage, LLMResponse, ThinkingEffort
 from src.schemas.wikigen.arc import ArcAnalysisResult, Arc
-from src.schemas.story import InputStory
+from src.schemas.story import Story
 from src.prompts import prompt_manager
 from src.agents.base_agent import BaseAgent, WindowProcessingResult
 from src.utils import clean_json_from_llm_response
@@ -160,7 +160,7 @@ class ArcSplitterAgent(BaseAgent):
     
     async def analyze_story(
         self,
-        story: InputStory,
+        story: Story,
         user_id: UUID,
         api_key: Optional[str] = None,
         provider: Optional[str] = None,
@@ -173,7 +173,7 @@ class ArcSplitterAgent(BaseAgent):
         state, then merges all results into a final ArcAnalysisResult.
         
         Args:
-            story: InputStory object containing all story data
+            story: Story object containing all story data
             user_id: UUID of the user making the request
             api_key: Optional API key for direct usage
             provider: Optional LLM provider override
@@ -197,7 +197,7 @@ class ArcSplitterAgent(BaseAgent):
 
     async def analyze_story_streaming(
         self,
-        story: InputStory,
+        story: Story,
         user_id: UUID,
         api_key: Optional[str] = None,
         provider: Optional[str] = None,
@@ -210,7 +210,7 @@ class ArcSplitterAgent(BaseAgent):
         as they arrive. Internal state is accumulated for later retrieval via get_final_result().
         
         Args:
-            story: InputStory object containing all story data
+            story: Story object containing all story data
             user_id: UUID of the user making the request
             api_key: Optional API key for direct usage
             provider: Optional LLM provider override
@@ -224,9 +224,9 @@ class ArcSplitterAgent(BaseAgent):
         self._reset_analysis_state()
         
         # Setup and Configuration
-        story_title = story.metadata.title
+        story_title = story.title
         total_chapters = story.total_chapters
-        genre = ", ".join(story.metadata.genres) if story.metadata.genres else None
+        genre = ", ".join(story.genres) if story.genres else None
         
         # Calculate chunk token limit based on model's input context window
         chunk_token_limit = self._calculate_chunk_token_limit(provider, model)
