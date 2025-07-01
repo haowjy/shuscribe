@@ -148,6 +148,34 @@ class WikiArticle(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
+    @property
+    def slug(self) -> str:
+        """Generate URL-friendly slug from title"""
+        import re
+        return re.sub(r'[^a-zA-Z0-9-]', '-', self.title.lower()).strip('-')
+    
+    @property
+    def preview(self) -> str:
+        """Generate preview from content (first 150 chars)"""
+        if not self.content:
+            return ""
+        # Remove markdown formatting for preview
+        import re
+        clean_content = re.sub(r'[#*_`\[\]()]', '', self.content)
+        return clean_content[:150].strip() + ("..." if len(clean_content) > 150 else "")
+    
+    @classmethod
+    def create_empty(cls, workspace_id: UUID) -> 'WikiArticle':
+        """Create an empty wiki article instance"""
+        return cls(
+            id=UUID('00000000-0000-0000-0000-000000000000'),
+            workspace_id=workspace_id,
+            title="",
+            article_type=WikiArticleType.CHARACTER,
+            content="",
+            created_at=datetime.now()
+        )
+    
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -171,5 +199,123 @@ class WikiArticleUpdate(BaseModel):
     summary: Optional[str] = None
     tags: Optional[List[str]] = None
     safe_through_chapter: Optional[int] = Field(None, ge=1, description="Chapter this article is safe through")
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WikiPageBase(BaseModel):
+    """Base wiki page schema - contains articles for a specific story context"""
+    title: str = Field("Untitled Wiki", description="Wiki page title (usually story title)")
+    description: str = Field("", description="Description of this wiki page")
+    is_public: bool = Field(False, description="Whether this wiki page is publicly accessible")
+    safe_through_chapter: int = Field(0, description="Highest chapter number safe to read with this wiki")
+
+
+class WikiPageCreate(WikiPageBase):
+    """Schema for creating a wiki page"""
+    workspace_id: UUID
+
+
+class WikiPageUpdate(BaseModel):
+    """Schema for updating a wiki page"""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    is_public: Optional[bool] = None
+    safe_through_chapter: Optional[int] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WikiPage(WikiPageBase):
+    """Complete wiki page with database fields"""
+    id: UUID
+    workspace_id: UUID
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    @classmethod
+    def create_empty(cls, workspace_id: UUID) -> 'WikiPage':
+        """Create an empty wiki page instance"""
+        return cls(
+            id=UUID('00000000-0000-0000-0000-000000000000'),
+            workspace_id=workspace_id,
+            title="",
+            description="",
+            is_public=False,
+            safe_through_chapter=0,
+            created_at=datetime.now()
+        )
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WikiArchiveMetadata(BaseModel):
+    """Metadata for a wiki archive safe through a specific chapter"""
+    wiki_page_id: UUID
+    wiki_page_title: str
+    safe_through_chapter: int = Field(..., description="Highest chapter number safe to read with this wiki")
+    total_articles: int
+    generation_timestamp: datetime
+    source_arc_id: Optional[UUID] = Field(None, description="Arc that generated this archive (for processing context)")
+    source_arc_title: Optional[str] = Field(None, description="Title of the arc that generated this archive")
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WikiArchive(BaseModel):
+    """Complete wiki archive safe through a specific chapter"""
+    metadata: WikiArchiveMetadata
+    articles: List[WikiArticle]
+    article_links: List['WikiPageArticleLink'] = Field(default_factory=list)
+    file_structure: Dict[str, str] = Field(default_factory=dict, description="Map of article titles to file paths")
+    
+    def get_article_by_title(self, title: str) -> Optional[WikiArticle]:
+        """Get article by title"""
+        return next((article for article in self.articles if article.title == title), None)
+    
+    def get_article_by_slug(self, slug: str) -> Optional[WikiArticle]:
+        """Get article by slug"""
+        return next((article for article in self.articles if article.slug == slug), None)
+    
+    def get_articles_by_type(self, article_type: WikiArticleType) -> List[WikiArticle]:
+        """Get all articles of a specific type"""
+        return [article for article in self.articles if article.article_type == article_type]
+    
+    def get_safe_articles(self, through_chapter: int) -> List[WikiArticle]:
+        """Get articles safe through a specific chapter"""
+        return [article for article in self.articles 
+                if article.safe_through_chapter is None or article.safe_through_chapter <= through_chapter]
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WikiPageArticleLinkBase(BaseModel):
+    """Base schema for linking wiki pages to articles"""
+    wiki_page_id: UUID
+    article_id: UUID
+    display_order: int = Field(0, description="Order to display this article in the wiki page")
+    is_featured: bool = Field(False, description="Whether this article is featured on the wiki page")
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WikiPageArticleLinkCreate(WikiPageArticleLinkBase):
+    """Schema for creating a wiki page article link"""
+    pass
+
+
+class WikiPageArticleLinkUpdate(BaseModel):
+    """Schema for updating a wiki page article link"""
+    display_order: Optional[int] = None
+    is_featured: Optional[bool] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WikiPageArticleLink(WikiPageArticleLinkBase):
+    """Complete wiki page article link with database fields"""
+    id: UUID
+    created_at: datetime
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True) 

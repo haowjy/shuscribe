@@ -34,7 +34,7 @@ from src.core.llm.catalog import (
     model_supports_thinking, # NEW: For checking thinking support
 )
 from src.core.exceptions import LLMError, ValidationError
-from src.database.repositories.user.user_abc import AbstractUserRepository
+from src.database.interfaces.user import IUserRepository
 # NEW: Import Pydantic models from their new schema locations
 from src.schemas.llm.models import LLMMessage, LLMResponse, ChunkType, ThinkingEffort
 from src.schemas.llm.config import LLMCapability, HostedModelInstance, LLMProvider, AIModelFamily
@@ -61,7 +61,7 @@ class LLMService:
     - Comprehensive logging and error handling
     """
     
-    def __init__(self, user_repository: Optional[AbstractUserRepository] = None):
+    def __init__(self, user_repository: Optional[IUserRepository] = None):
         self.user_repository = user_repository
         
         # Validate self-hosted Portkey Gateway is configured

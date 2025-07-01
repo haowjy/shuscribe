@@ -13,13 +13,8 @@ from uuid import UUID, uuid4
 from datetime import datetime
 
 from src.database.models.repositories import FileRepositories
-from src.schemas.story import Chapter
-
-# Add the backend src to the path so we can import modules
-sys.path.append(str(Path(__file__).parent.parent / "src"))
-
+from src.database.models.story import Chapter, ChapterCreate, ChapterStatus, StoryMetadata, StoryMetadataCreate
 from src.database.factory import get_repositories
-from src.database.models.story import ChapterCreate, ChapterStatus, StoryMetadata, StoryMetadataCreate
 from src.database.models.workspace import Workspace, WorkspaceCreate
 from src.database.models.user import User, UserCreate, SubscriptionTier
 
@@ -124,8 +119,8 @@ class StoryImporter:
                 if tag.get("name")
             ]
         
-        # Load chapters
-        chapters = self._load_chapters_from_xml(story_directory, strip_xml_wrapper)
+        # Load chapters - pass metadata_root to use chapter list
+        chapters = self._load_chapters_from_xml(story_directory, strip_xml_wrapper, metadata_root)
         
         return {
             "title": metadata["title"],
@@ -140,13 +135,51 @@ class StoryImporter:
             "chapters": chapters
         }
     
-    def _load_chapters_from_xml(self, story_directory: Path, strip_xml_wrapper: bool) -> list:
-        """Load chapters from numbered XML files"""
+    def _load_chapters_from_xml(self, story_directory: Path, strip_xml_wrapper: bool, metadata_root=None) -> list:
+        """Load chapters using chapter list from _meta.xml if available, otherwise scan directory"""
         import xml.etree.ElementTree as ET
         
         chapters = []
         
-        # Find all numbered XML files (exclude _meta.xml)
+        # First try to use chapter list from metadata
+        if metadata_root is not None:
+            print(f"🔍 Checking metadata_root for chapters...")
+            chapters_element = metadata_root.find("Chapters")
+            if chapters_element is not None:
+                print(f"✅ Found Chapters element in metadata")
+                chapter_elements = chapters_element.findall("Chapter")
+                print(f"📋 Found {len(chapter_elements)} chapter elements (including any in comments)")
+                if chapter_elements:
+                    
+                    for i, chapter_elem in enumerate(chapter_elements, 1):
+                        ref = chapter_elem.get("ref", "")
+                        title = chapter_elem.get("title", f"Chapter {i}")
+                        
+                        if ref:
+                            xml_file = story_directory / ref
+                            if xml_file.exists():
+                                content = xml_file.read_text(encoding="utf-8").strip()
+                                
+                                if strip_xml_wrapper:
+                                    content = self._strip_xml_wrapper(content)
+                                
+                                chapters.append({
+                                    "chapter_number": i,
+                                    "title": title,
+                                    "content": content,
+                                    "ref": ref
+                                })
+                            else:
+                                print(f"⚠️  Chapter file not found: {ref} (skipping)")
+                    
+                    if chapters:
+                        print(f"✅ Successfully loaded {len(chapters)} chapters from metadata")
+                        return chapters
+                    else:
+                        print("⚠️  No valid chapter files found from metadata, falling back to directory scan")
+        
+        # Fallback: scan directory for numbered XML files (original behavior)
+        print("📁 Scanning directory for numbered XML files...")
         xml_files = sorted([
             f for f in story_directory.glob("*.xml") 
             if f.name != "_meta.xml" and f.name.replace(".xml", "").isdigit()
@@ -176,8 +209,14 @@ class StoryImporter:
         import xml.etree.ElementTree as ET
         
         try:
-            # Try to parse as XML and look for title
+            # Try to parse as XML and look for title attribute first
             root = ET.fromstring(content)
+            
+            # Check for title attribute on root element
+            if root.get('title'):
+                return root.get('title', '').strip()
+            
+            # Then check for title element
             title_elem = root.find(".//title") or root.find(".//Title")
             if title_elem is not None and title_elem.text:
                 return title_elem.text.strip()
@@ -190,9 +229,8 @@ class StoryImporter:
                 if line.startswith('#'):
                     return line.lstrip('#').strip()
                 if line.startswith('[Chapter') and line.endswith(']'):
-                    return line.strip('[]')
+                    return line  # Return the full title with brackets
                 if len(line) < 100 and line and not line.lower().startswith('chapter'):
-                    # Likely a title if it's short and not starting with "chapter"
                     return line
                     
         except ET.ParseError:
@@ -311,8 +349,9 @@ class StoryImporter:
 
 def _create_temp_workspace_path(base_name: str) -> Path:
     """Create a unique temporary workspace path"""
-    script_dir = Path(__file__).parent
-    temp_dir = script_dir.parent / "temp"
+    # Navigate from src/utils/test to backend root
+    backend_root = Path(__file__).parent.parent.parent.parent
+    temp_dir = backend_root / "temp"
     temp_dir.mkdir(exist_ok=True)
     
     # Create unique temp workspace name with timestamp
@@ -344,11 +383,11 @@ def move_workspace_from_temp(temp_path: Path, final_path: Path) -> bool:
 async def import_pokemon_amber():
     """Import the Pokemon Amber story specifically"""
     
-    # Paths
-    script_dir = Path(__file__).parent
-    pokemon_amber_dir = script_dir.parent / "tests" / "resources" / "pokemon_amber" / "story"
+    # Paths - navigate from src/utils/test to backend root
+    backend_root = Path(__file__).parent.parent.parent.parent
+    pokemon_amber_dir = backend_root / "tests" / "resources" / "pokemon_amber" / "story"
     temp_workspace_path = _create_temp_workspace_path("workspace_pokemon_amber")
-    final_workspace_path = script_dir.parent / "workspace_pokemon_amber"
+    final_workspace_path = backend_root / "workspace_pokemon_amber"
     
     if not pokemon_amber_dir.exists():
         print(f"❌ Pokemon Amber directory not found: {pokemon_amber_dir}")
@@ -416,8 +455,8 @@ async def import_custom_story(story_dir: str, workspace_dir: str):
 
 def cleanup_temp_workspaces():
     """Clean up old temporary workspaces"""
-    script_dir = Path(__file__).parent
-    temp_dir = script_dir.parent / "temp"
+    backend_root = Path(__file__).parent.parent.parent.parent
+    temp_dir = backend_root / "temp"
     
     if not temp_dir.exists():
         print("📁 No temp directory found.")
@@ -462,8 +501,8 @@ if __name__ == "__main__":
     if args.cleanup_temp:
         cleanup_temp_workspaces()
     elif args.list_temp:
-        script_dir = Path(__file__).parent
-        temp_dir = script_dir.parent / "temp"
+        backend_root = Path(__file__).parent.parent.parent.parent
+        temp_dir = backend_root / "temp"
         if temp_dir.exists():
             temp_workspaces = [d for d in temp_dir.iterdir() if d.is_dir()]
             if temp_workspaces:

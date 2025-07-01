@@ -12,7 +12,7 @@ from typing import cast
 from src.database.interfaces.workspace import IWorkspaceRepository
 from src.database.models.workspace import WorkspaceCreate, WorkspaceUpdate
 from src.database.file.user import FileUserRepository
-from src.schemas.user import User
+from src.database.models.user import User
 
 
 class TestWorkspaceOperations:

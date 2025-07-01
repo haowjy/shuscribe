@@ -52,7 +52,7 @@ class IStoryRepository(ABC):
 
     # Story metadata operations
     @abstractmethod
-    async def get_story_metadata(self, workspace_id: UUID) -> Optional[StoryMetadata]:
+    async def get_story_metadata(self, workspace_id: UUID) -> StoryMetadata:
         """Get story metadata for a workspace"""
         pass
 

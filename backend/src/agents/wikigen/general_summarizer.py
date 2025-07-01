@@ -23,8 +23,9 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 # TODO: Import proper types when schemas are defined
-# from src.schemas.story import Arc, Chapter
-# from src.schemas.wiki import Summary, SummaryType
+# from src.database.models.story import Chapter
+# from src.database.models.workspace import Arc
+# NOTE: Summary and SummaryType may need to be created in domain models
 from src.services.llm.llm_service import LLMService
 from src.prompts import prompt_manager
 from src.agents.base_agent import BaseAgent

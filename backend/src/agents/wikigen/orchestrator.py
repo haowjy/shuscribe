@@ -19,8 +19,10 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 # TODO: Import proper types when schemas are defined
-# from src.schemas.story import Story, Chapter
-# from src.schemas.wiki import WikiResult, WikiArchive, Arc
+# from src.database.models.story import FullStoryBase as Story, Chapter
+# from src.database.models.wiki import WikiArchive
+# from src.database.models.workspace import Arc
+# NOTE: WikiResult may need to be created in domain models
 from src.services.llm.llm_service import LLMService
 
 

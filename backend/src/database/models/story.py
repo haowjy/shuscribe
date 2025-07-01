@@ -5,11 +5,13 @@ Handles all story content: chapters, drafts, story metadata, and publication sta
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Iterator, Tuple
 from uuid import UUID
 from enum import Enum
 
 from pydantic import BaseModel, Field, ConfigDict
+
+from src.utils import count_tokens
 
 
 class ChapterStatus(str, Enum):
@@ -34,6 +36,15 @@ class ChapterBase(BaseModel):
         """Calculate word count from content"""
         # Simple word count - could be enhanced
         return len(self.content.split()) if self.content else 0
+    
+    @classmethod
+    def create_empty(cls) -> 'ChapterBase':
+        """Create an empty chapter instance"""
+        return cls(
+            chapter_number=0,
+            title="",
+            content=""
+        )
 
 
 class ChapterCreate(ChapterBase):
@@ -150,4 +161,128 @@ class StoryMetadata(BaseModel):
             self.first_published_at = min(c.published_at for c in published if c.published_at)
             self.last_updated_at = max(c.updated_at for c in chapters if c.updated_at) or datetime.now()
     
-    model_config = ConfigDict(from_attributes=True) 
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FullStoryBase(BaseModel):
+    """Base model for complete story with chapters"""
+    metadata: StoryMetadata
+    chapters: List[Chapter] = Field(default_factory=list)
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._cached_total_tokens: Optional[int] = None
+    
+    @property
+    def total_chapters(self) -> int:
+        """Get total number of chapters"""
+        return len(self.chapters)
+    
+    @property
+    def word_count(self) -> int:
+        """Calculate total word count across all chapters"""
+        return sum(chapter.word_count for chapter in self.chapters)
+    
+    @property
+    def total_tokens(self) -> int:
+        """Calculate total token count across all chapters (cached)"""
+        if not hasattr(self, '_cached_total_tokens') or self._cached_total_tokens is None:
+            full_content = self.get_full_content()
+            self._cached_total_tokens = count_tokens(full_content)
+        return self._cached_total_tokens
+    
+    @property
+    def is_short_story(self) -> bool:
+        """Determine if this is a short story (< 15,000 words)"""
+        return self.word_count < 15000
+    
+    def get_content_chunks(self, chunk_token_limit: int) -> Iterator[Tuple[List[Chapter], str, int]]:
+        """
+        Yield chunks of chapters that fit within the token limit.
+        
+        Args:
+            chunk_token_limit: Maximum tokens per chunk
+            
+        Yields:
+            Tuple of (chapters_in_chunk, formatted_content, actual_token_count)
+        """
+        if not self.chapters:
+            return
+            
+        sorted_chapters = sorted(self.chapters, key=lambda c: c.chapter_number)
+        current_chunk_chapters = []
+        current_chunk_tokens = 0
+        
+        for chapter in sorted_chapters:
+            chapter_content = f"# Chapter {chapter.chapter_number}: {chapter.title}\n\n{chapter.content}"
+            chapter_tokens = count_tokens(chapter_content)
+            
+            if current_chunk_tokens + chapter_tokens > chunk_token_limit and current_chunk_chapters:
+                chunk_content = "\n\n".join([
+                    f"# Chapter {c.chapter_number}: {c.title}\n\n{c.content}" 
+                    for c in current_chunk_chapters
+                ])
+                yield (current_chunk_chapters, chunk_content, current_chunk_tokens)
+                
+                current_chunk_chapters = [chapter]
+                current_chunk_tokens = chapter_tokens
+            else:
+                current_chunk_chapters.append(chapter)
+                current_chunk_tokens += chapter_tokens
+        
+        if current_chunk_chapters:
+            chunk_content = "\n\n".join([
+                f"# Chapter {c.chapter_number}: {c.title}\n\n{c.content}" 
+                for c in current_chunk_chapters
+            ])
+            yield (current_chunk_chapters, chunk_content, current_chunk_tokens)
+    
+    def get_full_content(self) -> str:
+        """
+        Get the complete story content formatted with chapter headers.
+        
+        Returns:
+            Concatenated content of all chapters with chapter headers
+        """
+        if not self.chapters:
+            return ""
+        
+        content_parts = []
+        for chapter in sorted(self.chapters, key=lambda c: c.chapter_number):
+            chapter_header = f"# Chapter {chapter.chapter_number}"
+            if chapter.title:
+                chapter_header += f": {chapter.title}"
+            
+            content_parts.append(f"{chapter_header}\n\n{chapter.content}")
+        
+        return "\n\n".join(content_parts)
+    
+    def get_chapter_content_range(self, start: int, count: int) -> str:
+        """Get concatenated content for a range of chapters"""
+        selected_chapters = [ch for ch in self.chapters if start <= ch.chapter_number < start + count]
+        return "\n\n".join([f"# Chapter {ch.chapter_number}: {ch.title}\n\n{ch.content}" for ch in selected_chapters])
+    
+    @classmethod
+    def create_empty(cls, workspace_id: UUID) -> 'FullStoryBase':
+        """Create an empty story instance"""
+        empty_metadata = StoryMetadata(
+            id=UUID('00000000-0000-0000-0000-000000000000'),  # Placeholder for unpersisted
+            workspace_id=workspace_id,
+            title="Untitled Story",
+            author="Unknown Author",
+            created_at=datetime.now()
+        )
+        return cls(metadata=empty_metadata, chapters=[])
+    
+    @classmethod
+    def from_file_data(cls, workspace_id: UUID, title: str, author: str, chapters_data: List[dict]) -> 'FullStoryBase':
+        """Create story from file loading data"""
+        chapters = [Chapter(**ch_data) for ch_data in chapters_data]
+        metadata = StoryMetadata(
+            id=UUID('00000000-0000-0000-0000-000000000000'),  # Placeholder for unpersisted
+            workspace_id=workspace_id,
+            title=title,
+            author=author,
+            created_at=datetime.now()
+        )
+        return cls(metadata=metadata, chapters=chapters) 

@@ -150,20 +150,12 @@ async def pokemon_amber_workspace() -> AsyncIterator[Tuple[Path, Dict[str, Any]]
     
     workspace_path = temp_root / "pokemon_amber_test"
     
-    # Import Pokemon Amber using the import script
-    import sys
-    import importlib.util
-    scripts_path = str(backend_root / "scripts")
-    
+    # Import Pokemon Amber using the StoryImporter from utils
     try:
-        # Dynamically import the StoryImporter
-        spec = importlib.util.spec_from_file_location("import_story", backend_root / "scripts" / "import_story.py")
-        if spec and spec.loader:
-            import_story_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(import_story_module)
-            StoryImporter = import_story_module.StoryImporter
-        else:
-            raise ImportError("Could not load import_story module")
+        # Import StoryImporter directly from the utils module
+        import sys
+        sys.path.insert(0, str(backend_root))
+        from src.utils.test.import_story import StoryImporter
         
         importer = StoryImporter(workspace_path)
         pokemon_dir = backend_root / "tests" / "resources" / "pokemon_amber" / "story"

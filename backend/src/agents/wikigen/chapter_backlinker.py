@@ -24,8 +24,10 @@ from typing import List, Optional, Dict, Any, Tuple
 from uuid import UUID
 
 # TODO: Import proper types when schemas are defined
-# from src.schemas.story import Chapter, EnhancedChapter
-# from src.schemas.wiki import WikiArticle, LinkMapping
+# from src.database.models.story import Chapter
+# NOTE: EnhancedChapter may need to be added to domain models
+# from src.database.models.wiki import WikiArticle
+# NOTE: LinkMapping may need to be created in domain models
 from src.services.llm.llm_service import LLMService
 from src.prompts import prompt_manager
 from src.agents.base_agent import BaseAgent

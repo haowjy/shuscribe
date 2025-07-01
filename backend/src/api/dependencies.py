@@ -2,30 +2,50 @@
 """
 FastAPI dependencies
 """
-from fastapi import Depends
+from pathlib import Path
+from typing import cast
 from uuid import UUID
 
-from src.database.supabase_connection import get_supabase_client
-from src.database.repositories import get_user_repository
-from src.database.repositories.user.user_abc import AbstractUserRepository
-from src.core.security import get_current_user_id
+from src.database import get_repositories
+from src.database.interfaces.user import IUserRepository
+from src.database.models.repositories import FileRepositories
 
-def get_user_repository_dependency() -> AbstractUserRepository:
-    """Get user repository instance"""
-    # This will automatically use in-memory repository if SKIP_DATABASE is True
-    # or Supabase repository if database is enabled
-    if not hasattr(get_user_repository_dependency, '_skip_database_check'):
-        from src.config import settings
-        get_user_repository_dependency._skip_database_check = settings.SKIP_DATABASE
-    
-    if get_user_repository_dependency._skip_database_check:
-        return get_user_repository()
+
+def get_user_repository_dependency() -> IUserRepository:
+    """Get user repository instance based on configuration"""
+    from src.config import settings
+
+    if settings.SKIP_DATABASE:
+        # Use file-based repository for local development
+        workspace_path = Path("temp")  # Use temp directory
+        repositories = get_repositories(
+            backend="file", workspace_path=workspace_path
+        )
+        return repositories.user
     else:
-        supabase_client = get_supabase_client()
-        return get_user_repository(supabase_client)
+        # TODO: Use database repository when implemented
+        # For now, fall back to file-based even in database mode
+        workspace_path = Path("temp")
+        repositories = get_repositories(
+            backend="file", workspace_path=workspace_path
+        )
+        return repositories.user
+
 
 async def get_current_user_id_dependency() -> UUID:
-    """Get current user ID (placeholder until auth is implemented)"""
-    # For now, return a mock UUID for testing
-    from uuid import uuid4
-    return uuid4()
+    """Get current user ID based on repository type"""
+    from src.config import settings
+
+    if settings.SKIP_DATABASE:
+        # For file-based repositories, get the current workspace user
+        workspace_path = Path("temp")
+        repositories = cast(FileRepositories, get_repositories(
+            backend="file", workspace_path=workspace_path
+        ))
+        user = await repositories.user.get_current_user()
+        return user.id
+    else:
+        # TODO: Implement proper auth when database is enabled
+        # For now, return a mock UUID for testing
+        from uuid import uuid4
+        return uuid4()

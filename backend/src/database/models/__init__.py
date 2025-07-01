@@ -9,13 +9,17 @@ from src.database.models.user import User, UserAPIKey, UserCreate, UserUpdate, U
 from src.database.models.workspace import Workspace, Arc, WorkspaceCreate, WorkspaceUpdate
 from src.database.models.story import (
     Chapter, ChapterCreate, ChapterUpdate, ChapterStatus,
-    StoryMetadata, StoryMetadataCreate, StoryMetadataUpdate
+    StoryMetadata, StoryMetadataCreate, StoryMetadataUpdate,
+    FullStoryBase
 )
 from src.database.models.wiki import (
     WikiArticle, WikiArticleCreate, WikiArticleUpdate, WikiArticleType,
     ChapterVersion, ChapterVersionCreate, ChapterVersionUpdate,
     CurrentVersion, CurrentVersionCreate, CurrentVersionUpdate,
-    ArticleConnection, ArticleConnectionCreate
+    ArticleConnection, ArticleConnectionCreate,
+    WikiPage, WikiPageCreate, WikiPageUpdate,
+    WikiArchive, WikiArchiveMetadata,
+    WikiPageArticleLink, WikiPageArticleLinkCreate, WikiPageArticleLinkUpdate
 )
 
 
@@ -42,6 +46,7 @@ __all__ = [
     "StoryMetadata",
     "StoryMetadataCreate",
     "StoryMetadataUpdate",
+    "FullStoryBase",
     
     # Wiki domain
     "WikiArticle",
@@ -56,4 +61,12 @@ __all__ = [
     "CurrentVersionUpdate",
     "ArticleConnection",
     "ArticleConnectionCreate",
+    "WikiPage",
+    "WikiPageCreate",
+    "WikiPageUpdate",
+    "WikiArchive",
+    "WikiArchiveMetadata",
+    "WikiPageArticleLink",
+    "WikiPageArticleLinkCreate",
+    "WikiPageArticleLinkUpdate",
 ] 

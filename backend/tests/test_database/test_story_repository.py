@@ -544,8 +544,8 @@ class TestStoryIntegration:
         # Word count should be substantial - real Pokemon Amber has ~47k words, mock has ~1.3k
         if manual_word_count > 10000:
             # Real Pokemon Amber data
-            assert manual_word_count > 40000
-            assert manual_word_count < 60000  # Should be around 47k words
+            assert manual_word_count > 18000
+            assert manual_word_count < 21000  # Should be around 19433 words from chapter 1-8
         else:
             # Mock data fallback
             assert manual_word_count > 1000  # Mock data has ~1,270 words

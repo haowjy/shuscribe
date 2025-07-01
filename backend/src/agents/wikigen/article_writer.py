@@ -26,8 +26,10 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 # TODO: Import proper types when schemas are defined
-# from src.schemas.story import Arc, Chapter
-# from src.schemas.wiki import WikiPlan, ArticlePlan, WikiArticle
+# from src.database.models.story import Chapter
+# from src.database.models.workspace import Arc
+# from src.database.models.wiki import WikiArticle
+# NOTE: WikiPlan and ArticlePlan may need to be created in domain models
 from src.services.llm.llm_service import LLMService
 # TODO: Import when web search service is implemented
 # from src.services.web_search.web_search_service import WebSearchService

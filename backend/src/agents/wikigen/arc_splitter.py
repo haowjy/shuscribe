@@ -29,7 +29,7 @@ from uuid import UUID, uuid4
 from src.services.llm.llm_service import LLMService
 from src.schemas.llm.models import LLMMessage, LLMResponse, ThinkingEffort
 from src.schemas.wikigen.arc import ArcAnalysisResult, Arc
-from src.schemas.story import Story
+from src.database.models.story import FullStoryBase as Story
 from src.prompts import prompt_manager
 from src.agents.base_agent import BaseAgent, WindowProcessingResult
 from src.utils import clean_json_from_llm_response
@@ -224,9 +224,9 @@ class ArcSplitterAgent(BaseAgent):
         self._reset_analysis_state()
         
         # Setup and Configuration
-        story_title = story.title
+        story_title = story.metadata.title
         total_chapters = story.total_chapters
-        genre = ", ".join(story.genres) if story.genres else None
+        genre = ", ".join(story.metadata.genres) if story.metadata.genres else None
         
         # Calculate chunk token limit based on model's input context window
         chunk_token_limit = self._calculate_chunk_token_limit(provider, model)

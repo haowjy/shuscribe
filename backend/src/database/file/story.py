@@ -271,12 +271,12 @@ published_at: {chapter.published_at.isoformat() if chapter.published_at else ""}
         return True
 
     # Story metadata operations
-    async def get_story_metadata(self, workspace_id: UUID) -> Optional[StoryMetadata]:
+    async def get_story_metadata(self, workspace_id: UUID) -> StoryMetadata:
         """Get story metadata"""
         metadata_data = self.file_manager.read_json_file(self.metadata_file)
         
         if not metadata_data or metadata_data.get('workspace_id') != str(workspace_id):
-            return None
+            raise ValueError("Story metadata not found")
         
         return StoryMetadata(
             id=UUID(metadata_data['id']),

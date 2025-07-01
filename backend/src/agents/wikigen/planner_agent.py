@@ -26,8 +26,9 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 # TODO: Import proper types when schemas are defined
-# from src.schemas.story import Story, Chapter, Arc
-# from src.schemas.wiki import WikiPlan, ArticlePlan, EntityAnalysis
+# from src.database.models.story import FullStoryBase as Story, Chapter
+# from src.database.models.workspace import Arc
+# NOTE: WikiPlan, ArticlePlan, and EntityAnalysis may need to be created in domain models
 from src.services.llm.llm_service import LLMService
 from src.prompts import prompt_manager
 from src.agents.base_agent import BaseAgent
