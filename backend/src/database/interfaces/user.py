@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
 
-from src.database.models.user import User, UserAPIKey, UserCreate, UserUpdate, UserAPIKeyCreate
+from src.schemas.db.user import User, UserAPIKey, UserCreate, UserUpdate, UserAPIKeyCreate
 
 
 class IUserRepository(ABC):

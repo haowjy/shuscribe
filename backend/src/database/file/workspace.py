@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 from uuid import UUID, uuid4
 
 from src.database.interfaces.workspace import IWorkspaceRepository
-from src.database.models.workspace import Workspace, Arc, WorkspaceCreate, WorkspaceUpdate
+from src.schemas.db.workspace import Workspace, Arc, WorkspaceCreate, WorkspaceUpdate
 from src.database.file.utils import FileManager, ensure_workspace_structure
 
 

@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 import re
 
 from src.database.interfaces.wiki import IWikiRepository
-from src.database.models.wiki import (
+from src.schemas.db.wiki import (
     WikiArticle, WikiArticleCreate, WikiArticleUpdate, WikiArticleType,
     ChapterVersion, CurrentVersion, ArticleConnection
 )

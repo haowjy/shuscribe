@@ -86,3 +86,70 @@ We will measure the success of the MVP by focusing on adoption, engagement, and 
 *   **Technical Performance & Feedback:**
     *   Success rate of the wiki generation pipeline across both deployment modes.
     *   Qualitative feedback gathered from early adopters and author partners to guide Phase 2 development.
+*   
+
+### 7. Future Features & Extensions (Phase 2+)
+
+Our long-term vision for ShuScribe extends beyond the core MVP to create an even more dynamic, personalized, and insightful wiki experience. These features will unlock deeper engagement, broader use cases, and advanced monetization opportunities.
+
+#### 7.1 Enhanced User Control & Interaction
+
+*   **Multi-Mode Wiki Generation:**
+    *   **Vision:** Empower users with choice and control over the wiki generation process. Instead of a single automated pipeline, users can select a mode that aligns with their desired level of engagement and technical comfort.
+    *   **Details:** At the start of a new story's processing, offer distinct options:
+        *   **Automated & Spoiler-Safe Mode:** (Current MVP pipeline) Ideal for users who want a hands-off experience and prioritize spoiler prevention above all else, receiving arc-based archives without interruption.
+        *   **Guided & Interactive Mode:** Allows users to influence the wiki generation process step-by-step through a conversational interface, making decisions on arc boundaries, article focus, and content refinement. This provides maximum user agency and customization.
+        *   **Hybrid Mode:** Combines the interactive planning phase (e.g., user-approved arc boundaries) with automated, hands-off execution for the content generation, offering a balance of control and efficiency.
+*   **Conversational Orchestrator:**
+    *   **Vision:** Transform the backend into a highly flexible, conversational partner. Instead of rigid agent calls, a central "AI orchestrator" engages in a long-running chat thread with the user, intelligently spawning and managing specialized agents based on user queries and interests.
+    *   **Details:** This involves a sophisticated "turn-taking" mechanism where the system understands user intent ("Tell me about Elara," "What's the significance of this event?"), activates the relevant agent (e.g., CharacterAnalysisAgent, PlotAgent), receives its structured output, and then presents it naturally to the user. A shared `WikiGenContext` will maintain the state and accumulated wiki content throughout the conversation. Outputs would dynamically filter based on the user's explicit reading progress to maintain spoiler safety in this interactive mode.
+*   **Interactive Arc & Plan Approval:**
+    *   **Vision:** Introduce collaborative decision points where the user can review and approve critical structural elements.
+    *   **Details:** After the `ArcSplitterAgent` proposes narrative arc boundaries, the system will present these to the user in a visual or textual format. Users can then accept the suggestions or manually adjust the start/end chapters for each arc. Similarly, the `WikiPlannerAgent` could present its proposed article list and structure for user feedback before the `ArticleWriterAgent` begins content generation. This ensures the wiki aligns with the user's interpretation of the story.
+*   **Checkpoint-Based Conversation within Arcs:**
+    *   **Vision:** Provide an opportunity for deep, spoiler-safe exploration within a completed arc.
+    *   **Details:** Once an arc's processing is complete and its spoiler-safe archive is generated, the system can offer a freeform Q&A session. Users can ask detailed questions about characters, locations, events, or themes *within the scope of that arc's content*, without risking spoilers from future arcs. After the user feels satisfied with the current arc's wiki, they can signal "ready," and the system saves the arc wiki as a "checkpoint" and potentially moves to the next arc's processing.
+*   **User-Driven Refinement Loops:**
+    *   **Vision:** Allow users to iteratively improve specific wiki articles or sections.
+    *   **Details:** After an agent presents generated content (e.g., a character profile), the user can provide direct feedback ("Can you add more about their childhood?", "This relationship feels incomplete"). The system would then re-run the relevant agent with the refined instructions, allowing for continuous quality improvement based on user preference.
+
+#### 7.2 Deeper AI Insights & Automation
+
+*   **Dynamic Context Management:**
+    *   **Vision:** Enhance agent intelligence by dynamically providing only the most relevant and spoiler-safe contextual information for any given task.
+    *   **Details:** A dedicated `ContextManager` component will be developed. When an agent is invoked (e.g., to analyze a character in Arc 2), this manager will intelligently select and filter relevant information from previous arcs (e.g., character's Arc 1 summary, previous world-building details, resolved plot threads) to ensure the agent's output is consistent, comprehensive, and most importantly, does not reveal future spoilers.
+*   **Quality Assurance & Metrics Agents:**
+    *   **Vision:** Implement automated checks to ensure the high quality and consistency of generated wiki content.
+    *   **Details:** Introduce dedicated `WikiQualityChecker` agents that run post-generation validation. These agents would:
+        *   **Consistency Checks:** Verify character traits, plot points, and world-building consistency across multiple arcs.
+        *   **Completeness Checks:** Assess if all key entities from an arc are covered by articles.
+        *   **Cross-Reference Validation:** Ensure all internal wiki links are valid and resolve correctly.
+        *   **Style & Format Enforcement:** Verify adherence to Markdown formatting and defined wiki style guides.
+        *   **Sentiment/Tone Analysis:** Assess if the generated content matches the story's tone.
+*   **Semantic Search & Advanced Information Retrieval:**
+    *   **Vision:** Move beyond keyword search to provide intelligent, context-aware information retrieval within the generated wikis and source material.
+    *   **Details:** Implement embedding-based semantic search across all wiki articles and enhanced chapters. This allows users to ask natural language questions ("What did Elara do after leaving the Whispering Woods?"), and the system intelligently surfaces the most relevant information, even if exact keywords aren't present.
+*   **Custom Templates & Generative Output Control:**
+    *   **Vision:** Give users unprecedented control over the *format* and *structure* of their wiki articles.
+    *   **Details:** Users could define their own Jinja2 template macros or entire TOML prompt structures for specific article types (e.g., a detailed character sheet, a location description with specific sections like "Flora & Fauna," "History," "Inhabitants"). The `ArticleWriterAgent` would then generate content specifically into these user-defined templates.
+
+#### 7.3 Collaborative & Community Features
+
+*   **Collaborative Editing & Community Curation:**
+    *   **Vision:** Evolve ShuScribe from a personal tool into a platform where communities can collectively build and refine wikis for their favorite stories.
+    *   **Details:** Implement version control for wiki articles, allowing multiple users to suggest edits. A moderation system would ensure quality and adherence to spoiler policies. This would include user roles (reader, contributor, editor) and discussion forums tied to specific wiki articles.
+*   **Shared Wikis & Discovery:**
+    *   **Vision:** Allow users to share their generated wikis with others (e.g., a link to a spoiler-safe wiki up to Chapter X), fostering community around shared reading experiences.
+    *   **Details:** A discovery platform where users can browse high-quality, community-vetted wikis generated by others. Authors could also "publish" their official ShuScribe wikis.
+
+#### 7.4 Advanced Analytics & Visualization
+
+*   **Interactive Timelines:**
+    *   **Vision:** Provide a dynamic, visual representation of the story's progression, correlating plot points, character introductions, and major events across arcs.
+    *   **Details:** A UI component that visualizes key story events extracted by agents, allowing users to scroll through the timeline and jump to relevant chapters or wiki articles.
+*   **Relationship Graphs:**
+    *   **Vision:** Graphically display complex character relationships, faction dynamics, and thematic connections.
+    *   **Details:** A knowledge graph built from extracted entities and their relationships, allowing users to visualize networks of characters (friend/foe/family), organizations, and even conceptual links.
+*   **Reading Recommendations & Progress Heatmaps:**
+    *   **Vision:** Leverage wiki data to provide personalized reading insights and recommendations.
+    *   **Details:** Analyze user interaction with the wiki to suggest related stories, or even highlight areas within the current story (e.g., chapters with high activity for a specific character) for re-reading. Progress heatmaps could show a user's engagement with different parts of the story or wiki.

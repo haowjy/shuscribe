@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import cast
 
 from src.database.interfaces.workspace import IWorkspaceRepository
-from src.database.models.workspace import WorkspaceCreate, WorkspaceUpdate
+from src.schemas.db.workspace import WorkspaceCreate, WorkspaceUpdate
 from src.database.file.user import FileUserRepository
-from src.database.models.user import User
+from src.schemas.db.user import User
 
 
 class TestWorkspaceOperations:

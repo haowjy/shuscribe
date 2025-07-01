@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 
 from src.database.file import create_file_repositories
-from src.database.models.repositories import FileRepositories, DatabaseRepositories, Repositories
+from src.database.repositories import FileRepositories, DatabaseRepositories, Repositories  
 
 class RepositoryFactory:
     """Factory for creating repository implementations"""

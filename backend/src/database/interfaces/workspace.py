@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
 
-from src.database.models.workspace import Workspace, WorkspaceCreate, WorkspaceUpdate
+from src.schemas.db.workspace import Workspace, WorkspaceCreate, WorkspaceUpdate
 
 
 class IWorkspaceRepository(ABC):

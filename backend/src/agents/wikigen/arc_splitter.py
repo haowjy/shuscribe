@@ -29,7 +29,7 @@ from uuid import UUID, uuid4
 from src.services.llm.llm_service import LLMService
 from src.schemas.llm.models import LLMMessage, LLMResponse, ThinkingEffort
 from src.schemas.wikigen.arc import ArcAnalysisResult, Arc
-from src.database.models.story import FullStoryBase as Story
+from src.schemas.db.story import FullStoryBase as Story
 from src.prompts import prompt_manager
 from src.agents.base_agent import BaseAgent, WindowProcessingResult
 from src.utils import clean_json_from_llm_response

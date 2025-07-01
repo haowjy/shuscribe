@@ -12,11 +12,11 @@ from typing import cast
 from uuid import UUID, uuid4
 from datetime import datetime
 
-from src.database.models.repositories import FileRepositories
-from src.database.models.story import Chapter, ChapterCreate, ChapterStatus, StoryMetadata, StoryMetadataCreate
+from src.database.repositories import FileRepositories
+from src.schemas.db.story import Chapter, ChapterCreate, ChapterStatus, StoryMetadata, StoryMetadataCreate
 from src.database.factory import get_repositories
-from src.database.models.workspace import Workspace, WorkspaceCreate
-from src.database.models.user import User, UserCreate, SubscriptionTier
+from src.schemas.db.workspace import Workspace, WorkspaceCreate
+from src.schemas.db.user import User, UserCreate, SubscriptionTier
 
 
 class StoryImporter:

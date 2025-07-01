@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 from uuid import UUID, uuid4
 
 from src.database.interfaces.user import IUserRepository
-from src.database.models.user import User, UserAPIKey, UserCreate, UserUpdate, UserAPIKeyCreate, SubscriptionTier
+from src.schemas.db.user import User, UserAPIKey, UserCreate, UserUpdate, UserAPIKeyCreate, SubscriptionTier
 from src.database.file.utils import FileManager
 from src.database.file.encryption import FileEncryption, FileStorageConfig
 

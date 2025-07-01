@@ -8,7 +8,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from typing import AsyncIterator, Dict, Any, Tuple
+from typing import AsyncIterator, Dict, Any, Tuple, cast
 from uuid import UUID
 
 import pytest
@@ -17,13 +17,13 @@ import pytest
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
 
 from src.database.factory import get_repositories
-from src.database.models.repositories import FileRepositories, Repositories
-from src.database.models.user import UserCreate, UserAPIKeyCreate, SubscriptionTier
-from src.database.models.workspace import WorkspaceCreate  
-from src.database.models.story import ChapterCreate, ChapterStatus, StoryMetadataCreate
-from src.database.models.wiki import WikiArticleCreate, WikiArticleType
+from src.database.repositories import FileRepositories, Repositories
+from src.schemas.db.user import UserAPIKeyCreate
+from src.schemas.db.workspace import WorkspaceCreate  
+from src.schemas.db.story import ChapterCreate, ChapterStatus
+from src.schemas.db.wiki import WikiArticleCreate, WikiArticleType
 from src.database.file.user import FileUserRepository
-from typing import cast
+
 
 
 @pytest.fixture

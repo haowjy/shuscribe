@@ -27,4 +27,4 @@ class FileRepositories(Repositories):
 
 @dataclass
 class DatabaseRepositories(Repositories): # TODO: Implement database repositories
-    pass
+    pass 

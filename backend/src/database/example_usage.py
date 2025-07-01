@@ -10,8 +10,16 @@ from datetime import datetime
 
 from src.database import (
     get_repositories,
-    UserCreate, WorkspaceCreate, ChapterCreate, WikiArticleCreate,
-    SubscriptionTier, ChapterStatus, WikiArticleType
+)
+
+from src.schemas.db import (
+    UserCreate,
+    SubscriptionTier,
+    WorkspaceCreate,
+    ChapterCreate,
+    ChapterStatus,
+    WikiArticleCreate,
+    WikiArticleType
 )
 
 
@@ -39,7 +47,7 @@ async def example_usage():
     
     # 2. Store API key for BYOK
     print("\n🔑 Storing API key...")
-    from .models.user import UserAPIKeyCreate
+    from src.schemas.db.user import UserAPIKeyCreate
     api_key_data = UserAPIKeyCreate(
         provider="openai",
         api_key="sk-test-123456",

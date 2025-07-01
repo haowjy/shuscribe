@@ -8,7 +8,7 @@ from uuid import UUID
 
 from src.database import get_repositories
 from src.database.interfaces.user import IUserRepository
-from src.database.models.repositories import FileRepositories
+from src.database.repositories import FileRepositories
 
 
 def get_user_repository_dependency() -> IUserRepository:

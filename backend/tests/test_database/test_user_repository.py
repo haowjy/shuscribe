@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import cast
 
-from src.database.models.user import UserCreate, UserUpdate, UserAPIKeyCreate, SubscriptionTier
+from src.schemas.db.user import UserCreate, UserUpdate, UserAPIKeyCreate, SubscriptionTier
 from src.database.file.user import FileUserRepository
 
 

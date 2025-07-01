@@ -8,7 +8,7 @@ import pytest
 from pathlib import Path
 from typing import cast
 
-from src.database.models.wiki import WikiArticleCreate, WikiArticleUpdate, WikiArticleType
+from src.schemas.db.wiki import WikiArticleCreate, WikiArticleUpdate, WikiArticleType
 from src.database.file.user import FileUserRepository
 
 

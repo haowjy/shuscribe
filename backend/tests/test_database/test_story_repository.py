@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import cast
 
-from src.database.models.story import ChapterCreate, ChapterUpdate, ChapterStatus, StoryMetadataCreate, StoryMetadataUpdate
+from src.schemas.db.story import ChapterCreate, ChapterUpdate, ChapterStatus, StoryMetadataCreate, StoryMetadataUpdate
 from src.database.file.user import FileUserRepository
 
 

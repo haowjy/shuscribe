@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 from uuid import UUID
 
-from src.database.models.story import Chapter, ChapterCreate, ChapterUpdate, StoryMetadata
+from src.schemas.db.story import Chapter, ChapterCreate, ChapterUpdate, StoryMetadata
 
 
 class IStoryRepository(ABC):

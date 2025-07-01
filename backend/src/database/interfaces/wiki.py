@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
 
-from src.database.models.wiki import (
+from src.schemas.db.wiki import (
     WikiArticle, WikiArticleCreate, WikiArticleUpdate,
     ChapterVersion, CurrentVersion, ArticleConnection
 )

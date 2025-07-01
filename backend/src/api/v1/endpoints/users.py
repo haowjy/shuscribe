@@ -11,7 +11,7 @@ from src.api.dependencies import (
 )
 from src.database.interfaces.user import IUserRepository
 from src.services.llm.llm_service import LLMService
-from src.schemas.user import APIKeyRequest, APIKeyResponse
+from src.schemas.requests.user import APIKeyRequest, APIKeyResponse
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ async def store_api_key(
     """Store and validate user's API key for a provider"""
     try:
         # Create API key data from request
-        from src.database.models.user import UserAPIKeyCreate
+        from src.schemas.db.user import UserAPIKeyCreate
         api_key_data = UserAPIKeyCreate(
             provider=provider,
             api_key=request.api_key,

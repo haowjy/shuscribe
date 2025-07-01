@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 from uuid import UUID, uuid4
 
 from src.database.interfaces.story import IStoryRepository
-from src.database.models.story import Chapter, ChapterCreate, ChapterUpdate, ChapterStatus, StoryMetadata, StoryMetadataCreate, StoryMetadataUpdate
+from src.schemas.db.story import Chapter, ChapterCreate, ChapterUpdate, ChapterStatus, StoryMetadata, StoryMetadataCreate, StoryMetadataUpdate
 from src.database.file.utils import FileManager, ensure_workspace_structure
 
 
