@@ -93,7 +93,12 @@ class ChapterVersion(BaseModel):
     ai_guidance: Optional[str] = None
     
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime
+    
+    @property
+    def chapter_number(self) -> int:
+        """Alias for safe_through_chapter for backward compatibility"""
+        return self.safe_through_chapter
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -144,6 +149,7 @@ class WikiArticle(BaseModel):
     summary: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     safe_through_chapter: Optional[int] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the article")
     
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -181,24 +187,27 @@ class WikiArticle(BaseModel):
 
 class WikiArticleCreate(BaseModel):
     """Schema for creating wiki articles"""
+    workspace_id: UUID
     title: str = Field(..., min_length=1, description="Article title")
     article_type: WikiArticleType
     content: str = Field(..., min_length=1, description="Article content")
     summary: Optional[str] = None
     tags: List[str] = Field(default_factory=list, description="Article tags")
-    safe_through_chapter: Optional[int] = Field(None, ge=1, description="Chapter this article is safe through")
+    safe_through_chapter: Optional[int] = Field(default=None, description="Chapter this article is safe through")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the article")
     
     model_config = ConfigDict(from_attributes=True)
 
 
 class WikiArticleUpdate(BaseModel):
     """Schema for updating wiki articles"""
-    title: Optional[str] = Field(None, min_length=1, description="Article title")
+    title: Optional[str] = Field(default=None, min_length=1, description="Article title")
     article_type: Optional[WikiArticleType] = None
-    content: Optional[str] = Field(None, min_length=1, description="Article content") 
+    content: Optional[str] = Field(default=None, min_length=1, description="Article content") 
     summary: Optional[str] = None
     tags: Optional[List[str]] = None
-    safe_through_chapter: Optional[int] = Field(None, ge=1, description="Chapter this article is safe through")
+    safe_through_chapter: Optional[int] = Field(default=None, description="Chapter this article is safe through")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the article")
     
     model_config = ConfigDict(from_attributes=True)
 

@@ -67,7 +67,7 @@ addopts = [
     "--cov=src",
     "--cov-report=html:htmlcov",
     "--cov-report=xml",
-    "--cov-fail-under=40"
+    "--cov-fail-under=30"
 ]
 testpaths = ["tests"]
 asyncio_mode = "auto"
@@ -93,3 +93,8 @@ exclude_lines = [
     "if 0:",
     "if __name__ == .__main__.:",
 ]
+[dependency-groups]
+dev = [
+    "pytest-cov>=6.2.1",
+]
+

@@ -25,8 +25,9 @@ async def lifespan(app: FastAPI):
     
     # Initialize database (for development only)
     if settings.ENVIRONMENT == "development":
-        from src.database.supabase_connection import init_db
-        await init_db()
+        raise NotImplementedError("Database initialization not implemented")
+        # from src.database.supabase_connection import init_db
+        # await init_db()
         logging.info("Database initialized")
     
     yield

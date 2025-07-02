@@ -31,6 +31,17 @@ from .workspace import (
     WorkspaceBase,
     Arc,
 )
+from .agent import (
+    AgentMessage,
+    AgentConversation,
+    AgentConversationCreate,
+    AgentMetrics,
+    AgentExecution,
+    AgentExecutionCreate,
+    AgentExecutionResult,
+    UserFeedback,
+    AgentType,
+)
 from .wiki import (
     WikiArticle,
     WikiArticleCreate,
@@ -82,6 +93,16 @@ __all__ = [
     "WorkspaceUpdate",
     "WorkspaceBase",
     "Arc",
+    # Agent
+    "AgentMessage",
+    "AgentConversation",
+    "AgentConversationCreate",
+    "AgentMetrics",
+    "AgentExecution",
+    "AgentExecutionCreate",
+    "AgentExecutionResult",
+    "UserFeedback",
+    "AgentType",
     # Wiki
     "WikiArticle",
     "WikiArticleCreate",

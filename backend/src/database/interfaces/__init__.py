@@ -1,18 +1,23 @@
 """
-Repository Interface Definitions
+Repository interfaces for the ShuScribe database layer.
 
-Abstract interfaces that define contracts for all storage backends.
-Following the Interface Segregation Principle - each domain gets its own interface.
+These abstract interfaces define the contract that all repository
+implementations must follow, enabling easy swapping between different
+storage backends (memory, file, database).
 """
 
-from src.database.interfaces.user import IUserRepository
-from src.database.interfaces.workspace import IWorkspaceRepository  
-from src.database.interfaces.story import IStoryRepository
-from src.database.interfaces.wiki import IWikiRepository
+from src.database.interfaces.user_repository import IUserRepository
+from src.database.interfaces.agent_repository import IAgentRepository
+from src.database.interfaces.workspace_repository import IWorkspaceRepository
+from src.database.interfaces.story_repository import IStoryRepository
+from src.database.interfaces.wiki_repository import IWikiRepository
+from src.database.interfaces.writing_repository import IWritingRepository
 
 __all__ = [
     "IUserRepository",
-    "IWorkspaceRepository", 
-    "IStoryRepository",
+    "IAgentRepository",
+    "IWorkspaceRepository",
+    "IStoryRepository", 
     "IWikiRepository",
-] 
+    "IWritingRepository",
+]

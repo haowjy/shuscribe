@@ -194,3 +194,15 @@ When using file backend, the structure in `temp/` is:
 - Notebooks: `backend/notebooks/` for examples
 - Test files: Good examples of usage patterns
 - Type hints: IDE support for exploration
+
+## Code Snippets
+
+```python
+# use datetime.now(UTC) for all timestamps in UTC
+from datetime import UTC, datetime
+now = datetime.now(UTC)
+```
+
+## Documentation
+
+- If you do not implement something yet but still want to stub it in, you should raise a NotImplementedError and add a TODO comment.

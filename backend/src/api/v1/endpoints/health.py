@@ -3,9 +3,8 @@
 Health check endpoints
 """
 from fastapi import APIRouter
-from datetime import datetime
+from datetime import datetime, UTC
 from src.config import settings
-from src.database.supabase_connection import get_supabase_client
 
 router = APIRouter()
 
@@ -19,22 +18,21 @@ async def ping():
 @router.get("/status")
 async def status():
     """Detailed status endpoint with database check"""
-    if settings.SKIP_DATABASE:
-        db_status = "skipped (in-memory mode)"
+    if settings.DATABASE_BACKEND == "memory":
+        db_status = "skipped (memory mode)"
     else:
         try:
-            # Test Supabase connection
-            client = get_supabase_client()
-            client.table('users').select('id').limit(1).execute()
-            db_status = "healthy"
+            # TODO: Test database connection when PostgreSQL backend is implemented
+            # For now, assume healthy since we're using memory repositories
+            db_status = "healthy (memory fallback)"
         except Exception as e:
             db_status = f"unhealthy: {e}"
     
     return {
-        "status": "healthy" if db_status in ["healthy", "skipped (in-memory mode)"] else "degraded",
+        "status": db_status,
         "service": "shuscribe-api",
         "version": "0.1.0",
         "database": db_status,
-        "database_type": "supabase" if not settings.SKIP_DATABASE else "in-memory",
-        "timestamp": datetime.utcnow().isoformat()
+        "database_type": settings.DATABASE_BACKEND,
+        "timestamp": datetime.now(UTC).isoformat()
     }

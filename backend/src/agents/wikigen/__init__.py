@@ -13,13 +13,13 @@ Key Features:
 - Bidirectional chapter-wiki linking
 """
 
-from .orchestrator import WikiGenOrchestrator
-from .arc_splitter import ArcSplitterAgent
-from .planner_agent import WikiPlannerAgent
-from .article_writer import ArticleWriterAgent
+from src.agents.wikigen.orchestrator import WikiGenOrchestrator
+from src.agents.wikigen.arc_splitter import ArcSplitterAgent
+from src.agents.wikigen.planner import WikiPlannerAgent
+from src.agents.wikigen.article_writer import ArticleWriterAgent
 
-from .general_summarizer import GeneralSummarizerAgent
-from .chapter_backlinker import ChapterBacklinkerAgent
+from src.agents.wikigen.general_summarizer import GeneralSummarizerAgent
+from src.agents.wikigen.chapter_backlinker import ChapterBacklinkerAgent
 
 __all__ = [
     "WikiGenOrchestrator",

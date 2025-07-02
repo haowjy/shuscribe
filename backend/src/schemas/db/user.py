@@ -47,7 +47,7 @@ class User(UserBase):
     """Complete user model with all fields"""
     id: UUID
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
 

@@ -26,7 +26,7 @@ class Arc(BaseModel):
 class WorkspaceBase(BaseModel):
     """Base workspace schema"""
     name: str = Field(..., description="Workspace/project name")
-    description: Optional[str] = None
+    description: str = Field(default="", description="Workspace/project description")
     arcs: List[Arc] = Field(default_factory=list, description="Story arcs for processing")
     settings: Dict[str, Any] = Field(default_factory=dict, description="Workspace-specific settings")
 

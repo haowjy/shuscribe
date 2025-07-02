@@ -4,7 +4,7 @@ Application configuration using Pydantic Settings
 """
 import logging # Added for potential logging in init
 import os
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import dotenv_values
@@ -35,10 +35,11 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = "https://your-project.supabase.co"
     SUPABASE_KEY: str = "your-anon-key-here"
     SUPABASE_SERVICE_KEY: Optional[str] = None  # For admin operations
-    SKIP_DATABASE: bool = False # <-- Set to True to skip database connection and use in-memory repositories
     
     # Legacy SQLAlchemy URL (kept for compatibility during migration)
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/shuscribe"
+
+    DATABASE_BACKEND: Literal["memory", "file", "database"] = "memory"
     
     # CORS
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]

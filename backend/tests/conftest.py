@@ -8,8 +8,10 @@ import asyncio
 import pytest
 import shutil
 from pathlib import Path
-from typing import Iterator, AsyncIterator
+from typing import Iterator, AsyncIterator, Dict, Any
 from uuid import uuid4
+
+from src.database.factory import RepositoryContainer
 
 # Async test support
 @pytest.fixture(scope="session")
@@ -79,6 +81,71 @@ def cleanup_temp_workspaces():
     
     # Clean up at end of session
     cleanup()
+
+
+# Repository fixtures
+@pytest.fixture
+async def repository_container() -> RepositoryContainer:
+    """Provide a RepositoryContainer with memory repositories for testing."""
+    from src.database.factory import get_repositories
+    return get_repositories(backend="memory")
+
+
+@pytest.fixture
+async def populated_repositories(repository_container: RepositoryContainer) -> Dict[str, Any]:
+    """Provide repositories with sample data for integration tests."""
+    from src.schemas.db.user import UserCreate
+    from src.schemas.db.workspace import WorkspaceCreate, Arc
+    from src.schemas.db.story import ChapterCreate, ChapterStatus, StoryMetadataCreate
+    
+    # Create test user
+    user = await repository_container.user.create_user(UserCreate(
+        email="test@example.com",
+        display_name="Test User"
+    ))
+    
+    # Create test workspace with arcs
+    workspace = await repository_container.workspace.create_workspace(WorkspaceCreate(
+        owner_id=user.id,
+        name="Test Story",
+        description="Test workspace for story",
+        arcs=[Arc(
+            name="First Arc",
+            description="The beginning",
+            start_chapter=1,
+            end_chapter=10
+        )]
+    ))
+    
+    # Create test chapters (mix of published and draft)
+    chapters = []
+    for i in range(1, 6):
+        chapter = await repository_container.story.create_chapter(ChapterCreate(
+            workspace_id=workspace.id,
+            title=f"Chapter {i}",
+            content=f"Content for chapter {i}. " * 100,  # ~100 words
+            chapter_number=i,
+            status=ChapterStatus.PUBLISHED if i <= 3 else ChapterStatus.DRAFT
+        ))
+        chapters.append(chapter)
+    
+    # Create story metadata
+    metadata = await repository_container.story.create_story_metadata(StoryMetadataCreate(
+        workspace_id=workspace.id,
+        title="Test Story",
+        author="Test Author",
+        synopsis="A test story for unit testing",
+        genres=["Fantasy", "Adventure"],
+        total_chapters=10
+    ))
+    
+    return {
+        "container": repository_container,
+        "user": user,
+        "workspace": workspace,
+        "chapters": chapters,
+        "metadata": metadata
+    }
 
 
 # Test markers

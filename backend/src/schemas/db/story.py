@@ -70,7 +70,7 @@ class Chapter(ChapterBase):
     version: int = Field(default=1, description="Chapter version for tracking edits")
     published_at: Optional[datetime] = None
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime
     
     @property
     def is_published(self) -> bool:
@@ -87,6 +87,7 @@ class Chapter(ChapterBase):
 
 class StoryMetadataCreate(BaseModel):
     """Schema for creating story metadata"""
+    workspace_id: UUID
     title: str = Field(..., min_length=1, description="Story title")
     author: str = Field(..., min_length=1, description="Story author")
     synopsis: Optional[str] = None

@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 
 from src.api.dependencies import (
-    get_user_repository_dependency,
+    get_user_service_dependency,
     get_current_user_id_dependency
 )
-from src.database.interfaces.user import IUserRepository
+from src.services.user.user_service import UserService
 from src.services.llm.llm_service import LLMService
 from src.schemas.requests.user import APIKeyRequest, APIKeyResponse
 
@@ -21,21 +21,16 @@ async def store_api_key(
     provider: str,
     request: APIKeyRequest,
     current_user_id: UUID = Depends(get_current_user_id_dependency),
-    user_repo: IUserRepository = Depends(get_user_repository_dependency)
+    user_service: UserService = Depends(get_user_service_dependency)
 ):
     """Store and validate user's API key for a provider"""
     try:
-        # Create API key data from request
-        from src.schemas.db.user import UserAPIKeyCreate
-        api_key_data = UserAPIKeyCreate(
-            provider=provider,
-            api_key=request.api_key,
-            provider_metadata=request.provider_metadata or {}
-        )
-
-        # Store the API key (this will encrypt it automatically)
-        stored_key = await user_repo.store_api_key(
-            current_user_id, api_key_data
+        # Store the API key using the service (this will encrypt it automatically)
+        stored_key = await user_service.store_api_key(
+            current_user_id, 
+            provider,
+            request.api_key,
+            request.provider_metadata or {}
         )
 
         # Validate the API key based on request preference
@@ -52,7 +47,7 @@ async def store_api_key(
                     provider, test_model
                 )
                 if model_details:
-                    await user_repo.validate_api_key(current_user_id, provider)
+                    await user_service.validate_api_key(current_user_id, provider)
                     validation_status = "valid"
                 else:
                     validation_status = "invalid"
