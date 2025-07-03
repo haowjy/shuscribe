@@ -11,6 +11,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
+from src.core.constants import PROVIDER_ID
+
 
 class SubscriptionTier(str, Enum):
     """User subscription tiers"""
@@ -54,7 +56,7 @@ class User(UserBase):
 
 class UserAPIKeyCreate(BaseModel):
     """Schema for creating/updating API keys"""
-    provider: str = Field(..., description="LLM provider (e.g., 'openai', 'anthropic')")
+    provider: PROVIDER_ID = Field(..., description="LLM provider (e.g., 'openai', 'anthropic')")
     api_key: str = Field(..., description="The actual API key")
     provider_metadata: Dict[str, Any] = Field(default_factory=dict, description="Provider-specific settings")
 
@@ -62,7 +64,7 @@ class UserAPIKeyCreate(BaseModel):
 class UserAPIKey(BaseModel):
     """User's API key for a specific LLM provider"""
     user_id: UUID
-    provider: str
+    provider: PROVIDER_ID
     encrypted_api_key: str = Field(..., description="Encrypted API key for storage")
     provider_metadata: Dict[str, Any] = Field(default_factory=dict)
     validation_status: str = Field(default="pending", description="pending, valid, invalid")

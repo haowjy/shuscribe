@@ -1,5 +1,27 @@
 """Test utilities for ShuScribe"""
 
-from .import_story import StoryImporter, import_pokemon_amber, import_custom_story
+from src.utils.test.import_story import (
+    NotebookStoryLoader,
+    StoryLoadResult,
+    # Dependency-injected functions
+    load_story_with_repositories,
+    load_pokemon_amber_with_repositories,
+    create_test_story_with_repositories,
+    # Legacy convenience functions
+    load_pokemon_amber_story,
+    load_test_story,
+    load_story_from_xml
+)
 
-__all__ = ["StoryImporter", "import_pokemon_amber", "import_custom_story"]
+__all__ = [
+    "NotebookStoryLoader",
+    "StoryLoadResult",
+    # Dependency-injected functions
+    "load_story_with_repositories",
+    "load_pokemon_amber_with_repositories", 
+    "create_test_story_with_repositories",
+    # Legacy convenience functions
+    "load_pokemon_amber_story",
+    "load_test_story",
+    "load_story_from_xml"
+]

@@ -5,6 +5,7 @@ User Service - Business logic for user management and BYOK API keys.
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
+from src.core.constants import PROVIDER_ID
 from src.database.interfaces.user_repository import IUserRepository
 from src.schemas.db.user import SubscriptionTier, User, UserAPIKey, UserCreate, UserUpdate, UserAPIKeyCreate
 from src.core.encryption import encrypt_api_key, decrypt_api_key
@@ -74,7 +75,7 @@ class UserService:
     
     # BYOK API Key Management
     async def store_api_key(
-        self, user_id: UUID, provider: str, api_key: str, 
+        self, user_id: UUID, provider: PROVIDER_ID, api_key: str, 
         provider_metadata: Optional[Dict[str, Any]] = None
     ) -> UserAPIKey:
         """Store and encrypt user's API key (convenience method for API endpoints)."""
@@ -104,7 +105,7 @@ class UserService:
             user_id, api_key_data, encrypted_key
         )
     
-    async def get_api_key(self, user_id: UUID, provider: str) -> Optional[UserAPIKey]:
+    async def get_api_key(self, user_id: UUID, provider: PROVIDER_ID) -> Optional[UserAPIKey]:
         """Get decrypted API key for user and provider."""
         api_key = await self.user_repository.get_api_key(user_id, provider)
         if not api_key:
@@ -123,7 +124,7 @@ class UserService:
             return None
     
     async def update_api_key_validation(
-        self, user_id: UUID, provider: str, status: str
+        self, user_id: UUID, provider: PROVIDER_ID, status: str
     ) -> UserAPIKey:
         """Update API key validation status."""
         if status not in ["pending", "valid", "invalid", "expired"]:
@@ -133,7 +134,7 @@ class UserService:
             user_id, provider, status
         )
     
-    async def delete_api_key(self, user_id: UUID, provider: str) -> bool:
+    async def delete_api_key(self, user_id: UUID, provider: PROVIDER_ID) -> bool:
         """Delete user's API key for provider."""
         return await self.user_repository.delete_api_key(user_id, provider)
     
@@ -176,7 +177,7 @@ class UserService:
         
         return decrypted_keys
     
-    async def validate_api_key(self, user_id: UUID, provider: str) -> bool:
+    async def validate_api_key(self, user_id: UUID, provider: PROVIDER_ID) -> bool:
         """Validate an API key by testing it with the provider."""
         api_key = await self.get_api_key(user_id, provider)
         if not api_key:

@@ -14,6 +14,7 @@ from uuid import UUID
 from dataclasses import dataclass, field
 from pydantic import BaseModel
 
+from src.core.constants import MODEL_NAME, PROVIDER_ID
 from src.services.llm.llm_service import LLMService
 from src.schemas.llm.models import LLMResponse, ThinkingEffort, ChunkType
 
@@ -62,8 +63,8 @@ class BaseAgent(ABC):
     def __init__(
         self, 
         llm_service: LLMService,
-        default_provider: str = "google",
-        default_model: str = "gemini-2.0-flash-001",
+        default_provider: PROVIDER_ID = "google",
+        default_model: MODEL_NAME = "gemini-2.0-flash-001",
         temperature: float = 0.7,
         max_tokens: int = 8000,
         thinking: Optional[ThinkingEffort] = None,
@@ -82,8 +83,8 @@ class BaseAgent(ABC):
             **kwargs: Additional agent-specific configuration
         """
         self.llm_service = llm_service
-        self.default_provider = default_provider
-        self.default_model = default_model
+        self.default_provider: PROVIDER_ID = default_provider
+        self.default_model: MODEL_NAME = default_model
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.thinking = thinking
@@ -117,9 +118,9 @@ class BaseAgent(ABC):
     
     def _get_model_params(
         self, 
-        provider: Optional[str] = None, 
-        model: Optional[str] = None
-    ) -> tuple[str, str]:
+        provider: Optional[PROVIDER_ID] = None, 
+        model: Optional[MODEL_NAME] = None
+    ) -> tuple[PROVIDER_ID, MODEL_NAME]:
         """
         Get provider and model, using defaults if not specified.
         
@@ -140,8 +141,8 @@ class BaseAgent(ABC):
         messages: list,
         user_id: UUID,
         api_key: Optional[str] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
+        provider: Optional[PROVIDER_ID] = None,
+        model: Optional[MODEL_NAME] = None,
         stream: bool = False,
         response_format: Optional[Type[BaseModel]] = None,
         thinking: Optional[ThinkingEffort] = None,

@@ -6,11 +6,13 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from src.core.constants import MODEL_NAME, PROVIDER_ID
+
 
 class LLMConfig(BaseModel):
     """Configuration for LLM requests (internal use by LLMService)"""
-    provider: str  # The ID of the provider (e.g., 'openai', 'anthropic', 'groq')
-    model: str     # The exact model name used by that provider (e.g., 'gpt-4o', 'claude-3-haiku-20240307')
+    provider: PROVIDER_ID  # The ID of the provider (e.g., 'openai', 'anthropic', 'groq')
+    model: MODEL_NAME     # The exact model name used by that provider (e.g., 'gpt-4o', 'claude-3-haiku-20240307')
     temperature: float = 0.7
     max_tokens: Optional[int] = None
     additional_params: Dict[str, Any] = Field(default_factory=dict)
@@ -40,13 +42,13 @@ class HostedModelInstance(BaseModel):
     This is what your backend actually uses when making calls.
     """
     # The `name` is the exact string passed to the LLM API for this provider.
-    model_name: str = Field(..., description="The exact model string used by this provider for this instance (e.g., 'gpt-4o', 'claude-3-haiku-20240307', 'llama-3-8b-instruct').")
+    model_name: MODEL_NAME = Field(..., description="The exact model string used by this provider for this instance (e.g., 'gpt-4o', 'claude-3-haiku-20240307', 'llama-3-8b-instruct').")
     
     # Reference to the abstract model family it belongs to
     model_family_id: str = Field(..., description="The ID of the abstract AI Model Family this instance belongs to (e.g., 'gpt-4o').")
     
     # Reference to the provider hosting this instance
-    provider_id: str = Field(..., description="The ID of the provider hosting this instance (e.g., 'openai', 'anthropic', 'groq').")
+    provider_id: PROVIDER_ID = Field(..., description="The ID of the provider hosting this instance (e.g., 'openai', 'anthropic', 'groq').")
     
     # Provider-specific metadata for this instance (defaults can be overridden from family/general)
     default_temperature: float = Field(default=0.7, description="Default temperature for this specific hosted model instance.")
@@ -71,11 +73,11 @@ class HostedModelInstance(BaseModel):
 
 class LLMProvider(BaseModel):
     """Defines a specific LLM provider, and lists the hosted model instances it offers."""
-    provider_id: str = Field(..., description="Unique identifier for the provider (e.g., 'openai', 'anthropic', 'google', 'groq').")
+    provider_id: PROVIDER_ID = Field(..., description="Unique identifier for the provider (e.g., 'openai', 'anthropic', 'google', 'groq').")
     display_name: str = Field(..., description="Human-readable name of the provider.")
     api_key_format_hint: Optional[str] = Field(default=None, description="Hint for the format of the API key for this provider, useful for UI validation.")
     
     # List of hosted model instances this provider offers.
     # These instances are concrete offerings of abstract AIModelFamilies.
-    default_model_name: Optional[str] = Field(default=None, description="The default model name to use for this provider.")
+    default_model_name: Optional[MODEL_NAME] = Field(default=None, description="The default model name to use for this provider.")
     hosted_models: List[HostedModelInstance] = Field(default_factory=list, description="List of specific model instances hosted by this provider.") 

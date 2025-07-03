@@ -11,16 +11,17 @@ Features:
 - Thinking effort support with model-specific budget token conversion
 """
 import logging
-from typing import Dict, List, Optional, Any, AsyncIterator, Type, Union
+from typing import Dict, List, Optional, Any, AsyncIterator, Type, Union, cast
 from uuid import UUID
+from portkey_ai.api_resources.types.chat_complete_type import ChatCompletionChunk, ChatCompletions
 from pydantic import BaseModel
 
 from portkey_ai import AsyncPortkey
-# from portkey_ai.types.chat import ChatCompletion, ChatCompletionChunk # Removed problematic import
 
 from src.config import settings
 # CHANGED: Import all LLM configuration details from the new core catalog module
-from src.core.llm.catalog import (
+from src.core.constants import MODEL_NAME, PROVIDER_ID
+from src.utils.catalog import (
     get_hosted_model_instance,
     get_capabilities_for_hosted_model,
     get_all_llm_providers, # For listing providers
@@ -71,8 +72,8 @@ class LLMService:
     def _prepare_thinking_parameters(
         self,
         thinking_effort: ThinkingEffort,
-        provider: str,
-        model: str,
+        provider: PROVIDER_ID,
+        model: MODEL_NAME,
         max_tokens: Optional[int]
     ) -> tuple[Optional[int], Optional[Dict[str, Any]]]:
         """
@@ -222,7 +223,7 @@ class LLMService:
         
         return remove_validation_constraints(schema)
 
-    def _determine_chunk_type_from_content_blocks(self, chunk: Any) -> ChunkType:
+    def _determine_chunk_type_from_content_blocks(self, chunk: ChatCompletionChunk) -> ChunkType:
         """
         Determine chunk type using Portkey's built-in content_blocks structure for thinking models.
         
@@ -390,7 +391,7 @@ class LLMService:
         
         return False
 
-    def _extract_content_from_chunk(self, chunk: Any) -> str:
+    def _extract_content_from_chunk(self, chunk: ChatCompletionChunk) -> str:
         """
         Extract content from a Portkey streaming chunk, handling both regular and thinking models.
         
@@ -485,12 +486,15 @@ class LLMService:
                 
                 # Try additional fallback patterns for Anthropic thinking mode
                 # Check for direct delta fields that might contain thinking/content
-                if hasattr(delta, 'thinking') and delta.thinking:
-                    logger.debug(f"Found thinking content in delta.thinking: {len(str(delta.thinking))} chars")
-                    return str(delta.thinking)
-                elif hasattr(delta, 'text') and delta.text:
-                    logger.debug(f"Found content in delta.text: {len(str(delta.text))} chars")
-                    return str(delta.text)
+                thinking_content = getattr(delta, 'thinking', None)
+                if thinking_content:
+                    logger.debug(f"Found thinking content in delta.thinking: {len(str(thinking_content))} chars")
+                    return str(thinking_content)
+                
+                text_content = getattr(delta, 'text', None)
+                if text_content:
+                    logger.debug(f"Found content in delta.text: {len(str(text_content))} chars")
+                    return str(text_content)
                 
                 # Regular content (non-thinking models)
                 if hasattr(delta, 'content') and delta.content:
@@ -563,8 +567,8 @@ class LLMService:
 
     async def chat_completion(
         self,
-        provider: str, # The provider ID (e.g., 'openai')
-        model: str,    # The exact hosted model name (e.g., 'gpt-4o', 'claude-3-opus-20240229')
+        provider: PROVIDER_ID, # The provider ID (e.g., 'openai')
+        model: MODEL_NAME,    # The exact hosted model name (e.g., 'gpt-4o', 'claude-3-opus-20240229')
         messages: List[LLMMessage],
         user_id: Optional[UUID] = None,  # Optional when using direct API key
         api_key: Optional[str] = None,   # Optional direct API key (bypasses database)
@@ -818,20 +822,25 @@ class LLMService:
                 }
 
             # Use stable chat.completions.create() method
-            response = await portkey_client.with_options(
+            response: ChatCompletions | AsyncIterator[ChatCompletionChunk] = await portkey_client.with_options(
                 **portkey_options
             ).chat.completions.create(**create_kwargs)
             
             # 7. Return standardized response
             if stream:
+                # For streaming, response should be AsyncIterator[ChatCompletionChunk]
+                # We use cast since we know at runtime this will be the streaming type
+                stream_response = cast(AsyncIterator[ChatCompletionChunk], response)
                 return self._stream_response_to_llm_response(
-                    response,
+                    stream_response,
                     provider,
                     trace_id
                 )
             else:
                 # Extract content and determine chunk type using Portkey's content_blocks structure
-                content, chunk_type = self._extract_content_from_non_streaming_response(response)
+                # For non-streaming, response should be ChatCompletion
+                completion_response = cast(ChatCompletions, response)
+                content, chunk_type = self._extract_content_from_non_streaming_response(completion_response)
                 
                 return LLMResponse(
                     content=content,
@@ -878,8 +887,8 @@ class LLMService:
     
     async def _stream_response_to_llm_response(
         self,
-        portkey_stream_response: Any, # Changed to Any to resolve import issues
-        provider: str,
+        portkey_stream_response: AsyncIterator[ChatCompletionChunk],
+        provider: PROVIDER_ID,
         trace_id: Optional[str],
     ) -> AsyncIterator[LLMResponse]:
         """
@@ -907,7 +916,7 @@ class LLMService:
                 content=content,
                 model=chunk.model, # type: ignore
                 chunk_type=chunk_type,
-                usage=chunk.usage.dict() if hasattr(chunk, 'usage') and chunk.usage else None, # Handle optional usage
+                usage=chunk.usage.model_dump() if hasattr(chunk, 'usage') and chunk.usage else None, # Handle optional usage
                 metadata={
                     "provider": provider,
                     "gateway": "self-hosted",
@@ -924,7 +933,7 @@ class LLMService:
         return get_all_llm_providers()
 
     @staticmethod
-    def get_hosted_models_for_provider(provider_id: str) -> List[HostedModelInstance]:
+    def get_hosted_models_for_provider(provider_id: PROVIDER_ID) -> List[HostedModelInstance]:
         """Returns a list of hosted model instances offered by a specific provider."""
         return get_hosted_models_for_provider(provider_id)
     
@@ -934,21 +943,21 @@ class LLMService:
         return get_all_ai_model_families()
 
     @staticmethod
-    def get_capabilities_for_hosted_model(provider_id: str, model_name: str) -> List[LLMCapability]:
+    def get_capabilities_for_hosted_model(provider_id: PROVIDER_ID, model_name: MODEL_NAME) -> List[LLMCapability]:
         """Returns the list of capabilities for a specific hosted model."""
         return get_capabilities_for_hosted_model(provider_id, model_name)
     
     @staticmethod
-    def get_default_test_model_name_for_provider(provider_id: str) -> str:
+    def get_default_test_model_name_for_provider(provider_id: PROVIDER_ID) -> MODEL_NAME:
         """Gets the default model name for a provider, for API key validation."""
         return get_default_test_model_name_for_provider(provider_id)
     
     @staticmethod
-    def get_hosted_model_details(provider_id: str, model_name: str) -> Optional[HostedModelInstance]:
+    def get_hosted_model_details(provider_id: PROVIDER_ID, model_name: MODEL_NAME) -> Optional[HostedModelInstance]:
         """Returns detailed information for a specific hosted model instance."""
         return get_hosted_model_instance(provider_id, model_name)
 
-    def _extract_content_from_non_streaming_response(self, response: Any) -> tuple[str, ChunkType]:
+    def _extract_content_from_non_streaming_response(self, response: ChatCompletions) -> tuple[str, ChunkType]:
         """
         Extract content and determine chunk type from a non-streaming Portkey response.
         

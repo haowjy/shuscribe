@@ -1,76 +1,183 @@
 """
-Story Import Script for ShuScribe
+Notebook Story Loader - Clean dependency injection for story loading in notebooks
 
-Imports stories from XML directory format into the file-based database structure.
-Converts from the legacy XML format to the new database models and file structure.
+This module provides a simple interface for loading test stories into any repository
+that implements IStoryRepository, for use in Jupyter notebooks and testing environments.
 """
 
-import asyncio
-import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import cast
-from uuid import UUID, uuid4
+from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from uuid import UUID
 from datetime import datetime
 
-from src.database.repositories import FileRepositories
-from src.schemas.db.story import Chapter, ChapterCreate, ChapterStatus, StoryMetadata, StoryMetadataCreate
-from src.database.factory import get_repositories
-from src.schemas.db.workspace import Workspace, WorkspaceCreate
-from src.schemas.db.user import User, UserCreate, SubscriptionTier
+from src.database.interfaces.story_repository import IStoryRepository
+from src.database.interfaces.workspace_repository import IWorkspaceRepository
+from src.database.interfaces.user_repository import IUserRepository
+from src.schemas.db.workspace import WorkspaceCreate
+from src.schemas.db.story import (
+    StoryMetadataCreate, 
+    ChapterCreate, 
+    ChapterStatus,
+    StoryMetadata,
+    Chapter,
+    FullStoryBase
+)
+from src.schemas.db.user import UserCreate, SubscriptionTier
 
 
-class StoryImporter:
-    """Imports stories from XML directory format into ShuScribe database"""
+@dataclass
+class StoryLoadResult:
+    """Result of story loading operation"""
+    story: FullStoryBase
+    workspace_id: UUID
+    user_id: UUID
+    story_repository: IStoryRepository
+    workspace_repository: IWorkspaceRepository
+    user_repository: IUserRepository
+    chapters_count: int
     
-    def __init__(self, workspace_path: Path):
-        """Initialize importer with target workspace path"""
-        self.workspace_path = workspace_path
-        self.repos: FileRepositories = cast(FileRepositories, get_repositories(backend="file", workspace_path=workspace_path))
-        
-    async def import_story_from_directory(self, story_directory: Path, strip_xml_wrapper: bool = True) -> dict:
+    def summary(self) -> str:
+        return (
+            f"�� Story: {self.story.metadata.title}\n"
+            f"✍️  Author: {self.story.metadata.author}\n" 
+            f"�� Chapters: {self.chapters_count}\n"
+            f"�� Words: {self.story.word_count:,}\n"
+            f"📁 Workspace: {self.workspace_id}\n"
+            f"👤 User: {self.user_id}"
+        )
+
+
+class NotebookStoryLoader:
+    """
+    Clean story loader for notebooks with full dependency injection
+    
+    Loads stories into any repository that implements IStoryRepository.
+    Designed for testing and notebook environments with maximum flexibility.
+    """
+    
+    def __init__(
+        self,
+        story_repository: IStoryRepository,
+        workspace_repository: IWorkspaceRepository,
+        user_repository: IUserRepository
+    ):
+        """Initialize with injected repositories"""
+        self.story_repo = story_repository
+        self.workspace_repo = workspace_repository
+        self.user_repo = user_repository
+    
+    async def load_story_from_directory(
+        self, 
+        story_directory: Path,
+        workspace_name: Optional[str] = None,
+        user_email: Optional[str] = None,
+        user_display_name: Optional[str] = None
+    ) -> StoryLoadResult:
         """
-        Import a story from XML directory format
+        Load story from any directory that follows the _meta.xml format
         
         Args:
             story_directory: Path to directory containing _meta.xml and chapter files
-            strip_xml_wrapper: Whether to strip XML wrapper tags from chapter content
+            workspace_name: Optional custom workspace name
+            user_email: Optional custom user email
+            user_display_name: Optional custom user display name
             
         Returns:
-            Dict with imported story information
+            StoryLoadResult with loaded story data
         """
-        print(f"Importing story from: {story_directory}")
         
-        # Load the story using the existing loader
-        story_data = self._load_story_from_xml(story_directory, strip_xml_wrapper)
+        # 1. Create user and workspace
+        user = await self._get_or_create_user(user_email, user_display_name)
+        workspace = await self._create_workspace(
+            user.id, 
+            workspace_name or f"{story_directory.name.title()} Workspace"
+        )
         
-        # Create or get user
-        user = await self._get_or_create_user()
+        # 2. Parse XML metadata and chapters
+        story_data = self._parse_xml_story(story_directory)
         
-        # Create or get workspace 
-        workspace = await self._get_or_create_workspace(user.id, story_data)
+        # 3. Store in repository
+        story_metadata = await self._store_story_in_repository(workspace.id, story_data)
         
-        # Create story metadata
-        story_metadata = await self._create_story_metadata(workspace.id, story_data)
+        # 4. Create FullStoryBase object for agents
+        full_story = FullStoryBase(
+            metadata=story_metadata,
+            chapters=story_data["chapters"]
+        )
         
-        # Import chapters
-        imported_chapters = await self._import_chapters(workspace.id, story_data["chapters"])
+        return StoryLoadResult(
+            story=full_story,
+            workspace_id=workspace.id,
+            user_id=user.id,
+            story_repository=self.story_repo,
+            workspace_repository=self.workspace_repo,
+            user_repository=self.user_repo,
+            chapters_count=len(story_data["chapters"])
+        )
+    
+    async def create_minimal_test_story(
+        self,
+        workspace_name: Optional[str] = None,
+        user_email: Optional[str] = None,
+        user_display_name: Optional[str] = None
+    ) -> StoryLoadResult:
+        """Create a minimal test story for basic testing"""
         
-        # Refresh stats
-        await self.repos.story.refresh_chapter_stats(workspace.id)
+        # Create user and workspace
+        user = await self._get_or_create_user(user_email, user_display_name)
+        workspace = await self._create_workspace(
+            user.id, 
+            workspace_name or "Test Story Workspace"
+        )
         
-        result = {
-            "workspace_id": str(workspace.id),
-            "story_title": story_metadata.title,
-            "chapters_imported": len(imported_chapters),
-            "workspace_path": str(self.workspace_path)
+        # Define test story data
+        story_data = {
+            "title": "Test Story",
+            "author": "Test Author",
+            "synopsis": "A simple test story for agent testing",
+            "genres": ["Fantasy"],
+            "chapters": [
+                {
+                    "chapter_number": 1,
+                    "title": "The Beginning", 
+                    "content": "This is the beginning of our test story. Our hero starts their journey into the unknown, filled with hope and determination."
+                },
+                {
+                    "chapter_number": 2,
+                    "title": "The Challenge", 
+                    "content": "Here we develop the plot further. Challenges arise and our hero must adapt, learning new skills and facing their fears."
+                },
+                {
+                    "chapter_number": 3,
+                    "title": "The Resolution", 
+                    "content": "And this is how our story concludes. The hero succeeds against all odds, having grown and changed through their journey."
+                }
+            ]
         }
         
-        print(f"✅ Successfully imported '{story_metadata.title}' with {len(imported_chapters)} chapters")
-        return result
+        # Store in repository
+        story_metadata = await self._store_story_in_repository(workspace.id, story_data)
+        
+        # Create FullStoryBase object
+        full_story = FullStoryBase(
+            metadata=story_metadata,
+            chapters=story_data["chapters"]
+        )
+        
+        return StoryLoadResult(
+            story=full_story,
+            workspace_id=workspace.id,
+            user_id=user.id,
+            story_repository=self.story_repo,
+            workspace_repository=self.workspace_repo,
+            user_repository=self.user_repo,
+            chapters_count=len(story_data["chapters"])
+        )
     
-    def _load_story_from_xml(self, story_directory: Path, strip_xml_wrapper: bool) -> dict:
-        """Load story data from XML directory using the existing loader logic"""
-        import xml.etree.ElementTree as ET
+    def _parse_xml_story(self, story_directory: Path) -> Dict:
+        """Parse story from XML directory format following _meta.xml structure"""
         
         # Load metadata
         meta_file = story_directory / "_meta.xml"
@@ -80,27 +187,13 @@ class StoryImporter:
         tree = ET.parse(meta_file)
         root = tree.getroot()
         
-        # Handle StoryMetadata wrapper if present
-        if root.tag == "StoryMetadata":
-            metadata_root = root
-        else:
-            metadata_root = root.find("StoryMetadata")
-            if metadata_root is None:
-                metadata_root = root  # Fallback to root if no wrapper
-        
         # Extract metadata
-        metadata = {
-            "title": metadata_root.findtext("Title", "").strip(),
-            "author": metadata_root.findtext("Author", "").strip(),
-            "synopsis": metadata_root.findtext("Synopsis", "").strip(),
-            "status": metadata_root.findtext("Status", "").strip(),
-            "date_created": metadata_root.findtext("DateCreated", "").strip() or None,
-            "last_updated": metadata_root.findtext("LastUpdated", "").strip() or None,
-            "copyright": metadata_root.findtext("Copyright", "").strip() or None,
-        }
+        title = root.findtext(".//Title", "").strip() or "Untitled Story"
+        author = root.findtext(".//Author", "").strip() or "Unknown Author"
+        synopsis = root.findtext(".//Synopsis", "").strip() or ""
         
         # Extract genres
-        genres_element = metadata_root.find("Genres")
+        genres_element = root.find(".//Genres")
         genres = []
         if genres_element is not None:
             genres = [
@@ -109,77 +202,57 @@ class StoryImporter:
                 if genre.get("name")
             ]
         
-        # Extract tags  
-        tags_element = metadata_root.find("Tags")
-        tags = []
-        if tags_element is not None:
-            tags = [
-                tag.get("name", "").strip()
-                for tag in tags_element.findall("Tag")
-                if tag.get("name")
-            ]
-        
-        # Load chapters - pass metadata_root to use chapter list
-        chapters = self._load_chapters_from_xml(story_directory, strip_xml_wrapper, metadata_root)
+        # Load chapters using the chapter list from _meta.xml if available
+        chapters = self._load_chapters_from_metadata(story_directory, root)
         
         return {
-            "title": metadata["title"],
-            "author": metadata["author"],
-            "synopsis": metadata["synopsis"],
-            "status": metadata["status"],
+            "title": title,
+            "author": author,
+            "synopsis": synopsis,
             "genres": genres,
-            "tags": tags,
-            "date_created": metadata["date_created"],
-            "last_updated": metadata["last_updated"],
-            "copyright": metadata["copyright"],
             "chapters": chapters
         }
     
-    def _load_chapters_from_xml(self, story_directory: Path, strip_xml_wrapper: bool, metadata_root=None) -> list:
-        """Load chapters using chapter list from _meta.xml if available, otherwise scan directory"""
-        import xml.etree.ElementTree as ET
+    def _load_chapters_from_metadata(self, story_directory: Path, metadata_root) -> List[Chapter]:
+        """Load chapters using the chapter list from _meta.xml"""
         
         chapters = []
         
         # First try to use chapter list from metadata
-        if metadata_root is not None:
-            print(f"🔍 Checking metadata_root for chapters...")
-            chapters_element = metadata_root.find("Chapters")
-            if chapters_element is not None:
-                print(f"✅ Found Chapters element in metadata")
-                chapter_elements = chapters_element.findall("Chapter")
-                print(f"📋 Found {len(chapter_elements)} chapter elements (including any in comments)")
-                if chapter_elements:
-                    
-                    for i, chapter_elem in enumerate(chapter_elements, 1):
-                        ref = chapter_elem.get("ref", "")
-                        title = chapter_elem.get("title", f"Chapter {i}")
+        chapters_element = metadata_root.find(".//Chapters")
+        if chapters_element is not None:
+            chapter_elements = chapters_element.findall("Chapter")
+            
+            for i, chapter_elem in enumerate(chapter_elements, 1):
+                ref = chapter_elem.get("ref", "")
+                title = chapter_elem.get("title", f"Chapter {i}")
+                
+                if ref:
+                    xml_file = story_directory / ref
+                    if xml_file.exists():
+                        content = xml_file.read_text(encoding="utf-8").strip()
+                        chapter_content = self._extract_chapter_content(content)
                         
-                        if ref:
-                            xml_file = story_directory / ref
-                            if xml_file.exists():
-                                content = xml_file.read_text(encoding="utf-8").strip()
-                                
-                                if strip_xml_wrapper:
-                                    content = self._strip_xml_wrapper(content)
-                                
-                                chapters.append({
-                                    "chapter_number": i,
-                                    "title": title,
-                                    "content": content,
-                                    "ref": ref
-                                })
-                            else:
-                                print(f"⚠️  Chapter file not found: {ref} (skipping)")
-                    
-                    if chapters:
-                        print(f"✅ Successfully loaded {len(chapters)} chapters from metadata")
-                        return chapters
+                        # Create Chapter object
+                        chapter = Chapter(
+                            id=UUID('00000000-0000-0000-0000-000000000000'),  # Placeholder
+                            workspace_id=UUID('00000000-0000-0000-0000-000000000000'),  # Will be set later
+                            chapter_number=i,
+                            title=title,
+                            content=chapter_content,
+                            status=ChapterStatus.PUBLISHED,
+                            created_at=datetime.now(),
+                            updated_at=datetime.now()
+                        )
+                        chapters.append(chapter)
                     else:
-                        print("⚠️  No valid chapter files found from metadata, falling back to directory scan")
+                        print(f"⚠️  Chapter file not found: {ref} (skipping)")
+            
+            if chapters:
+                return chapters
         
-        # Fallback: scan directory for numbered XML files (original behavior)
-        print("📁 Scanning directory for numbered XML files...")
+        # Fallback: scan directory for numbered XML files
+        print("📁 Falling back to directory scan for numbered XML files...")
         xml_files = sorted([
             f for f in story_directory.glob("*.xml") 
             if f.name != "_meta.xml" and f.name.replace(".xml", "").isdigit()
@@ -187,27 +260,29 @@ class StoryImporter:
         
         for xml_file in xml_files:
             chapter_number = int(xml_file.name.replace(".xml", ""))
-            content = xml_file.read_text(encoding="utf-8").strip()
+            content = xml_file.read_text(encoding="utf-8")
             
-            # Extract title and content
-            title = self._extract_chapter_title(content) or f"Chapter {chapter_number}"
+            # Extract title and clean content
+            chapter_title = self._extract_chapter_title(content) or f"Chapter {chapter_number}"
+            chapter_content = self._extract_chapter_content(content)
             
-            if strip_xml_wrapper:
-                content = self._strip_xml_wrapper(content)
-            
-            chapters.append({
-                "chapter_number": chapter_number,
-                "title": title,
-                "content": content,
-                "ref": xml_file.name
-            })
+            # Create Chapter object
+            chapter = Chapter(
+                id=UUID('00000000-0000-0000-0000-000000000000'),  # Placeholder
+                workspace_id=UUID('00000000-0000-0000-0000-000000000000'),  # Will be set later
+                chapter_number=chapter_number,
+                title=chapter_title,
+                content=chapter_content,
+                status=ChapterStatus.PUBLISHED,
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            chapters.append(chapter)
         
         return chapters
     
     def _extract_chapter_title(self, content: str) -> str:
         """Extract chapter title from content"""
-        import xml.etree.ElementTree as ET
-        
         try:
             # Try to parse as XML and look for title attribute first
             root = ET.fromstring(content)
@@ -243,283 +318,167 @@ class StoryImporter:
         
         return ""
     
-    def _strip_xml_wrapper(self, content: str) -> str:
-        """Strip XML wrapper tags from content"""
-        import xml.etree.ElementTree as ET
-        
+    def _extract_chapter_content(self, content: str) -> str:
+        """Extract clean chapter content, stripping XML wrapper if present"""
         try:
             root = ET.fromstring(content)
             if root.tag == "Chapter":
                 return "".join(root.itertext()).strip()
+            else:
+                # Try to find chapter content in nested elements
+                chapter_elem = root.find(".//Chapter")
+                if chapter_elem is not None:
+                    return "".join(chapter_elem.itertext()).strip()
+                else:
+                    # Return all text content
+                    return "".join(root.itertext()).strip()
         except ET.ParseError:
-            pass
+            # Not valid XML, return as-is
+            return content.strip()
+    
+    async def _get_or_create_user(self, email: Optional[str] = None, display_name: Optional[str] = None):
+        """Get or create a test user"""
+        user_email = email or "notebook@example.com"
+        user_display_name = display_name or "Notebook User"
         
-        return content
+        # Try to get existing user first
+        existing_user = await self.user_repo.get_user_by_email(user_email)
+        if existing_user:
+            return existing_user
+        
+        # Create new user
+        return await self.user_repo.create_user(UserCreate(
+            email=user_email,
+            display_name=user_display_name,
+            subscription_tier=SubscriptionTier.PREMIUM
+        ))
     
-    async def _get_or_create_user(self) -> User:
-        """Get or create the local user"""
-        try:
-            user = await self.repos.user.get_current_user()
-            return user
-        except:
-            # Create default user
-            user_data = UserCreate(
-                email="author@local.dev",
-                display_name="Story Author",
-                subscription_tier=SubscriptionTier.LOCAL,
-                preferences={}
-            )
-            return await self.repos.user.create(user_data)
-    
-    async def _get_or_create_workspace(self, user_id: UUID, story_data: dict) -> Workspace:
-        """Get or create workspace for the story"""
-        workspace_data = WorkspaceCreate(
-            name=story_data["title"] or "Imported Story",
-            description=story_data["synopsis"] or "",
+    async def _create_workspace(self, user_id: UUID, name: str):
+        """Create a workspace for the story"""
+        return await self.workspace_repo.create_workspace(WorkspaceCreate(
+            name=name,
+            description=f"Test workspace for {name}",
             owner_id=user_id,
-            arcs=[],  # We'll create arcs later if needed
-            settings={
-                "import_source": "xml_directory",
-                "import_date": datetime.now().isoformat(),
-                "original_author": story_data["author"],
-                "original_status": story_data["status"]
-            }
-        )
-        
-        return await self.repos.workspace.create(workspace_data)
+            arcs=[],
+            settings={"source": "notebook_import"}
+        ))
     
-    async def _create_story_metadata(self, workspace_id: UUID, story_data: dict) -> StoryMetadata:
-        """Create story metadata"""
-        # Map status to publication_status
-        status_mapping = {
-            "Complete": "completed",
-            "In Progress": "in_progress", 
-            "On Hiatus": "on_hiatus",
-            "Discontinued": "discontinued",
-            "Draft": "draft"
-        }
+    async def _store_story_in_repository(self, workspace_id: UUID, story_data: Dict) -> StoryMetadata:
+        """Store story data in the repository and return metadata"""
         
-        publication_status = status_mapping.get(story_data.get("status", ""), "draft")
-        total_chapters = len(story_data.get("chapters", []))
-        
-        return await self.repos.story.create_story_metadata(
+        # Create story metadata
+        metadata_create = StoryMetadataCreate(
             workspace_id=workspace_id,
-            title=story_data["title"] or "Untitled Story",
-            author=story_data["author"] or "Unknown Author",
+            title=story_data["title"],
+            author=story_data["author"],
             synopsis=story_data.get("synopsis", ""),
             genres=story_data.get("genres", []),
-            tags=story_data.get("tags", []),
-            total_chapters=total_chapters,
-            publication_status=publication_status,
-            settings={
-                "import_source": "xml_directory",
-                "import_date": datetime.now().isoformat(),
-                "original_status": story_data.get("status", ""),
-                "date_created": story_data.get("date_created"),
-                "last_updated": story_data.get("last_updated"),
-                "copyright": story_data.get("copyright")
-            }
+            tags=[],
+            total_chapters=len(story_data["chapters"]),
+            publication_status="completed"
         )
-    
-    async def _import_chapters(self, workspace_id: UUID, chapters_data: list) -> list[Chapter]:
-        """Import all chapters"""
-        imported_chapters = []
+        story_metadata = await self.story_repo.create_story_metadata(metadata_create)
         
-        for chapter_data in chapters_data:
-            chapter_create = ChapterCreate(
+        # Create chapters
+        for chapter in story_data["chapters"]:
+            await self.story_repo.create_chapter(ChapterCreate(
                 workspace_id=workspace_id,
-                title=chapter_data["title"],
-                content=chapter_data["content"],
-                chapter_number=chapter_data["chapter_number"],
-                status=ChapterStatus.PUBLISHED,  # Assume imported chapters are published
+                title=chapter.title,
+                content=chapter.content,
+                chapter_number=chapter.chapter_number,
+                status=ChapterStatus.PUBLISHED,
                 summary=None,
                 tags=[],
-                metadata={
-                    "imported_from": chapter_data.get("ref", ""),
-                    "import_date": datetime.now().isoformat()
-                }
-            )
-            
-            chapter = await self.repos.story.create_chapter(chapter_create)
-            imported_chapters.append(chapter)
-            print(f"  📄 Imported: {chapter.title}")
+                metadata={"source": "notebook_import"}
+            ))
         
-        return imported_chapters
+        return story_metadata
 
 
-def _create_temp_workspace_path(base_name: str) -> Path:
-    """Create a unique temporary workspace path"""
-    # Navigate from src/utils/test to backend root
-    backend_root = Path(__file__).parent.parent.parent.parent
-    temp_dir = backend_root / "temp"
-    temp_dir.mkdir(exist_ok=True)
+# Convenience functions for notebooks with dependency injection
+async def load_story_with_repositories(
+    story_directory: Path,
+    story_repository: IStoryRepository,
+    workspace_repository: IWorkspaceRepository,
+    user_repository: IUserRepository,
+    workspace_name: Optional[str] = None,
+    user_email: Optional[str] = None,
+    user_display_name: Optional[str] = None
+) -> StoryLoadResult:
+    """Load story with injected repositories"""
+    loader = NotebookStoryLoader(story_repository, workspace_repository, user_repository)
+    return await loader.load_story_from_directory(
+        story_directory, workspace_name, user_email, user_display_name
+    )
+
+
+async def load_pokemon_amber_with_repositories(
+    story_repository: IStoryRepository,
+    workspace_repository: IWorkspaceRepository,
+    user_repository: IUserRepository
+) -> StoryLoadResult:
+    """Load Pokemon Amber story with injected repositories"""
+    story_directory = Path("../tests/resources/pokemon_amber/story")
     
-    # Create unique temp workspace name with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    temp_workspace_path = temp_dir / f"{base_name}_{timestamp}"
-    
-    return temp_workspace_path
-
-
-def move_workspace_from_temp(temp_path: Path, final_path: Path) -> bool:
-    """Move workspace from temp to final location"""
-    try:
-        if final_path.exists():
-            print(f"⚠️  Final workspace already exists: {final_path}")
-            print("   You can either:")
-            print(f"   1. Remove existing: rm -rf {final_path}")
-            print(f"   2. Use temp workspace: {temp_path}")
-            return False
+    if not story_directory.exists():
+        # Try from current directory
+        story_directory = Path("tests/resources/pokemon_amber/story")
         
-        # Move from temp to final location
-        temp_path.rename(final_path)
-        print(f"📦 Moved workspace from temp to: {final_path}")
-        return True
-    except Exception as e:
-        print(f"❌ Error moving workspace: {e}")
-        return False
+    if not story_directory.exists():
+        raise FileNotFoundError(
+            f"Pokemon Amber story not found. Tried:\n"
+            f"  - ../tests/resources/pokemon_amber/story\n"
+            f"  - tests/resources/pokemon_amber/story"
+        )
+    
+    return await load_story_with_repositories(
+        story_directory,
+        story_repository,
+        workspace_repository,
+        user_repository,
+        workspace_name="Pokemon Ambertwo Workspace"
+    )
 
 
-async def import_pokemon_amber():
-    """Import the Pokemon Amber story specifically"""
-    
-    # Paths - navigate from src/utils/test to backend root
-    backend_root = Path(__file__).parent.parent.parent.parent
-    pokemon_amber_dir = backend_root / "tests" / "resources" / "pokemon_amber" / "story"
-    temp_workspace_path = _create_temp_workspace_path("workspace_pokemon_amber")
-    final_workspace_path = backend_root / "workspace_pokemon_amber"
-    
-    if not pokemon_amber_dir.exists():
-        print(f"❌ Pokemon Amber directory not found: {pokemon_amber_dir}")
-        return
-    
-    print(f"📁 Creating temporary workspace: {temp_workspace_path}")
-    
-    # Create temp workspace directory
-    temp_workspace_path.mkdir(parents=True, exist_ok=True)
-    
-    # Import the story to temp location
-    importer = StoryImporter(temp_workspace_path)
-    result = await importer.import_story_from_directory(pokemon_amber_dir)
-    
-    print(f"\n🎉 Import completed in temp directory!")
-    print(f"📁 Temp Workspace: {result['workspace_path']}")
-    print(f"📚 Story: {result['story_title']}")
-    print(f"📄 Chapters: {result['chapters_imported']}")
-    print(f"🔧 Workspace ID: {result['workspace_id']}")
-    
-    # Offer to move to final location
-    print(f"\n📦 Moving to final location...")
-    if move_workspace_from_temp(temp_workspace_path, final_workspace_path):
-        print(f"✅ Workspace ready at: {final_workspace_path}")
-    else:
-        print(f"⚠️  Workspace remains in temp: {temp_workspace_path}")
+async def create_test_story_with_repositories(
+    story_repository: IStoryRepository,
+    workspace_repository: IWorkspaceRepository,
+    user_repository: IUserRepository,
+    workspace_name: Optional[str] = None,
+    user_email: Optional[str] = None,
+    user_display_name: Optional[str] = None
+) -> StoryLoadResult:
+    """Create minimal test story with injected repositories"""
+    loader = NotebookStoryLoader(story_repository, workspace_repository, user_repository)
+    return await loader.create_minimal_test_story(workspace_name, user_email, user_display_name)
 
 
-async def import_custom_story(story_dir: str, workspace_dir: str):
-    """Import a custom story from directory"""
+# Legacy convenience functions for backward compatibility (using memory repositories)
+async def load_pokemon_amber_story() -> StoryLoadResult:
+    """Quick function to load Pokemon Amber story with memory repositories"""
+    from src.database.factory import get_repositories
     
-    story_path = Path(story_dir)
-    final_workspace_path = Path(workspace_dir)
-    
-    # Create temp workspace path based on final name
-    base_name = final_workspace_path.name
-    temp_workspace_path = _create_temp_workspace_path(base_name)
-    
-    if not story_path.exists():
-        print(f"❌ Story directory not found: {story_path}")
-        return
-    
-    print(f"📁 Creating temporary workspace: {temp_workspace_path}")
-    
-    # Create temp workspace directory
-    temp_workspace_path.mkdir(parents=True, exist_ok=True)
-    
-    # Import the story to temp location
-    importer = StoryImporter(temp_workspace_path)
-    result = await importer.import_story_from_directory(story_path)
-    
-    print(f"\n🎉 Import completed in temp directory!")
-    print(f"📁 Temp Workspace: {result['workspace_path']}")
-    print(f"📚 Story: {result['story_title']}")
-    print(f"📄 Chapters: {result['chapters_imported']}")
-    print(f"🔧 Workspace ID: {result['workspace_id']}")
-    
-    # Offer to move to final location
-    print(f"\n📦 Moving to final location...")
-    if move_workspace_from_temp(temp_workspace_path, final_workspace_path):
-        print(f"✅ Workspace ready at: {final_workspace_path}")
-    else:
-        print(f"⚠️  Workspace remains in temp: {temp_workspace_path}")
+    repos = get_repositories(backend="memory")
+    return await load_pokemon_amber_with_repositories(
+        repos.story, repos.workspace, repos.user
+    )
 
 
-def cleanup_temp_workspaces():
-    """Clean up old temporary workspaces"""
-    backend_root = Path(__file__).parent.parent.parent.parent
-    temp_dir = backend_root / "temp"
+async def load_test_story() -> StoryLoadResult:
+    """Quick function to load minimal test story with memory repositories"""
+    from src.database.factory import get_repositories
     
-    if not temp_dir.exists():
-        print("📁 No temp directory found.")
-        return
-    
-    temp_workspaces = [d for d in temp_dir.iterdir() if d.is_dir()]
-    
-    if not temp_workspaces:
-        print("📁 No temp workspaces found.")
-        return
-    
-    print(f"🗑️  Found {len(temp_workspaces)} temp workspaces:")
-    for workspace in temp_workspaces:
-        print(f"   - {workspace.name}")
-    
-    response = input("\nDelete all temp workspaces? (y/N): ").strip().lower()
-    if response in ['y', 'yes']:
-        import shutil
-        for workspace in temp_workspaces:
-            try:
-                shutil.rmtree(workspace)
-                print(f"✅ Deleted: {workspace.name}")
-            except Exception as e:
-                print(f"❌ Error deleting {workspace.name}: {e}")
-        print("🗑️  Cleanup completed!")
-    else:
-        print("🚫 Cleanup cancelled.")
+    repos = get_repositories(backend="memory")
+    return await create_test_story_with_repositories(
+        repos.story, repos.workspace, repos.user
+    )
 
 
-if __name__ == "__main__":
-    import argparse
+async def load_story_from_xml(story_directory: Path, workspace_name: Optional[str] = None) -> StoryLoadResult:
+    """Quick function to load story from XML directory with memory repositories"""
+    from src.database.factory import get_repositories
     
-    parser = argparse.ArgumentParser(description="Import stories into ShuScribe database")
-    parser.add_argument("--pokemon-amber", action="store_true", help="Import Pokemon Amber story")
-    parser.add_argument("--story-dir", type=str, help="Directory containing story XML files")
-    parser.add_argument("--workspace-dir", type=str, help="Target workspace directory")
-    parser.add_argument("--cleanup-temp", action="store_true", help="Clean up temporary workspaces")
-    parser.add_argument("--list-temp", action="store_true", help="List temporary workspaces")
-    
-    args = parser.parse_args()
-    
-    if args.cleanup_temp:
-        cleanup_temp_workspaces()
-    elif args.list_temp:
-        backend_root = Path(__file__).parent.parent.parent.parent
-        temp_dir = backend_root / "temp"
-        if temp_dir.exists():
-            temp_workspaces = [d for d in temp_dir.iterdir() if d.is_dir()]
-            if temp_workspaces:
-                print(f"📁 Found {len(temp_workspaces)} temp workspaces:")
-                for workspace in temp_workspaces:
-                    print(f"   - {workspace}")
-            else:
-                print("📁 No temp workspaces found.")
-        else:
-            print("📁 No temp directory found.")
-    elif args.pokemon_amber:
-        asyncio.run(import_pokemon_amber())
-    elif args.story_dir and args.workspace_dir:
-        asyncio.run(import_custom_story(args.story_dir, args.workspace_dir))
-    else:
-        print("Usage:")
-        print("  python import_story.py --pokemon-amber")
-        print("  python import_story.py --story-dir /path/to/story --workspace-dir /path/to/workspace")
-        print("  python import_story.py --list-temp")
-        print("  python import_story.py --cleanup-temp") 
+    repos = get_repositories(backend="memory")
+    return await load_story_with_repositories(
+        story_directory, repos.story, repos.workspace, repos.user, workspace_name
+    )

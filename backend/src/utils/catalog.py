@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 # Import the new Pydantic models for LLM configuration
+from src.core.constants import MODEL_NAME, PROVIDER_ID
 from src.schemas.llm.config import (
     AIModelFamily,
     HostedModelInstance,
@@ -311,12 +312,12 @@ def get_all_llm_providers() -> List[LLMProvider]:
     """Returns a list of all defined LLM Providers."""
     return LLM_PROVIDERS
 
-def get_hosted_models_for_provider(provider_id: str) -> List[HostedModelInstance]:
+def get_hosted_models_for_provider(provider_id: PROVIDER_ID) -> List[HostedModelInstance]:
     """Returns all hosted model instances for a specific provider."""
     provider = _providers_by_id.get(provider_id)
     return provider.hosted_models if provider else []
 
-def get_hosted_model_instance(provider_id: str, model_name: str) -> Optional[HostedModelInstance]:
+def get_hosted_model_instance(provider_id: PROVIDER_ID, model_name: MODEL_NAME) -> Optional[HostedModelInstance]:
     """Retrieves a specific hosted model instance by its provider and name."""
     return _hosted_models_by_provider_and_name.get((provider_id, model_name))
 
@@ -324,7 +325,7 @@ def get_model_family_by_id(model_family_id: str) -> Optional[AIModelFamily]:
     """Retrieves an AI Model Family by its unique ID."""
     return _model_families_by_id.get(model_family_id)
 
-def get_capabilities_for_hosted_model(provider_id: str, model_name: str) -> List[LLMCapability]:
+def get_capabilities_for_hosted_model(provider_id: PROVIDER_ID, model_name: MODEL_NAME) -> List[LLMCapability]:
     """
     Retrieves the list of capabilities for a specific hosted model by looking up its family.
     """
@@ -335,11 +336,11 @@ def get_capabilities_for_hosted_model(provider_id: str, model_name: str) -> List
     family = get_model_family_by_id(instance.model_family_id)
     return family.capabilities if family else []
 
-def get_hosted_instances_for_family(model_family_id: str) -> List[HostedModelInstance]:
+def get_hosted_instances_for_family(model_family_id: MODEL_NAME) -> List[HostedModelInstance]:
     """Returns all hosted model instances that belong to a specific AI Model Family."""
     return _hosted_models_by_family.get(model_family_id, [])
 
-def get_default_test_model_name_for_provider(provider_id: str) -> str:
+def get_default_test_model_name_for_provider(provider_id: PROVIDER_ID) -> MODEL_NAME:
     """
     Gets a default model name for a provider, which can be used for API key validation.
     Prefers the cheapest and fastest models.
@@ -351,7 +352,7 @@ def get_default_test_model_name_for_provider(provider_id: str) -> str:
     return provider.default_model_name if provider.default_model_name else provider.hosted_models[0].model_name
 
 
-def get_thinking_budget_config(provider_id: str, model_name: str) -> Optional[Tuple[int, int, int]]:
+def get_thinking_budget_config(provider_id: PROVIDER_ID, model_name: MODEL_NAME) -> Optional[Tuple[int, int, int]]:
     """
     Gets thinking budget configuration for a specific model.
     
@@ -390,8 +391,8 @@ def get_thinking_budget_config(provider_id: str, model_name: str) -> Optional[Tu
 
 
 def calculate_thinking_budget_tokens(
-    provider_id: str, 
-    model_name: str, 
+    provider_id: PROVIDER_ID, 
+    model_name: MODEL_NAME, 
     thinking_level: str
 ) -> Optional[int]:
     """
@@ -434,7 +435,7 @@ def calculate_thinking_budget_tokens(
     return max(min_budget, min(calculated, max_budget))
 
 
-def model_supports_thinking(provider_id: str, model_name: str) -> bool:
+def model_supports_thinking(provider_id: PROVIDER_ID, model_name: MODEL_NAME) -> bool:
     """
     Checks if a model supports thinking/reasoning mode.
     
@@ -449,7 +450,7 @@ def model_supports_thinking(provider_id: str, model_name: str) -> bool:
     return LLMCapability.REASONING in model_capabilities
 
 
-def model_supports_temperature(provider_id: str, model_name: str, is_thinking: bool = False) -> bool:
+def model_supports_temperature(provider_id: PROVIDER_ID, model_name: MODEL_NAME, is_thinking: bool = False) -> bool:
     """
     Checks if a model supports custom temperature parameter.
     
@@ -477,7 +478,7 @@ def model_supports_temperature(provider_id: str, model_name: str, is_thinking: b
     return True
 
 
-def get_temperature_restriction_message(provider_id: str, model_name: str, is_thinking: bool, temperature: float) -> Optional[str]:
+def get_temperature_restriction_message(provider_id: PROVIDER_ID, model_name: MODEL_NAME, is_thinking: bool, temperature: float) -> Optional[str]:
     """
     Gets a warning message if temperature will be ignored for a model.
     
@@ -508,7 +509,7 @@ def get_temperature_restriction_message(provider_id: str, model_name: str, is_th
     return None
 
 
-def should_use_completion_tokens_param(provider_id: str, model_name: str) -> bool:
+def should_use_completion_tokens_param(provider_id: PROVIDER_ID, model_name: MODEL_NAME) -> bool:
     """
     Checks if a model should use max_completion_tokens instead of max_tokens.
     
@@ -524,3 +525,10 @@ def should_use_completion_tokens_param(provider_id: str, model_name: str) -> boo
     is_reasoning_model = LLMCapability.REASONING in model_capabilities
     
     return provider_id.lower() == "openai" and is_reasoning_model
+
+
+if __name__ == "__main__":
+    for llm_provider in get_all_llm_providers():
+        # print(llm_provider.provider_id)
+        for model in llm_provider.hosted_models:
+            print(f"{model.model_name}")

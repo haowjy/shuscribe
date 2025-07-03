@@ -26,10 +26,11 @@ Key Features:
 from typing import List, Optional, cast, AsyncIterator
 from uuid import UUID, uuid4
 
+from src.core.constants import MODEL_NAME, PROVIDER_ID
 from src.services.llm.llm_service import LLMService
 from src.schemas.llm.models import LLMMessage, LLMResponse, ThinkingEffort
 from src.schemas.wikigen.arc import ArcAnalysisResult, Arc
-from src.schemas.db.story import FullStoryBase as Story
+from src.schemas.db.story import FullStoryBase
 from src.prompts import prompt_manager
 from src.agents.base_agent import BaseAgent, WindowProcessingResult
 from src.utils import clean_json_from_llm_response
@@ -51,8 +52,8 @@ class ArcSplitterAgent(BaseAgent):
     def __init__(
         self, 
         llm_service: LLMService,
-        default_provider: str = "google",
-        default_model: str = "gemini-2.5-flash-lite-preview-06-17",
+        default_provider: PROVIDER_ID = "google",
+        default_model: MODEL_NAME = "gemini-2.5-flash-lite-preview-06-17",
         temperature: float = 0.7,
         max_tokens: int = 16000,
         thinking: Optional[ThinkingEffort] = None
@@ -160,11 +161,11 @@ class ArcSplitterAgent(BaseAgent):
     
     async def analyze_story(
         self,
-        story: Story,
+        story: FullStoryBase,
         user_id: UUID,
         api_key: Optional[str] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None
+        provider: Optional[PROVIDER_ID] = None,
+        model: Optional[MODEL_NAME] = None
     ) -> ArcAnalysisResult:
         """
         Main analysis method that splits story into arcs with growth-aware planning.
@@ -197,11 +198,11 @@ class ArcSplitterAgent(BaseAgent):
 
     async def analyze_story_streaming(
         self,
-        story: Story,
+        story: FullStoryBase,
         user_id: UUID,
         api_key: Optional[str] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None
+        provider: Optional[PROVIDER_ID] = None,
+        model: Optional[MODEL_NAME] = None
     ) -> AsyncIterator[LLMResponse]:
         """
         Streaming version of story analysis that yields raw LLM responses while managing internal state.
@@ -382,8 +383,8 @@ class ArcSplitterAgent(BaseAgent):
 
     def _calculate_chunk_token_limit(
         self, 
-        provider: Optional[str] = None, 
-        model: Optional[str] = None,
+        provider: Optional[PROVIDER_ID] = None, 
+        model: Optional[MODEL_NAME] = None,
         prompt_overhead_tokens: int = 5000
     ) -> int:
         """
@@ -403,7 +404,7 @@ class ArcSplitterAgent(BaseAgent):
         final_provider, final_model = self._get_model_params(provider, model)
         
         # Get the model's actual input context window (not output tokens!)
-        from src.core.llm.catalog import get_hosted_model_instance
+        from src.utils.catalog import get_hosted_model_instance
         model_instance = get_hosted_model_instance(final_provider, final_model)
         if not model_instance:
             raise ValueError(f"Unknown model: {final_provider}/{final_model}")

@@ -5,11 +5,9 @@ Comprehensive tests for UserService with memory repositories
 import pytest
 from uuid import uuid4
 from unittest.mock import patch, MagicMock
-from typing import Dict, Any
 
-from src.schemas.db.user import SubscriptionTier, User, UserCreate, UserUpdate, UserAPIKey, UserAPIKeyCreate
+from src.schemas.db.user import SubscriptionTier, User, UserCreate, UserUpdate, UserAPIKeyCreate
 from src.services.user.user_service import UserService
-from src.core.encryption import encrypt_api_key, decrypt_api_key
 from src.database.factory import RepositoryContainer
 
 
@@ -271,7 +269,7 @@ class TestAPIKeyManagement:
     
     async def test_get_api_key_not_found(self, user_service: UserService, sample_user: User):
         """Test retrieving non-existent API key returns None"""
-        key = await user_service.get_api_key(sample_user.id, "nonexistent")
+        key = await user_service.get_api_key(sample_user.id, "nonexistent") # type: ignore
         assert key is None
     
     @patch('src.services.user.user_service.decrypt_api_key')
@@ -411,7 +409,7 @@ class TestAPIKeyManagement:
     
     async def test_validate_api_key_not_found(self, user_service: UserService, sample_user: User):
         """Test validation of non-existent key returns False"""
-        result = await user_service.validate_api_key(sample_user.id, "nonexistent")
+        result = await user_service.validate_api_key(sample_user.id, "nonexistent") # type: ignore
         assert result is False
 
 

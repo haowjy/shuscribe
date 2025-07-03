@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
 
+from src.core.constants import PROVIDER_ID
 from src.schemas.db.user import SubscriptionTier, User, UserAPIKey, UserCreate, UserUpdate, UserAPIKeyCreate
 
 
@@ -57,20 +58,20 @@ class IUserRepository(ABC):
 
     @abstractmethod
     async def get_api_key(
-        self, user_id: UUID, provider: str
+        self, user_id: UUID, provider: PROVIDER_ID
     ) -> Optional[UserAPIKey]:
         """Get an API key for a specific user and provider"""
         pass
 
     @abstractmethod
     async def update_api_key_validation(
-        self, user_id: UUID, provider: str, status: str
+        self, user_id: UUID, provider: PROVIDER_ID, status: str
     ) -> UserAPIKey:
         """Update API key validation status"""
         pass
 
     @abstractmethod
-    async def delete_api_key(self, user_id: UUID, provider: str) -> bool:
+    async def delete_api_key(self, user_id: UUID, provider: PROVIDER_ID) -> bool:
         """Delete an API key"""
         pass
 

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 from typing import List, Optional
 
 # Import your structured catalog data and Pydantic schemas for the API response
-from src.core.llm.catalog import AI_MODEL_FAMILIES, LLM_PROVIDERS
+from src.utils.catalog import AI_MODEL_FAMILIES, LLM_PROVIDERS
 from src.schemas.llm.config import ( # NEW: Updated schemas
     AIModelFamily,
     LLMProvider,

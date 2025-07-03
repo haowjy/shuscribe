@@ -67,7 +67,8 @@ addopts = [
     "--cov=src",
     "--cov-report=html:htmlcov",
     "--cov-report=xml",
-    "--cov-fail-under=30"
+    "--cov-fail-under=30",
+    "-m", "not integration"
 ]
 testpaths = ["tests"]
 asyncio_mode = "auto"
