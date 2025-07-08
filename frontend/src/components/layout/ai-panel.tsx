@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { aiModes, mockContext, getAiModeById } from "@/data/ai-modes";
-import { cn } from "@/lib/utils";
 
 export function AiPanel() {
   const [selectedMode, setSelectedMode] = useState("writing");
@@ -84,8 +83,8 @@ export function AiPanel() {
                   <Bot className="h-5 w-5 text-blue-500 mt-0.5" />
                   <div className="text-sm">
                     <p className="text-foreground">
-                      I'm ready to help with your {currentMode?.label.toLowerCase()}! 
-                      Based on your current context, I can see you're working with Elara, 
+                      I&apos;m ready to help with your {currentMode?.label.toLowerCase()}! 
+                      Based on your current context, I can see you&apos;re working with Elara, 
                       a fire magic user in the capital city.
                     </p>
                     <p className="text-muted-foreground mt-1 text-xs">

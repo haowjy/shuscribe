@@ -15,7 +15,6 @@ import {
   BookOpen, 
   Loader2,
   Sparkles,
-  Users,
   Folder,
   Plus
 } from "lucide-react";

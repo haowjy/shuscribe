@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ImperativePanelHandle } from "react-resizable-panels";
+import { usePersistedLayout } from "@/hooks/use-persisted-layout";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -17,7 +18,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
 import { getProjectDisplayData } from "@/data/projects";
-import { cn } from "@/lib/utils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -46,32 +46,80 @@ export function WorkspaceLayout({
 }: WorkspaceLayoutProps) {
   const [isFileExplorerCollapsed, setIsFileExplorerCollapsed] = useState(false);
   const [isAiPanelCollapsed, setIsAiPanelCollapsed] = useState(false);
+  const [fileExplorerSize, setFileExplorerSize] = useState(20);
+  const [editorSize, setEditorSize] = useState(55);
+  const [aiPanelSize, setAiPanelSize] = useState(25);
+  
   const fileExplorerRef = useRef<ImperativePanelHandle>(null);
   const aiPanelRef = useRef<ImperativePanelHandle>(null);
   const { user, signOut } = useAuth();
+  
+  // Initialize layout persistence
+  const {
+    updatePanelSizes,
+    updateCollapsedStates,
+  } = usePersistedLayout({
+    projectId,
+    onLayoutLoaded: (layout) => {
+      setFileExplorerSize(layout.fileExplorerSize);
+      setEditorSize(layout.editorSize);
+      setAiPanelSize(layout.aiPanelSize);
+      setIsFileExplorerCollapsed(layout.isFileExplorerCollapsed);
+      setIsAiPanelCollapsed(layout.isAiPanelCollapsed);
+    },
+  });
 
   // Get project data - will be replaced with API call
   const currentProject = getProjectDisplayData(projectId || "");
 
   const toggleFileExplorer = () => {
     if (fileExplorerRef.current) {
-      if (isFileExplorerCollapsed) {
-        fileExplorerRef.current.expand();
-      } else {
+      const newState = !isFileExplorerCollapsed;
+      if (newState) {
         fileExplorerRef.current.collapse();
+      } else {
+        fileExplorerRef.current.expand();
       }
+      updateCollapsedStates({ isFileExplorerCollapsed: newState });
     }
   };
 
   const toggleAiPanel = () => {
     if (aiPanelRef.current) {
-      if (isAiPanelCollapsed) {
-        aiPanelRef.current.expand();
-      } else {
+      const newState = !isAiPanelCollapsed;
+      if (newState) {
         aiPanelRef.current.collapse();
+      } else {
+        aiPanelRef.current.expand();
       }
+      updateCollapsedStates({ isAiPanelCollapsed: newState });
     }
   };
+  
+  // Handle panel resize events
+  const handlePanelResize = (sizes: number[]) => {
+    const [newFileExplorerSize, newEditorSize, newAiPanelSize] = sizes;
+    setFileExplorerSize(newFileExplorerSize);
+    setEditorSize(newEditorSize);
+    setAiPanelSize(newAiPanelSize);
+    
+    // Debounced save to localStorage
+    updatePanelSizes({
+      fileExplorerSize: newFileExplorerSize,
+      editorSize: newEditorSize,
+      aiPanelSize: newAiPanelSize,
+    });
+  };
+  
+  // Apply collapsed states when layout is loaded
+  useEffect(() => {
+    if (isFileExplorerCollapsed && fileExplorerRef.current) {
+      fileExplorerRef.current.collapse();
+    }
+    if (isAiPanelCollapsed && aiPanelRef.current) {
+      aiPanelRef.current.collapse();
+    }
+  }, [isFileExplorerCollapsed, isAiPanelCollapsed]);
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -154,11 +202,12 @@ export function WorkspaceLayout({
         <ResizablePanelGroup
           direction="horizontal"
           className="h-full"
+          onLayout={handlePanelResize}
         >
           {/* File Explorer Panel */}
           <ResizablePanel
             ref={fileExplorerRef}
-            defaultSize={20}
+            defaultSize={fileExplorerSize}
             minSize={15}
             maxSize={40}
             collapsible={true}
@@ -212,7 +261,7 @@ export function WorkspaceLayout({
           <ResizableHandle withHandle />
 
           {/* Editor Panel */}
-          <ResizablePanel defaultSize={55} minSize={30}>
+          <ResizablePanel defaultSize={editorSize} minSize={30}>
             <div className="h-full bg-background">
               {editor || (
                 <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -227,7 +276,7 @@ export function WorkspaceLayout({
           {/* AI Panel */}
           <ResizablePanel
             ref={aiPanelRef}
-            defaultSize={25}
+            defaultSize={aiPanelSize}
             minSize={20}
             maxSize={40}
             collapsible={true}
