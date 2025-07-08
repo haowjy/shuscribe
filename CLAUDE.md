@@ -40,13 +40,18 @@ uv add --dev package-name                 # Add development dependency
 cd frontend
 
 # Dependencies
-npm install                               # Install dependencies
+pnpm install                              # Install dependencies (preferred)
+npm install                               # Alternative: npm install
 
 # Development
-npm run dev                               # Start dev server with hot reload
+# IMPORTANT: Never run dev server via Claude Code - let user handle this
+# User will run: npm run dev or pnpm dev
 npm run build                             # Production build
 npm run start                             # Start production server
 npm run lint                              # Run ESLint
+
+# UI Components (shadcn/ui)
+pnpm dlx shadcn@latest add [component]    # Add shadcn components
 ```
 
 ### Docker Services
@@ -60,7 +65,41 @@ docker-compose exec postgres psql -U postgres -d shuscribe  # Connect to databas
 
 ## Architecture Overview
 
-### Repository Pattern
+### Overall System Architecture
+ShuScribe is a **context-aware fiction writing platform** with a three-panel VS Code-like workspace. The system consists of:
+
+- **Backend**: FastAPI with repository pattern for data persistence
+- **Frontend**: Next.js 15 with React 19, implementing a workspace UI for fiction writers
+- **Authentication**: Supabase Auth with OAuth support
+- **Database**: Supabase (PostgreSQL) for production, file-based repos for development
+
+### Frontend Architecture (Next.js)
+
+**Core Design**: Three-panel workspace layout for fiction writing:
+1. **File Explorer** - Hierarchical project organization (characters, locations, chapters)
+2. **Editor** - Tabbed document editor with @-reference system
+3. **AI Panel** - Context-aware AI assistance (future implementation)
+
+**Key Technologies**:
+- **Next.js 15.3.5** with App Router and Turbopack
+- **React 19** with TypeScript
+- **shadcn/ui** + **Radix UI** for component library
+- **Tailwind CSS v4** for styling
+- **react-resizable-panels** for workspace layout
+- **Supabase Auth** with SSR support
+
+**Authentication Flow**:
+- Middleware-based route protection (`src/middleware.ts`)
+- Dual Supabase clients: browser (`src/lib/supabase/client.ts`) and server (`src/lib/supabase/server.ts`)
+- AuthContext provider for global auth state
+- OAuth callback handling at `/auth/callback`
+
+**Component Patterns**:
+- **Composition**: WorkspaceLayout accepts pluggable panels
+- **Client Components**: Most components use `"use client"` for interactivity
+- **Context Pattern**: AuthContext for user state management
+
+### Backend Repository Pattern
 ShuScribe uses a repository pattern with multiple backends:
 - **File repositories**: Local file-based storage for development (`src/database/file/`)
 - **Database repositories**: PostgreSQL for production (planned, see `src/database/models/`)
@@ -98,22 +137,44 @@ FastAPI app with versioned routing:
 ## Development Notes
 
 ### Environment Setup
+
+**Backend Setup**:
 1. Copy `.env.example` to `.env` and configure
 2. Generate encryption key: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
 3. Start Docker services: `docker-compose up -d`
 4. Backend: `cd backend && uv sync`
-5. Frontend: `cd frontend && npm install`
+
+**Frontend Setup**:
+1. `cd frontend && pnpm install`
+2. Copy `.env.local.example` to `.env.local`
+3. Configure Supabase environment variables:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
+4. In Supabase dashboard:
+   - Enable authentication providers (Email, Google OAuth)
+   - Add redirect URLs: `http://localhost:3000/auth/callback`
+   - Set Site URL: `http://localhost:3000`
 
 ### Testing Strategy
-- Backend: pytest with async support, coverage threshold 40%
+- **Backend**: pytest with async support, coverage threshold 40%
 - Database tests: `tests/test_database/` with test runner
 - Factories: `tests/factories.py` for test data generation
+- **Frontend**: No tests currently configured (recommended: Jest + Testing Library)
 
 ### Code Quality
+**Backend**:
 - **Formatting**: Black (88 char line length)
 - **Type checking**: mypy with strict settings
 - **Import sorting**: isort with black profile
 - **Linting**: flake8
+
+**Frontend**:
+- **TypeScript**: Strict type checking with path aliases (`@/*`)
+- **ESLint**: Next.js recommended configuration
+- **Prettier**: Auto-formatting via Tailwind CSS classes
+- **Component Library**: shadcn/ui with consistent design tokens
 
 ### File Repository Storage
 **CRITICAL**: When using file-based repositories for local development:
@@ -130,4 +191,34 @@ repos = get_repositories(backend="file", workspace_path=Path("temp"))
 # Wrong - could commit local files
 repos = get_repositories(backend="file", workspace_path=Path("."))
 ```
+
+### Frontend Development Patterns
+
+**Component Architecture**:
+- Components follow composition pattern: `<WorkspaceLayout fileExplorer={<FileExplorer />} />`
+- Use `"use client"` directive for interactive components
+- Leverage shadcn/ui components: `pnpm dlx shadcn@latest add [component-name]`
+- UI state managed with React hooks (`useState`, `useContext`)
+
+**Authentication Integration**:
+- Use `useAuth()` hook to access user state: `const { user, signOut } = useAuth()`
+- Protected routes handled by middleware, not component-level guards
+- Supabase client selection: browser context uses `createClient()`, server uses `await createClient()`
+
+**@-Reference System** (Core Feature):
+- Documents support `@character/name` syntax for cross-references
+- References are highlighted and clickable in editor
+- File explorer shows contextual tags on hover
+- Future: Will integrate with backend for validation and autocomplete
+
+**Development Server Behavior**:
+- **CRITICAL**: Claude Code should NEVER run `npm run dev`, `pnpm dev`, or similar
+- Environment changes require server restart (user handles this)
+- Turbopack provides fast rebuilds during development
+
+**Component State Patterns**:
+- Resizable panels: Use `react-resizable-panels` with persistence
+- Modal/Dialog state: Prefer controlled components with explicit state
+- Form handling: `react-hook-form` with `zod` validation (when needed)
+- Loading states: Use skeleton components from shadcn/ui
 
