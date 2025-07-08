@@ -2,45 +2,10 @@
 
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EditorTab, mockTabs } from "@/data/editor-tabs";
 import { cn } from "@/lib/utils";
-
-interface EditorTab {
-  id: string;
-  name: string;
-  content: string;
-  isActive: boolean;
-}
-
-const mockTabs: EditorTab[] = [
-  {
-    id: "1",
-    name: "elara.md",
-    content: `# Elara Brightflame
-
-## Character Profile
-- **Age**: 23
-- **Magic**: Fire elemental
-- **Background**: Noble-born, but haunted by trauma
-
-## Personality
-Elara is cautious about using her powers after accidentally burning down her childhood home. She's been suppressing her abilities for three years, but recent events may force her to embrace them again.
-
-## Relationships
-- **@characters/protagonists/marcus**: Her mentor and guide
-- **@locations/capital-city**: Where she currently lives in exile`,
-    isActive: true,
-  },
-  {
-    id: "2",
-    name: "chapter-01.md",
-    content: `# Chapter 1: Awakening
-
-The morning mist clung to the cobblestones of @locations/capital-city as @characters/protagonists/elara made her way through the narrow alleys. She had been hiding for three years, but today everything would change.
-
-Her fingers trembled as she felt the familiar warmth building in her chest. The @fire-magic that had once consumed her childhood home was stirring again, and this time she couldn't run from it.`,
-    isActive: false,
-  },
-];
 
 export function EditorPlaceholder() {
   const [tabs, setTabs] = useState(mockTabs);
@@ -64,7 +29,7 @@ export function EditorPlaceholder() {
           <div
             key={tab.id}
             className={cn(
-              "flex items-center gap-2 px-3 py-2 text-sm border-r cursor-pointer group",
+              "flex items-center gap-2 px-3 py-2 text-sm border-r cursor-pointer group relative",
               activeTabId === tab.id 
                 ? "bg-background text-foreground border-b-2 border-b-primary" 
                 : "hover:bg-secondary/50 text-muted-foreground"
@@ -72,20 +37,22 @@ export function EditorPlaceholder() {
             onClick={() => setActiveTabId(tab.id)}
           >
             <span>{tab.name}</span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 closeTab(tab.id);
               }}
-              className="opacity-0 group-hover:opacity-100 hover:bg-accent rounded p-0.5 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 h-auto p-0.5 transition-opacity"
             >
               <X className="h-3 w-3" />
-            </button>
+            </Button>
           </div>
         ))}
-        <button className="p-2 hover:bg-accent text-muted-foreground">
+        <Button variant="ghost" size="sm" className="p-2 text-muted-foreground">
           <Plus className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
 
       {/* Editor Content */}
@@ -98,7 +65,7 @@ export function EditorPlaceholder() {
                   return (
                     <span
                       key={index}
-                      className="bg-blue-100 text-blue-800 px-1 rounded cursor-pointer hover:bg-blue-200"
+                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer px-1 py-0.5 rounded text-xs font-medium inline"
                     >
                       {part}
                     </span>

@@ -1,0 +1,145 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { mockProjects, formatDate, formatNumber } from "@/data/mock-data";
+import { 
+  Plus, 
+  FileText, 
+  Clock, 
+  Users, 
+  Settings,
+  ChevronRight,
+  BookOpen
+} from "lucide-react";
+
+export default function DashboardPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [projects] = useState<Project[]>(mockProjects);
+
+  const handleCreateProject = () => {
+    router.push("/dashboard/new");
+  };
+
+  const handleOpenProject = (projectId: string) => {
+    // For now, redirect to main workspace
+    // In the future, this will load the specific project
+    router.push(`/?project=${projectId}`);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold">ShuScribe</h1>
+              <Badge variant="secondary">Dashboard</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Welcome back, {user?.email?.split('@')[0]}
+              </span>
+              <Button variant="ghost" size="sm">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Projects Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Your Projects</h2>
+            <p className="text-muted-foreground mt-1">
+              Manage your fiction writing projects and continue your stories
+            </p>
+          </div>
+          <Button onClick={handleCreateProject} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
+        </div>
+
+        {/* Projects Grid */}
+        {projects.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
+              <Card 
+                key={project.id} 
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleOpenProject(project.id)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg line-clamp-1">
+                        {project.title}
+                      </CardTitle>
+                      {project.genre && (
+                        <Badge variant="outline" className="mt-2 text-xs">
+                          {project.genre}
+                        </Badge>
+                      )}
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <CardDescription className="line-clamp-2">
+                    {project.description}
+                  </CardDescription>
+                  
+                  {/* Project Stats */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span>{project.document_count} docs</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      <span>{formatNumber(project.word_count)} words</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span>{project.collaborators} collaborator{project.collaborators !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>{formatDate(project.updated_at)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="text-center py-12">
+            <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              No projects yet
+            </h3>
+            <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+              Get started by creating your first fiction writing project. 
+              Organize your characters, plots, and chapters all in one place.
+            </p>
+            <Button onClick={handleCreateProject} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Your First Project
+            </Button>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
