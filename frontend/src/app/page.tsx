@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WorkspaceLayout } from "@/components/layout/workspace-layout";
 import { FileExplorer } from "@/components/layout/file-explorer";
-import { EditorPlaceholder } from "@/components/layout/editor-placeholder";
+import { EditorWorkspace } from "@/components/layout/editor-workspace";
 import { AiPanel } from "@/components/layout/ai-panel";
 import { FileItem } from "@/data/file-tree";
 
@@ -33,7 +33,7 @@ export default function HomePage() {
     <WorkspaceLayout
       projectId={projectId}
       fileExplorer={<FileExplorer onFileSelect={handleFileSelect} />}
-      editor={<EditorPlaceholder selectedFile={selectedFile} projectId={projectId || "default"} />}
+      editor={<EditorWorkspace selectedFile={selectedFile} projectId={projectId || "default"} />}
       aiPanel={<AiPanel />}
     />
   );

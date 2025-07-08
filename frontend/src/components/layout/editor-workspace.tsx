@@ -29,17 +29,19 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { EditorTab } from "@/data/editor-tabs";
+import { EditorTab, mockTabs } from "@/data/editor-tabs";
 import { FileItem } from "@/data/file-tree";
 import { usePersistedEditorState } from "@/hooks/use-persisted-editor-state";
+import { FictionEditor } from "@/components/editor/fiction-editor";
+import { createEmptyDoc } from "@/lib/prosemirror/schema";
 import { cn } from "@/lib/utils";
 
-interface EditorPlaceholderProps {
+interface EditorWorkspaceProps {
   selectedFile?: FileItem | null;
   projectId: string;
 }
 
-export function EditorPlaceholder({ selectedFile, projectId }: EditorPlaceholderProps) {
+export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProps) {
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("");
   const [tempFileCounter, setTempFileCounter] = useState(1);
@@ -162,10 +164,13 @@ export function EditorPlaceholder({ selectedFile, projectId }: EditorPlaceholder
         newId = `temp-${newCounter}`;
       }
       
+      // Create empty ProseMirror document
+      const emptyDoc = createEmptyDoc();
+      
       const newTab: EditorTab = {
         id: newId,
         name: `Untitled-${newCounter}`,
-        content: "# New Document\n\nStart writing your story here...\n\n",
+        content: emptyDoc.toJSON(),
         isDirty: true,
         isTemp: true,
         order: Math.max(...currentTabs.map(t => t.order), -1) + 1
@@ -176,7 +181,7 @@ export function EditorPlaceholder({ selectedFile, projectId }: EditorPlaceholder
       setActiveTabId(newTab.id);
       
       // Save initial draft
-      saveDraft(newTab.id, newTab.content, true);
+      saveDraft(newTab.id, JSON.stringify(newTab.content), true);
       
       return [...currentTabs, newTab];
     });
@@ -202,12 +207,22 @@ export function EditorPlaceholder({ selectedFile, projectId }: EditorPlaceholder
         return currentTabs;
       }
       
+      // Check if we have mock data for this file
+      const mockTab = mockTabs.find(tab => 
+        tab.name === file.name || 
+        tab.filePath === file.name ||
+        file.name.includes(tab.name.replace('.md', ''))
+      );
+      
+      // Use mock content if available, otherwise create empty document
+      const content = mockTab ? mockTab.content : createEmptyDoc().toJSON();
+      
       // Create new tab
       let newTab: EditorTab = {
         id: file.id,
         name: file.name,
         filePath: file.name, // Store the file path separately
-        content: `# ${file.name}\n\nThis is a placeholder for the ${file.name} document. In a real implementation, this would load the actual content from the backend.\n\n## Sample Content\n\nYou can reference other documents using the @-syntax:\n- @characters/protagonists/elara\n- @locations/capital-city\n- @timeline/main-story\n\nThis helps create connections between different parts of your story.`,
+        content,
         isDirty: false,
         order: Math.max(...currentTabs.map(t => t.order), -1) + 1
       };
@@ -262,22 +277,16 @@ export function EditorPlaceholder({ selectedFile, projectId }: EditorPlaceholder
         setActiveTabId(savedState.activeTabId);
         setTempFileCounter(savedState.tempFileCounter);
       } else {
-        // Create initial tab if no saved state - inline creation to avoid dependency issues
-        const initialTab: EditorTab = {
-          id: 'temp-1',
-          name: 'Untitled-1',
-          content: "# New Document\n\nStart writing your story here...\n\n",
-          isDirty: true,
-          isTemp: true,
-          order: 0
-        };
+        // Load mock tabs with proper ordering and IDs
+        const initialTabs = mockTabs.map((tab, index) => ({
+          ...tab,
+          order: index,
+          id: `mock-${index + 1}` // Give them unique IDs
+        }));
         
-        setTabs([initialTab]);
-        setActiveTabId(initialTab.id);
-        setTempFileCounter(2);
-        
-        // Save initial draft
-        saveDraft(initialTab.id, initialTab.content, true);
+        setTabs(initialTabs);
+        setActiveTabId(initialTabs[0]?.id || '');
+        setTempFileCounter(mockTabs.length + 1);
       }
       
       setIsInitialized(true);
@@ -459,18 +468,17 @@ export function EditorPlaceholder({ selectedFile, projectId }: EditorPlaceholder
   }, []);
 
   // Handle content changes and save drafts
-  // TODO: Connect this to actual editor when implementing ProseMirror
-  // const handleContentChange = useCallback((tabId: string, content: string) => {
-  //   // Update tab content
-  //   setTabs(prev => prev.map(tab => 
-  //     tab.id === tabId 
-  //       ? { ...tab, content, isDirty: true }
-  //       : tab
-  //   ));
-  //   
-  //   // Save draft
-  //   saveDraft(tabId, content, true);
-  // }, [saveDraft]);
+  const handleContentChange = useCallback((tabId: string, content: object) => {
+    // Update tab content
+    setTabs(prev => prev.map(tab => 
+      tab.id === tabId 
+        ? { ...tab, content, isDirty: true }
+        : tab
+    ));
+    
+    // Save draft (convert to string for localStorage)
+    saveDraft(tabId, JSON.stringify(content), true);
+  }, [saveDraft]);
 
   return (
     <div className="h-full flex flex-col">
@@ -572,25 +580,16 @@ export function EditorPlaceholder({ selectedFile, projectId }: EditorPlaceholder
       </div>
 
       {/* Editor Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden">
         {activeTab ? (
-          <div className="p-4 h-full">
-            <div className="font-mono text-sm whitespace-pre-wrap leading-relaxed">
-              {activeTab.content.split(/(@[a-zA-Z0-9-_/]+)/).map((part, index) => {
-                if (part.startsWith('@')) {
-                  return (
-                    <span
-                      key={index}
-                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer px-1 py-0.5 rounded text-xs font-medium inline"
-                    >
-                      {part}
-                    </span>
-                  );
-                }
-                return part;
-              })}
-            </div>
-          </div>
+          <FictionEditor
+            key={activeTab.id}
+            content={activeTab.content}
+            onChange={(content: object) => handleContentChange(activeTab.id, content)}
+            onUpdate={(content: object) => handleContentChange(activeTab.id, content)}
+            placeholder={activeTab.isTemp ? "Start writing your story here..." : `Edit ${activeTab.name}`}
+            className="h-full"
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             No document open
@@ -601,7 +600,7 @@ export function EditorPlaceholder({ selectedFile, projectId }: EditorPlaceholder
       {/* Status Bar */}
       <div className="h-6 bg-secondary/20 border-t flex items-center justify-between px-4 text-xs text-muted-foreground">
         <span>
-          {activeTab ? `${activeTab.content.split(' ').length} words` : 'No document'}
+          {activeTab ? 'Fiction document' : 'No document'}
         </span>
         <span>
           {(activeTab?.isDirty || (activeTab && hasDraft(activeTab.id))) ? "Modified" : "Saved"}

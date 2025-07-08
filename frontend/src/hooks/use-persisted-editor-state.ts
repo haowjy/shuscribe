@@ -23,8 +23,8 @@ interface UsePersistedEditorStateParams {
 export function usePersistedEditorState({ 
   projectId
 }: UsePersistedEditorStateParams) {
-  const saveDraftsTimeoutRef = useRef<NodeJS.Timeout>();
-  const saveStateTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveDraftsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveStateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
    * Ensure all tabs have valid order properties
@@ -147,16 +147,22 @@ export function usePersistedEditorState({
   const restoreContentFromDraft = useCallback((tab: EditorTab): EditorTab => {
     const draft = getDraft(tab.id);
     if (draft && draft.isDirty) {
-      return {
-        ...tab,
-        content: draft.content,
-        isDirty: true,
-      };
+      try {
+        // Parse JSON content
+        const content = JSON.parse(draft.content);
+        return {
+          ...tab,
+          content,
+          isDirty: true,
+        };
+      } catch (error) {
+        console.error("Error parsing draft content:", error);
+        // Return original tab if JSON parsing fails
+        return tab;
+      }
     }
     return tab;
   }, [getDraft]);
-
-
 
   /**
    * Cleanup timeouts on unmount
