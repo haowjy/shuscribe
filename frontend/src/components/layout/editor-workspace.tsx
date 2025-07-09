@@ -658,6 +658,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
             onChange={(content: object) => handleContentChange(activeTab.id, content)}
             onUpdate={(content: object) => handleContentChange(activeTab.id, content)}
             placeholder={activeTab.isTemp ? "Start writing your story here..." : `Edit ${activeTab.name}`}
+            projectId={projectId}
             className="h-full"
           />
         ) : (
