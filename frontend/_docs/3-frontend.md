@@ -1,381 +1,279 @@
-# ShuScribe Backend MVP Technical Specification
+# ShuScribe Frontend MVP Technical Specification
 
-**Context-Aware Fiction Writing Platform - Backend MVP**
+**"Cursor for Fiction Writing" - Frontend Implementation**
 
-_Practical technical planning for FastAPI + Supabase + AI Services_
+*Practical technical planning for Next.js + shadcn/ui + ProseMirror with client-side search*
 
 ---
 
 ## Core MVP Features
 
 ### What We're Actually Building
-
-1. **Project data API** - Load complete project data (documents + tags) in single request
-2. **Document CRUD API** - Create, read, update, delete documents via REST
-3. **Reference extraction** - Parse saved documents for @-references and tags
-4. **Auth middleware** - Validate Supabase JWT tokens
-5. **Project management** - Basic project and file tree operations
-6. **Mock AI endpoints** - Placeholder AI chat/context endpoints
+1. **Flexible workspace** - Resizable/collapsible file explorer, editor, mock AI panel
+2. **@-reference system + tagging** - Context-aware linking like "Cursor for fiction writing"
+3. **Client-side autocomplete** - Instant suggestions from local project index
+4. **Basic document management** - Create, edit, save, delete documents
+5. **Project data loading** - Load all documents/tags once for fast local search
+6. **Supabase auth** - Login/signup/logout
 
 ### What We're NOT Building Yet
-
-- Real AI chat implementation (just mock responses)
-- Real-time collaboration endpoints
-- Complex search/filtering (frontend handles local search)
-- File upload/storage management
-- Advanced caching strategies
-- Performance optimizations
+- Real-time collaboration
+- AI chat functionality (just mock UI)
+- Complex performance optimizations
+- Advanced search/filtering beyond local fuzzy search
+- Complex error handling
 
 ---
 
 ## Technology Stack
 
-- **FastAPI** for REST API
-- **Supabase** for database + auth validation
-- **SQLAlchemy** with dependency injection pattern
-- **Pydantic** for request/response models
-- **Python-dotenv** for environment management
-- **Pytest** for testing
-- **Uvicorn** for development server
+- **Next.js 14+** with App Router
+- **TypeScript**
+- **Tailwind CSS**
+- **shadcn/ui** components
+- **ProseMirror** for rich text editing
+- **Supabase** (auth + database via FastAPI)
+- **TanStack Query** for API state
+- **Zustand** for simple client state
 
 ---
 
-## Architecture Overview
+## Key Technical Components
 
-### API Structure
-
-```
-/api/v1/
-├── auth/                   # JWT validation, user info
-├── projects/               # Project CRUD
-│   └── {project_id}/
-│       ├── data/           # Complete project data (documents + tags)
-│       └── documents/      # Document CRUD operations
-└── ai/                     # Mock AI endpoints (future)
-```
-
-### Dependency Injection Pattern
+### 1. Flexible Workspace Layout
 
 ```
-FastAPI App
-├── Database Service (Injectable)
-├── Auth Service (Injectable) 
-├── Reference Service (Injectable)
-└── AI Service (Injectable - Mock)
+┌─────────────────────────────────────────────┐
+│ Header (project selector, user menu)       │
+├─────────────────────────────────────────────┤
+│ File Explorer│  Editor Workspace │ AI Panel│
+│ [▼] [↔]     │  (flexible center) │ [↔] [▼] │
+│             │                    │         │
+│ - resizable │ - ProseMirror      │- mock   │
+│ - collapsible│ - @-references    │- context│
+│ - file tree │ - local search     │- modes  │
+│ - tags view │ - tabs             │         │
+└─────────────────────────────────────────────┘
 ```
 
-**Why Dependency Injection:**
+**Implementation Notes:**
+- Use CSS Grid with `fr` units for flexible center panel
+- Drag handles between panels for resizing
+- Collapse buttons that hide panels and show icon bars
+- Save panel states in localStorage or user preferences
 
-- Easy to swap database implementations
-- Simple testing with mock services
-- Clean separation of concerns
-- Future-proof for scaling
+### 2. Client-Side @-Reference + Tagging System (Core Feature)
+
+**Local Project Index Approach:**
+- Load all project documents and tags on project open
+- Build searchable index in client memory
+- No API calls for autocomplete → instant <50ms responses
+- Fuzzy search through documents, paths, and tags
+
+**ProseMirror Integration:**
+- Custom node type for references: `@characters/elara`
+- Plugin to detect `@` character and trigger instant autocomplete
+- Render references as styled spans with hover effects
+- Client-side validation against local project index
+
+**Autocomplete Flow:**
+1. User types `@` in editor
+2. Plugin detects and shows dropdown instantly
+3. Client-side fuzzy search of local project index
+4. User selects → insert reference node in editor
+5. Reference becomes clickable/hoverable
+
+**Reference + Tag Types:**
+- **File references**: `@characters/protagonists/elara`
+- **Tag references**: `@fire-magic` (all docs with that tag)
+- **Smart tagging**: Documents have multiple tags for thematic organization
+
+### 3. Document Management
+
+**Basic CRUD:**
+- Create new document (with simple templates)
+- Open document → new tab
+- Edit in ProseMirror editor
+- Save document (manual save button + auto-save on change)
+- Delete document
+
+**File Tree:**
+- Show project structure as collapsible tree
+- Click file → open in new tab
+- Right-click → context menu (create, delete, rename)
+- Simple icons for different file types
+
+**Tab System:**
+- Open documents appear as tabs above editor
+- Click tab → switch document
+- Close tab button
+- *Keep it simple - no persistence or complex state*
+
+### 4. Mock AI Panel
+
+**Purpose:** Show what AI features will look like without implementing them
+
+**Components:**
+- Mode selector dropdown (Chapter Writing, Character Development, etc.) - non-functional
+- Context display showing current document's references
+- Placeholder chat interface with "Coming Soon" message
+- Maybe some sample suggestions to show concept
 
 ---
 
-## Core Technical Components
+## Technical Implementation
 
-### 1. Database Layer with Dependency Injection
+### Project Structure
 
-**Database Service Interface:**
-
-- Abstract base class defining database operations
-- Concrete implementation for Supabase
-- Easy to swap for PostgreSQL, SQLite, etc.
-
-**Key Operations:**
-
-- Projects: CRUD, list user projects
-- Documents: CRUD, list by project, search by path
-- References: Extract, validate, get suggestions
-
-**Models (SQLAlchemy/Pydantic):**
-
-```python
-# Conceptual models - we'll define these properly
-Project: id, user_id, title, created_at, updated_at
-Document: id, project_id, path, title, content, tags, word_count
-DocumentReference: source_id, target_path, position, is_valid
+```
+frontend/src/
+├── app/                     # Next.js app router
+│   ├── (auth)/             # Auth pages
+│   ├── (dashboard)/        # Main app
+│   └── project/[id]/       # Project workspace
+├── components/
+│   ├── editor/             # ProseMirror components
+│   ├── project/            # File tree, navigation
+│   ├── ai/                 # Mock AI panel
+│   └── ui/                 # shadcn/ui components
+├── lib/
+│   ├── supabase/           # Auth client
+│   ├── api/                # FastAPI client
+│   ├── prosemirror/        # Editor schema/plugins
+│   └── stores/             # Zustand stores
+└── types/                  # TypeScript types
 ```
 
-### 2. Authentication Middleware
+### State Management Strategy
 
-**JWT Validation:**
+**Project Data Loading:**
+- Load complete project on open: all documents, metadata, tags
+- Build local searchable index for instant autocomplete
+- Cache in memory for session, refresh on document changes
 
-- Validate Supabase JWT tokens from frontend
-- Extract user ID from token
-- Protect routes that need authentication
-- Handle token expiry gracefully
+**Zustand Stores (Keep Simple):**
+- `useAuthStore` - User session, login/logout
+- `useProjectStore` - Project data, local index, file tree state
+- `useWorkspaceStore` - Panel sizes, collapse states, UI preferences
+- `useEditorStore` - Open tabs, active document
 
-**Auth Flow:**
+**TanStack Query:**
+- Load project data once per session
+- Document save mutations with optimistic updates
+- Reference validation on save (not for autocomplete)
 
-1. Frontend sends JWT token in Authorization header
-2. Middleware validates token with Supabase
-3. Extract user info and attach to request
-4. Route handlers can access current user
+### ProseMirror Integration
 
-### 3. Project Data API
+**Custom Schema:**
+- Standard nodes (paragraph, heading, text)
+- Custom `reference` node for @-references
+- Basic marks (bold, italic)
 
-**Complete Project Loading:**
+**Key Plugins:**
+- Reference input detection (@ character)
+- Reference autocomplete
+- Basic editing commands
 
-- `GET /projects/{id}/data` - Return all documents, metadata, tags in single response
-- Optimized for client-side index building
-- Include document relationships and reference mappings
-- Efficient serialization for fast frontend processing
+**Reference Node:**
+```typescript
+// Conceptual structure - we'll implement this
+referenceNode = {
+  attrs: {
+    type: 'file' | 'tag',
+    path: string,
+    displayText: string,
+    isValid: boolean
+  },
+  // rendering, parsing logic
+}
+```
 
-**Core Endpoints:**
-
-- `GET /projects/{id}/data` - Complete project data for client-side indexing
-- `GET /documents/{id}` - Get single document (for editing)
-- `POST /projects/{id}/documents` - Create document
-- `PUT /documents/{id}` - Update document content
-- `DELETE /documents/{id}` - Delete document
-
-**Key Features:**
-
-- Single request loads entire project for client-side search
-- Auto-extract references and tags on document save
-- Update project index when documents change
-- Handle concurrent edits (basic last-write-wins)
-
-### 4. Reference & Tag Processing
-
-**Reference Extraction:**
-
-- Parse document content for @-references on save
-- Extract different reference types (file, tag)
-- Build reference mappings for project data response
-- Track document relationships and dependencies
-
-**Tag Management:**
-
-- Extract and manage document tags
-- Build tag-to-document mappings
-- Support multiple tags per document
-- Include in project data for client-side filtering
+### FastAPI Integration
 
 **Key Endpoints:**
+- `GET /projects/{id}/data` - Load complete project data once
+- `GET /documents/{id}` - Get single document content
+- `POST /documents` - Create document
+- `PUT /documents/{id}` - Save document
+- `POST /projects/{id}/references/validate` - Validate references on demand
 
-- `POST /projects/{id}/references/validate` - Validate references (on demand)
-- `GET /documents/{id}/references` - Get document reference data
-
-**Processing Logic:**
-
-- File references: `@characters/elara` → validate path exists
-- Tag references: `@fire-magic` → build tag-document mappings
-- Reference integrity checking across project
-- Efficient data structure for frontend index building
-
-### 5. Mock AI Services
-
-**Purpose:** Provide API structure for future AI implementation
-
-**Endpoints:**
-
-- `POST /projects/{id}/ai/chat` - Mock chat responses
-- `GET /documents/{id}/ai/context` - Extract context for AI
-- `POST /documents/{id}/ai/suggestions` - Mock writing suggestions
-
-**Mock Implementation:**
-
-- Return hardcoded responses based on input
-- Extract document references for context
-- Provide realistic response structure
-- Foundation for real AI integration later
+**Client Setup:**
+- Simple fetch wrapper with auth headers
+- TanStack Query for project data loading and document mutations
+- Local project index for instant search (no API calls for autocomplete)
+- Basic error handling and optimistic updates
 
 ---
 
-## Implementation Steps
+## Key Implementation Challenges
 
-### Step 1: Project Setup
+### 1. Client-Side Project Index
+- Building efficient searchable index from all project documents
+- Fuzzy search algorithm for instant autocomplete
+- Keeping index in sync when documents change
+- Memory management for large projects
 
-- Initialize FastAPI project with proper structure
-- Set up virtual environment and dependencies
-- Configure environment variables for Supabase
-- Set up basic logging and error handling
-- Create development database schema
+### 2. Flexible Panel System
+- CSS Grid layout with resizable panels
+- Drag handles for panel resizing
+- Panel collapse/expand with smooth animations
+- Persistent panel state across sessions
 
-### Step 2: Database Layer
+### 3. @-Reference ProseMirror Integration
+- Custom schema definition with reference nodes
+- Plugin development for @ detection and autocomplete
+- Styling references with Tailwind classes
+- Handling reference clicks and navigation
 
-- Define SQLAlchemy models for Project, Document, Reference
-- Create database service interface (abstract base class)
-- Implement Supabase database service
-- Set up dependency injection container
-- Create basic CRUD operations
-
-### Step 3: Authentication
-
-- Create JWT validation middleware
-- Set up Supabase client for token verification
-- Implement user extraction from tokens
-- Add auth decorators/dependencies for routes
-- Test auth flow with frontend
-
-### Step 4: Project Data API
-
-- Implement complete project data endpoint
-- Optimize response for client-side index building
-- Include all documents, metadata, tags, and relationships
-- Handle efficient serialization for large projects
-- Test frontend integration with local search
-
-### Step 5: Reference & Tag Processing
-
-- Create reference extraction from document content
-- Build tag management and document relationships
-- Implement reference validation logic
-- Add reference integrity checking
-- Support project data updates when content changes
-
-### Step 6: Mock AI Integration
-
-- Create placeholder AI service interface
-- Implement mock chat endpoint with hardcoded responses
-- Build context extraction from document references
-- Add suggestion endpoint structure
-- Prepare for future real AI integration
-
-### Step 7: Testing & Polish
-
-- Set up pytest with database fixtures
-- Add unit tests for core business logic
-- Create integration tests for API endpoints
-- Add proper error handling and validation
-- Configure for deployment
-
----
-
-## Key Technical Challenges
-
-### 1. Efficient Project Data Serialization
-
-- Optimize complete project data response for large projects
-- Efficient JSON serialization of documents, tags, references
-- Structure data for fast client-side index building
-- Handle projects with hundreds of documents
-
-### 2. Reference & Tag Extraction
-
-- Parse @-references from ProseMirror JSON content
-- Handle different reference types (file, tag, complex)
-- Extract and manage document tag systems
-- Build efficient relationship mappings
-
-### 3. Database Abstraction
-
-- Design clean interface that works with different databases
-- Handle Supabase-specific features while keeping abstraction
-- Manage database connections and transactions
-- Structure for easy testing and mocking
-
-### 4. Content Processing Pipeline
-
-- Parse ProseMirror document structure efficiently
-- Extract text, references, and metadata
-- Handle different document formats and versions
-- Maintain content integrity during operations
-
----
-
-## Database Schema Design
-
-### Core Tables
-
-```sql
--- Basic schema structure (we'll define properly later)
-users (id, supabase_user_id, email, created_at)
-projects (id, user_id, title, description, created_at, updated_at)
-documents (id, project_id, path, title, content_json, tags[], word_count, updated_at)
-document_references (source_doc_id, target_path, reference_type, position, is_valid)
-```
-
-### Key Relationships
-
-- User → Projects (one-to-many)
-- Project → Documents (one-to-many, hierarchical paths)
-- Document → References (one-to-many, extracted from content)
-
-### Indexes for Performance
-
-- Documents: project_id, path (for file tree queries)
-- References: source_doc_id, target_path (for validation)
-- Full-text search on document content (for suggestions)
-
----
-
-## API Design Patterns
-
-### Request/Response Models
-
-- Pydantic models for all API inputs/outputs
-- Consistent error response format
-- Proper HTTP status codes
-- Request validation with clear error messages
-
-### Error Handling
-
-- Custom exception classes for business logic errors
-- Global exception handler for consistent responses
-- Proper logging of errors for debugging
-- User-friendly error messages
-
-### Dependency Injection Structure
-
-```python
-# Conceptual structure
-@app.get("/documents/{doc_id}")
-async def get_document(
-    doc_id: str,
-    current_user: User = Depends(get_current_user),
-    db: DatabaseService = Depends(get_database),
-    references: ReferenceService = Depends(get_reference_service)
-):
-    # Route logic here
-```
+### 4. Local Search Performance
+- Fast fuzzy search through documents and tags
+- Debounced search to avoid blocking UI
+- Ranking algorithms for relevance
+- Efficient re-indexing on content changes
 
 ---
 
 ## Things to Keep in Mind (But Don't Build Yet)
 
 ### Future Enhancements:
-
-- **Real AI integration** with OpenAI/Anthropic APIs
-- **Real-time collaboration** with WebSocket support
-- **Advanced search** with full-text and semantic search
-- **File storage** for images, attachments
-- **Performance optimizations** (caching, database optimization)
-- **Background tasks** for heavy processing
-- **Rate limiting** and API security
-- **Monitoring and observability**
+- **Real AI integration** replacing mock panel
+- **Advanced reference types** (filters, complex queries)
+- **Collaborative editing** with Y.js and real-time sync
+- **Performance optimizations** (virtualization for large projects)
+- **Offline support** with local storage fallback
+- **Keyboard shortcuts** and advanced accessibility
+- **Advanced search** beyond local fuzzy search
+- **Panel layout persistence** across devices
 
 ### Architectural Decisions:
-
-- Database service pattern supports future scaling
-- AI service interface ready for real implementation
-- Reference system designed for complex query types
-- API structure supports real-time features later
+- Local project index supports instant search now, can add server-side search later
+- ProseMirror schema should be extensible for future node types
+- Panel system ready for real-time collaborative cursors
+- Component structure supports AI integration when ready
+- State management simple now, but designed for complexity later
 
 ---
 
 ## Success Criteria
 
-**MVP backend is successful when:**
+**MVP is successful when:**
+- User can create a project and add documents
+- @-reference + tagging system works with instant autocomplete
+- Flexible workspace layout feels intuitive and customizable
+- Documents save and load reliably
+- Local project search is fast and helpful
+- Panel resizing/collapsing works smoothly
 
-- Frontend can authenticate users via Supabase JWT
-- Complete project data loads efficiently in single request
-- Document CRUD operations work reliably
-- Reference and tag extraction processes documents correctly
-- Project data structure supports fast client-side search
-- Mock AI endpoints return structured responses
-
-**Core API Flow:**
-
-1. Frontend sends JWT → Backend validates → User authenticated
-2. Load project → Backend returns complete project data → Frontend builds index
-3. Create/edit document → Content saved with extracted references and tags
-4. Frontend uses local index for instant @-reference autocomplete
-5. AI panel requests → Backend returns mock but structured responses
+**Core User Flow:**
+1. Login → Dashboard → Create/Open Project
+2. Project loads → Complete data loaded once → Local index built
+3. Create character document in `characters/` folder with tags
+4. Create chapter document
+5. Type `@characters/elara` in chapter → instant autocomplete works
+6. Reference becomes clickable/hoverable
+7. Navigate between documents via file tree and tabs
+8. Resize panels to preferred layout → state persists
 
 ---
 
-This specification focuses on building a solid, testable API foundation that supports the frontend's @-reference system while preparing for future AI and collaboration features.
+This specification focuses on building the essential features that make ShuScribe unique (the @-reference system) without getting bogged down in premature optimizations or complex features we don't need yet.

@@ -2,14 +2,13 @@
 
 **Context-Aware Fiction Writing Platform - Full MVP Specification**
 
-_How Frontend + Backend Work Together to Deliver the Core @-Reference System_
+*How Frontend + Backend Work Together to Deliver the Core @-Reference System*
 
 ---
 
 ## MVP Vision & Core Value Proposition
 
 ### What ShuScribe MVP Delivers
-
 **"Cursor for fiction writing - context-aware assistance through smart references and tagging"**
 
 **Core Innovation:** Like how Cursor understands your codebase, ShuScribe understands your story world through @-references and tags, providing intelligent context within a flexible workspace.
@@ -21,7 +20,6 @@ _How Frontend + Backend Work Together to Deliver the Core @-Reference System_
 ## Complete System Architecture
 
 ### Technology Stack Overview
-
 ```
 Frontend (Next.js)              Backend (FastAPI)              Database (Supabase)
 ├── React + TypeScript          ├── Python + FastAPI           ├── PostgreSQL
@@ -32,7 +30,6 @@ Frontend (Next.js)              Backend (FastAPI)              Database (Supabas
 ```
 
 ### Data Flow Architecture
-
 ```
 Project Load → Frontend Fetches All Documents & Tags → Local Index Built
     ↓
@@ -56,7 +53,6 @@ Document Saved → Backend Extracts References → Updates Index
 ### 1. Context-Aware Reference + Tagging System (Primary Feature)
 
 **What It Does:**
-
 - **@-References:** Type `@` to link documents: `@characters/protagonists/elara`
 - **Tag References:** Link by theme: `@fire-magic` (finds all documents with that tag)
 - **Smart Tagging:** Documents can have multiple tags for thematic organization
@@ -64,7 +60,6 @@ Document Saved → Backend Extracts References → Updates Index
 - **Visual Context:** See all story elements connected to current document
 
 **User Experience:**
-
 ```
 User writing: "Elara walked into the tavern, her @"
                                               ↑
@@ -75,7 +70,6 @@ User writing: "Elara walked into the tavern, her @"
 ```
 
 **Technical Implementation:**
-
 - **Frontend:** Project data loaded once → built into searchable index
 - **Frontend:** Custom ProseMirror plugin detects `@` → instant client-side search
 - **Frontend:** No API calls for autocomplete (uses local project index)
@@ -84,7 +78,6 @@ User writing: "Elara walked into the tavern, her @"
 ### 2. Flexible Workspace Layout
 
 **Layout:**
-
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Header: Project Selector | User Menu | Save Status         │
@@ -104,7 +97,6 @@ User writing: "Elara walked into the tavern, her @"
 ```
 
 **Panel Features:**
-
 - **Flexible Layout:** All panels resizable with drag handles
 - **Collapsible:** File explorer and AI panel can collapse to icons
 - **Responsive:** Layout adapts to screen size and user preferences
@@ -113,7 +105,6 @@ User writing: "Elara walked into the tavern, her @"
 ### 3. Document Management System
 
 **Project Structure:**
-
 ```
 My Fantasy Novel/
 ├── characters/
@@ -130,7 +121,6 @@ My Fantasy Novel/
 ```
 
 **Document Operations:**
-
 - Create documents with templates
 - Open multiple documents in tabs
 - Auto-save on content changes
@@ -140,13 +130,11 @@ My Fantasy Novel/
 ### 4. Reference Intelligence
 
 **Reference Types:**
-
 - **File References:** `@characters/protagonists/elara` → Direct link to character document
 - **Tag References:** `@fire-magic` → All documents tagged with fire-magic
 - **Path Completion:** Smart autocomplete based on project structure
 
 **Intelligence Features:**
-
 - **Broken Reference Detection:** Visual indicators for invalid references
 - **Reference Counting:** Show how many times elements are referenced
 - **Context Extraction:** AI panel shows current document's story context
@@ -155,14 +143,12 @@ My Fantasy Novel/
 ### 5. Authentication & Project Management
 
 **User Experience:**
-
 - Simple email/password login via Supabase
 - Dashboard showing user's projects
 - Create new projects with folder templates
 - Project settings and sharing (basic)
 
 **Technical Implementation:**
-
 - Supabase handles auth complexity
 - Frontend gets JWT tokens
 - Backend validates tokens for API access
@@ -173,7 +159,6 @@ My Fantasy Novel/
 ## Key User Workflows
 
 ### Workflow 1: New User Onboarding
-
 1. **Sign up** → Email verification via Supabase
 2. **Create first project** → "My Fantasy Novel"
 3. **Auto-generated structure** → characters/, locations/, etc. folders
@@ -184,7 +169,6 @@ My Fantasy Novel/
 8. **See AI context** → Right panel shows "Context: elara, fire-magic"
 
 ### Workflow 2: Active Writing Session
-
 1. **Open project** → Last session restored
 2. **Open chapter document** → Tabs from previous session
 3. **Write scene** → "Elara entered the @" → Autocomplete suggests locations
@@ -194,7 +178,6 @@ My Fantasy Novel/
 7. **Navigate** → Click reference → Opens referenced document in new tab
 
 ### Workflow 3: Story Organization
-
 1. **Create new character** → Add to characters/antagonists/
 2. **Tag character** → Add relevant theme tags
 3. **Reference in multiple chapters** → `@characters/antagonists/villain`
@@ -209,7 +192,6 @@ My Fantasy Novel/
 ### Frontend ↔ Backend Communication
 
 **Authentication Flow:**
-
 ```
 Frontend                    Backend                     Supabase
 ├── User login             ├── Validate JWT            ├── Issue JWT token
@@ -219,7 +201,6 @@ Frontend                    Backend                     Supabase
 ```
 
 **Document Operations:**
-
 ```
 Frontend                    Backend                     Database
 ├── Open document          ├── GET /documents/{id}     ├── Fetch document
@@ -229,7 +210,6 @@ Frontend                    Backend                     Database
 ```
 
 **Reference System:**
-
 ```
 Frontend                    Backend                     Processing
 ├── Load project once      ├── GET /projects/{id}/data ├── Return all docs + tags
@@ -244,7 +224,6 @@ Frontend                    Backend                     Processing
 ### Database Schema Integration
 
 **Core Tables:**
-
 ```sql
 users (id, supabase_user_id, email, created_at)
 projects (id, user_id, title, created_at, updated_at)
@@ -253,9 +232,8 @@ document_references (source_doc_id, target_path, reference_type, is_valid)
 ```
 
 **Key Relationships:**
-
 - User owns multiple Projects
-- Project contains hierarchical Documents
+- Project contains hierarchical Documents 
 - Documents contain References to other Documents
 - References maintain integrity across operations
 
@@ -264,18 +242,15 @@ document_references (source_doc_id, target_path, reference_type, is_valid)
 ## Mock AI Integration (Foundation for Future)
 
 ### Current MVP Implementation
-
 **Purpose:** Show users what AI features will look like without implementing them
 
 **AI Panel Components:**
-
 - **Mode Selector:** Dropdown with options (Chapter Writing, Character Development, etc.) - non-functional
 - **Context Display:** Shows current document's references and story elements
 - **Chat Interface:** Placeholder with "Coming Soon" messages
 - **Sample Suggestions:** Hardcoded examples of future AI assistance
 
 ### API Structure (Ready for Real Implementation)
-
 ```
 POST /projects/{id}/ai/chat
 ├── Request: { message: string, mode: string, context: DocumentContext }
@@ -296,14 +271,12 @@ POST /documents/{id}/ai/suggestions
 ## Success Metrics & Validation
 
 ### User Engagement Metrics
-
 - **@-references created per session:** Target >10 (shows core feature adoption)
 - **Documents created per project:** Target >5 (comprehensive story building)
 - **Reference navigation clicks:** Target >5 per session (users exploring connections)
 - **Time spent in editor:** Target >20 minutes (productive writing sessions)
 
 ### Technical Performance Metrics
-
 - **Reference autocomplete response:** <50ms (instant client-side search)
 - **Project load time:** <2 seconds (all documents and tags loaded once)
 - **Document save time:** <500ms (doesn't interrupt flow)
@@ -311,7 +284,6 @@ POST /documents/{id}/ai/suggestions
 - **Reference validation accuracy:** >95% (reliable integrity checking)
 
 ### Feature Adoption Metrics
-
 - **Users creating @-references:** >80% (core feature adoption)
 - **Multi-document projects:** >65% (complex story building)
 - **Tag usage for organization:** >60% (thematic organization)
@@ -322,17 +294,15 @@ POST /documents/{id}/ai/suggestions
 ## MVP Scope Boundaries
 
 ### What's Included in MVP
-
 ✅ **@-reference system** with autocomplete and validation  
 ✅ **Three-panel workspace** with file tree and editor  
 ✅ **Document CRUD** operations with auto-save  
 ✅ **Basic project management** and file organization  
 ✅ **Supabase authentication** and user management  
 ✅ **Mock AI panel** showing future capabilities  
-✅ **Reference integrity** checking and broken link detection
+✅ **Reference integrity** checking and broken link detection  
 
 ### What's Explicitly NOT in MVP
-
 ❌ **Real-time collaboration** (Y.js, WebSocket, presence)  
 ❌ **AI chat implementation** (OpenAI/Anthropic integration)  
 ❌ **Publishing platform** (public stories, wikis)  
@@ -340,34 +310,30 @@ POST /documents/{id}/ai/suggestions
 ❌ **File uploads** (images, attachments)  
 ❌ **Complex permissions** (sharing, team management)  
 ❌ **Performance optimization** (caching, virtualization)  
-❌ **Mobile app** (desktop web only)
+❌ **Mobile app** (desktop web only)  
 
 ---
 
 ## Development Priorities
 
 ### Phase 1: Foundation (Most Critical)
-
 1. **Authentication setup** - Users can sign up, login, access dashboard
 2. **Flexible workspace layout** - Resizable/collapsible panels with state persistence
 3. **Project data loading** - Load all documents/tags into client-side index
 4. **Basic file tree** - File explorer with project structure
 
-### Phase 2: Core Feature (MVP Differentiator)
-
+### Phase 2: Core Feature (MVP Differentiator)  
 5. **@-reference detection** - ProseMirror plugin detects @ character
 6. **Client-side autocomplete** - Instant fuzzy search of local project index
 7. **Reference insertion** - Custom ProseMirror nodes for references
 8. **Tagging system** - Document tags for thematic organization
 
 ### Phase 3: Polish & Complete (MVP Ready)
-
 9. **Reference validation** - Integrity checking, broken link detection
 10. **File operations** - Create, delete, rename with reference updates
 11. **Mock AI panel** - Context display showing current document's story elements
 
 ### Success Definition
-
 **MVP is complete when:** A user can create a project, add character and chapter documents, use @-references to link them together, and see the story context in the AI panel - providing a compelling preview of the full platform vision.
 
 ---

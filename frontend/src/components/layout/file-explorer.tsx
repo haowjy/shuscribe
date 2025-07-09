@@ -24,8 +24,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { FileItem, mockFileTree } from "@/data/file-tree";
+import { FileItem } from "@/data/file-tree";
+import { useProjectData } from "@/lib/query/hooks";
+import { ProjectData } from "@/types/project";
 import { cn } from "@/lib/utils";
+
+// No conversion needed - API already returns FileItem format
 
 interface FileTreeItemProps {
   item: FileItem;
@@ -177,11 +181,14 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
 }
 
 interface FileExplorerProps {
+  projectId: string;
   onFileSelect?: (file: FileItem) => void;
 }
 
-export function FileExplorer({ onFileSelect }: FileExplorerProps) {
+export function FileExplorer({ projectId, onFileSelect }: FileExplorerProps) {
+  const { data: projectData, isLoading, error } = useProjectData(projectId);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  
 
   const handleFileSelect = (file: FileItem) => {
     setSelectedFile(file);
@@ -216,12 +223,39 @@ export function FileExplorer({ onFileSelect }: FileExplorerProps) {
     }
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-xs text-muted-foreground">Loading files...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-xs text-destructive mb-1">Failed to load files</p>
+          <p className="text-xs text-muted-foreground">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // FileTree is already in the correct format
+  const fileTree = projectData?.fileTree || [];
+
   return (
     <div className="h-full flex flex-col">
       {/* Header with actions */}
       <div className="flex items-center justify-between p-2 border-b">
         <span className="text-sm font-medium text-muted-foreground">
-          Project Files
+          {projectData?.title || 'Project Files'}
         </span>
         <div className="flex gap-1">
           <Button
@@ -236,8 +270,8 @@ export function FileExplorer({ onFileSelect }: FileExplorerProps) {
       </div>
       
       {/* File Tree */}
-      <div className="flex-1 overflow-auto p-1">
-        {mockFileTree.map((item) => (
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-1">
+        {fileTree.map((item) => (
           <FileTreeItem
             key={item.id}
             item={item}

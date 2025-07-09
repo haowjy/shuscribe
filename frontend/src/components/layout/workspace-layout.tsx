@@ -3,6 +3,22 @@
 import { useState, useRef, useEffect } from "react";
 import { ImperativePanelHandle } from "react-resizable-panels";
 import { usePersistedLayout } from "@/hooks/use-persisted-layout";
+
+// Panel size constants
+const PANEL_CONFIG = {
+  fileExplorer: {
+    minSize: 10,
+    maxSize: 35,
+    collapsedSize: 2,
+    collapseThreshold: 4,
+  },
+  aiPanel: {
+    minSize: 20,
+    maxSize: 40,
+    collapsedSize: 2,
+    collapseThreshold: 4,
+  },
+} as const;
 import {
   ResizableHandle,
   ResizablePanel,
@@ -103,11 +119,34 @@ export function WorkspaceLayout({
     setEditorSize(newEditorSize);
     setAiPanelSize(newAiPanelSize);
     
+    // Sync collapsed states based on actual panel sizes
+    // Use different thresholds for collapse vs expand to make it more responsive
+    const fileExplorerShouldBeCollapsed = isFileExplorerCollapsed 
+      ? newFileExplorerSize < PANEL_CONFIG.fileExplorer.collapseThreshold   // When collapsed, expand when dragged past threshold
+      : newFileExplorerSize <= PANEL_CONFIG.fileExplorer.collapseThreshold; // When expanded, collapse when dragged below threshold
+    const aiPanelShouldBeCollapsed = isAiPanelCollapsed
+      ? newAiPanelSize < PANEL_CONFIG.aiPanel.collapseThreshold             // Same logic for AI panel
+      : newAiPanelSize <= PANEL_CONFIG.aiPanel.collapseThreshold;
+    
+    if (fileExplorerShouldBeCollapsed !== isFileExplorerCollapsed) {
+      setIsFileExplorerCollapsed(fileExplorerShouldBeCollapsed);
+    }
+    
+    if (aiPanelShouldBeCollapsed !== isAiPanelCollapsed) {
+      setIsAiPanelCollapsed(aiPanelShouldBeCollapsed);
+    }
+    
     // Debounced save to localStorage
     updatePanelSizes({
       fileExplorerSize: newFileExplorerSize,
       editorSize: newEditorSize,
       aiPanelSize: newAiPanelSize,
+    });
+    
+    // Update collapsed states in localStorage
+    updateCollapsedStates({
+      isFileExplorerCollapsed: fileExplorerShouldBeCollapsed,
+      isAiPanelCollapsed: aiPanelShouldBeCollapsed,
     });
   };
   
@@ -208,15 +247,15 @@ export function WorkspaceLayout({
           <ResizablePanel
             ref={fileExplorerRef}
             defaultSize={fileExplorerSize}
-            minSize={15}
-            maxSize={40}
+            minSize={PANEL_CONFIG.fileExplorer.minSize}
+            maxSize={PANEL_CONFIG.fileExplorer.maxSize}
             collapsible={true}
-            collapsedSize={3}
+            collapsedSize={PANEL_CONFIG.fileExplorer.collapsedSize}
             onCollapse={() => setIsFileExplorerCollapsed(true)}
             onExpand={() => setIsFileExplorerCollapsed(false)}
             className="bg-secondary/30"
           >
-            <div className="h-full flex flex-col">
+            <div className={`h-full flex flex-col ${isFileExplorerCollapsed ? 'overflow-hidden' : ''}`}>
               <div className="h-10 border-b flex items-center justify-between px-2">
                 {!isFileExplorerCollapsed ? (
                   <>
@@ -277,10 +316,10 @@ export function WorkspaceLayout({
           <ResizablePanel
             ref={aiPanelRef}
             defaultSize={aiPanelSize}
-            minSize={20}
-            maxSize={40}
+            minSize={PANEL_CONFIG.aiPanel.minSize}
+            maxSize={PANEL_CONFIG.aiPanel.maxSize}
             collapsible={true}
-            collapsedSize={3}
+            collapsedSize={PANEL_CONFIG.aiPanel.collapsedSize}
             onCollapse={() => setIsAiPanelCollapsed(true)}
             onExpand={() => setIsAiPanelCollapsed(false)}
             className="bg-secondary/30"
@@ -316,7 +355,7 @@ export function WorkspaceLayout({
                 )}
               </div>
               {!isAiPanelCollapsed && (
-                <div className="flex-1 p-4">
+                <div className="flex-1 p-2">
                   {aiPanel || (
                     <div className="text-sm text-muted-foreground">
                       AI features coming soon

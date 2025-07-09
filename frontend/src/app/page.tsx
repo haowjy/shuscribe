@@ -32,8 +32,8 @@ export default function HomePage() {
   return (
     <WorkspaceLayout
       projectId={projectId}
-      fileExplorer={<FileExplorer onFileSelect={handleFileSelect} />}
-      editor={<EditorWorkspace selectedFile={selectedFile} projectId={projectId || "default"} />}
+      fileExplorer={<FileExplorer projectId={projectId || "project-fantasy-novel"} onFileSelect={handleFileSelect} />}
+      editor={<EditorWorkspace selectedFile={selectedFile} projectId={projectId || "project-fantasy-novel"} />}
       aiPanel={<AiPanel />}
     />
   );

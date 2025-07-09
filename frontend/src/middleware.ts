@@ -38,7 +38,8 @@ export async function middleware(request: NextRequest) {
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/api/auth')
+    !request.nextUrl.pathname.startsWith('/api/auth') &&
+    !request.nextUrl.pathname.startsWith('/api/') // Allow all API routes for demo
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()

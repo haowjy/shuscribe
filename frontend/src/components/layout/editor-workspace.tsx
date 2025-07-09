@@ -29,12 +29,25 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { EditorTab, mockTabs } from "@/data/editor-tabs";
+import { useProjectData } from "@/lib/query/hooks";
 import { FileItem } from "@/data/file-tree";
 import { usePersistedEditorState } from "@/hooks/use-persisted-editor-state";
 import { FictionEditor } from "@/components/editor/fiction-editor";
 import { createEmptyDoc } from "@/lib/prosemirror/schema";
 import { cn } from "@/lib/utils";
+
+// Updated EditorTab interface to match API data
+export interface EditorTab {
+  id: string;
+  name: string;
+  content: object; // ProseMirror JSON document
+  isDirty?: boolean;
+  isTemp?: boolean;
+  filePath?: string;
+  order: number;
+  documentId?: string; // API document ID
+  projectId?: string;
+}
 
 interface EditorWorkspaceProps {
   selectedFile?: FileItem | null;
@@ -42,6 +55,11 @@ interface EditorWorkspaceProps {
 }
 
 export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProps) {
+  // API data loading
+  const { data: projectData, isLoading: projectLoading, error: projectError } = useProjectData(projectId);
+  
+  
+  // State management
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("");
   const [tempFileCounter, setTempFileCounter] = useState(1);
@@ -51,7 +69,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
   const [visibleTabs, setVisibleTabs] = useState<EditorTab[]>([]);
   const [overflowTabs, setOverflowTabs] = useState<EditorTab[]>([]);
   const tabContainerRef = useRef<HTMLDivElement>(null);
-  const [maxVisibleTabs, setMaxVisibleTabs] = useState(8); // Default estimate
+  const [maxVisibleTabs, setMaxVisibleTabs] = useState(8);
   const [sortedTabs, setSortedTabs] = useState<EditorTab[]>([]);
   
   // Configure drag sensors
@@ -111,7 +129,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
         ref={setNodeRef}
         style={style}
         className={cn(
-          "flex items-center px-3 py-2 text-sm border-r cursor-pointer group relative min-w-0 flex-shrink-0",
+          "flex items-center px-3 py-2 text-sm border-r cursor-pointer group relative min-w-0 flex-shrink-0 h-10",
           isActive 
             ? "bg-background text-foreground border-b-2 border-b-primary" 
             : "hover:bg-secondary/50 text-muted-foreground",
@@ -131,7 +149,9 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
         <div className="flex items-center gap-1.5 min-w-0 flex-1 relative">
           {tab.isTemp && <FileEdit className="h-3 w-3 flex-shrink-0" />}
           <span className="truncate pr-6">{tab.name}</span>
-          {(tab.isDirty || hasDraft(tab.id)) && <span className="text-xs text-orange-500 absolute right-5">•</span>}
+          {(tab.isDirty || hasDraft(tab.id)) && (
+            <span className="text-xs text-orange-500 absolute right-2.5 top-1/2 -translate-y-1/2">•</span>
+          )}
           
           {canClose && (
             <Button
@@ -154,30 +174,41 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
   // Create a new untitled file
   const createNewFile = useCallback(() => {
     setTabs(currentTabs => {
-      // Generate a unique ID that doesn't conflict with existing tabs
-      let newCounter = tempFileCounter;
-      let newId = `temp-${newCounter}`;
+      // Find the lowest available untitled number
+      const existingUntitledNumbers = currentTabs
+        .filter(tab => tab.isTemp && tab.name.startsWith('Untitled-'))
+        .map(tab => {
+          const match = tab.name.match(/Untitled-(\d+)/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .sort((a, b) => a - b);
       
-      // Ensure ID is unique
-      while (currentTabs.some(tab => tab.id === newId)) {
-        newCounter++;
-        newId = `temp-${newCounter}`;
+      // Find the lowest available number starting from 1
+      let newNumber = 1;
+      for (const num of existingUntitledNumbers) {
+        if (num === newNumber) {
+          newNumber++;
+        } else {
+          break;
+        }
       }
+      
+      const newId = `temp-${newNumber}`;
       
       // Create empty ProseMirror document
       const emptyDoc = createEmptyDoc();
       
       const newTab: EditorTab = {
         id: newId,
-        name: `Untitled-${newCounter}`,
+        name: `Untitled-${newNumber}`,
         content: emptyDoc.toJSON(),
         isDirty: true,
         isTemp: true,
         order: Math.max(...currentTabs.map(t => t.order), -1) + 1
       };
       
-      // Update counter and set active tab
-      setTempFileCounter(newCounter + 1);
+      // Update counter to track highest used number (for reference)
+      setTempFileCounter(Math.max(tempFileCounter, newNumber + 1));
       setActiveTabId(newTab.id);
       
       // Save initial draft
@@ -189,42 +220,35 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
 
   // Handle file selection - create or switch to tab
   const handleFileSelect = useCallback((file: FileItem) => {
-    if (file.type === "folder") return;
+    if (file.type === "folder" || !projectData) return;
     
     setTabs(currentTabs => {
       // Check if tab already exists
       const existingTab = currentTabs.find(tab => tab.id === file.id);
       if (existingTab) {
-        // Just switch to existing tab, don't modify tabs array
         setTimeout(() => setActiveTabId(file.id), 0);
         return currentTabs;
       }
       
-      // Double-check to prevent race conditions
-      const stillExists = currentTabs.find(tab => tab.id === file.id);
-      if (stillExists) {
-        setTimeout(() => setActiveTabId(file.id), 0);
-        return currentTabs;
-      }
+      // Find corresponding document from API data
+      const document = projectData.documents.find(doc => {
+        // Match by file path or document ID stored in file.id if it's a document ID
+        return doc.path === file.name || doc.id === file.id;
+      });
       
-      // Check if we have mock data for this file
-      const mockTab = mockTabs.find(tab => 
-        tab.name === file.name || 
-        tab.filePath === file.name ||
-        file.name.includes(tab.name.replace('.md', ''))
-      );
-      
-      // Use mock content if available, otherwise create empty document
-      const content = mockTab ? mockTab.content : createEmptyDoc().toJSON();
+      // Use document content if available, otherwise create empty document
+      const content = document ? document.content : createEmptyDoc().toJSON();
       
       // Create new tab
       let newTab: EditorTab = {
         id: file.id,
         name: file.name,
-        filePath: file.name, // Store the file path separately
+        filePath: document?.path || file.name,
         content,
         isDirty: false,
-        order: Math.max(...currentTabs.map(t => t.order), -1) + 1
+        order: Math.max(...currentTabs.map(t => t.order), -1) + 1,
+        documentId: document?.id,
+        projectId: projectId
       };
       
       // Restore from draft if available
@@ -234,7 +258,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
       
       return [...currentTabs, newTab];
     });
-  }, [restoreContentFromDraft]);
+  }, [restoreContentFromDraft, projectData, projectId]);
 
   // Effect to handle selectedFile prop
   useEffect(() => {
@@ -246,17 +270,19 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
 
   const closeTab = useCallback((tabId: string) => {
     setTabs(currentTabs => {
-      // Don't close if it's the last tab
-      if (currentTabs.length <= 1) return currentTabs;
-      
       const tabIndex = currentTabs.findIndex(tab => tab.id === tabId);
       const newTabs = currentTabs.filter(tab => tab.id !== tabId);
       
-      // If closing the active tab, switch to an adjacent tab
+      // If closing the active tab, switch to an adjacent tab (or clear if no tabs left)
       if (tabId === activeTabId) {
-        // Try to select the tab to the right, or to the left if it's the last tab
-        const newIndex = Math.min(tabIndex, newTabs.length - 1);
-        setActiveTabId(newTabs[newIndex].id);
+        if (newTabs.length === 0) {
+          // No tabs left - clear active tab
+          setActiveTabId("");
+        } else {
+          // Try to select the tab to the right, or to the left if it's the last tab
+          const newIndex = Math.min(tabIndex, newTabs.length - 1);
+          setActiveTabId(newTabs[newIndex].id);
+        }
       }
       
       // Clean up draft if exists
@@ -266,32 +292,45 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     });
   }, [activeTabId, removeDraft]);
 
-  // Initialize state from localStorage on mount
+  // Initialize state from localStorage or API data
   useEffect(() => {
-    if (!initializationRef.current) {
+    if (!initializationRef.current && projectData) {
       initializationRef.current = true;
       const savedState = loadEditorState();
       
       if (savedState && savedState.tabs.length > 0) {
-        setTabs(ensureTabOrder(savedState.tabs));
+        // Validate saved tabs against current project data
+        const validTabs = savedState.tabs.filter((tab: any) => {
+          if (tab.isTemp) return true; // Keep temp files
+          // Check if document still exists in project (handle legacy tabs without documentId)
+          if (!tab.documentId) return false; // Skip tabs without documentId
+          return projectData.documents.some(doc => doc.id === tab.documentId);
+        });
+        
+        setTabs(ensureTabOrder(validTabs));
         setActiveTabId(savedState.activeTabId);
         setTempFileCounter(savedState.tempFileCounter);
       } else {
-        // Load mock tabs with proper ordering and IDs
-        const initialTabs = mockTabs.map((tab, index) => ({
-          ...tab,
+        // Create initial tabs from project documents (first few documents)
+        const initialTabs: EditorTab[] = projectData.documents.slice(0, 3).map((doc, index) => ({
+          id: doc.id,
+          name: doc.title,
+          filePath: doc.path,
+          content: doc.content,
+          isDirty: false,
           order: index,
-          id: `mock-${index + 1}` // Give them unique IDs
+          documentId: doc.id,
+          projectId: projectId
         }));
         
         setTabs(initialTabs);
         setActiveTabId(initialTabs[0]?.id || '');
-        setTempFileCounter(mockTabs.length + 1);
+        setTempFileCounter(initialTabs.length + 1);
       }
       
       setIsInitialized(true);
     }
-  }, [loadEditorState, saveDraft, ensureTabOrder]);
+  }, [loadEditorState, ensureTabOrder, projectData, projectId]);
   
   // Save state to localStorage when tabs or activeTabId change (after initialization)
   useEffect(() => {
@@ -480,10 +519,43 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     saveDraft(tabId, JSON.stringify(content), true);
   }, [saveDraft]);
 
+  // Show loading state while project data is loading
+  if (projectLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">Loading project...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if project data failed to load
+  if (projectError) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-destructive mb-2">Failed to load project</p>
+          <p className="text-xs text-muted-foreground">{projectError.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no project data
+  if (!projectData) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">No project selected</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Tab Bar */}
-      <div className="flex items-center border-b bg-secondary/20">
+      <div className="flex items-center border-b bg-secondary/20 h-10">
         {/* Scrollable Tabs */}
         <div className="flex-1 min-w-0">
           <ScrollArea className="w-full">
@@ -507,7 +579,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
                       isActive={activeTabId === tab.id}
                       onActivate={setActiveTabId}
                       onClose={closeTab}
-                      canClose={tabs.length > 1}
+                      canClose={true}
                       hasDraft={hasDraft}
                     />
                   ))}
@@ -547,21 +619,19 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     {tab.isTemp && <FileEdit className="h-3 w-3 flex-shrink-0" />}
                     <span className="truncate">{tab.name}</span>
-                    {(tab.isDirty || hasDraft(tab.id)) && <span className="text-xs text-orange-500">•</span>}
+                    {(tab.isDirty || hasDraft(tab.id)) && <span className="text-xs text-orange-500 ml-1">•</span>}
                   </div>
-                  {tabs.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        closeTab(tab.id);
-                      }}
-                      className="h-auto p-0.5 ml-2 opacity-70 hover:opacity-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(tab.id);
+                    }}
+                    className="h-auto p-0.5 ml-2 opacity-70 hover:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -591,8 +661,17 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
             className="h-full"
           />
         ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            No document open
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-lg text-muted-foreground mb-2">No documents open</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Select a file from the explorer or create a new document to get started
+              </p>
+              <Button onClick={createNewFile} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                New Document
+              </Button>
+            </div>
           </div>
         )}
       </div>
