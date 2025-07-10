@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { X, Plus, FileEdit, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, FileEdit, MoreHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   DndContext,
   closestCenter,
@@ -24,18 +32,15 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { RichEditor } from "@/components/editor";
 import { 
-  useDocumentWithStorage, 
-  useCreateDocumentWithStorage,
-  useSaveDocument,
   useProjectDataWithStorage 
 } from "@/lib/query/enhanced-hooks";
 import { 
   EditorDocument, 
-  DocumentState,
   DraftManager,
   EditorStateManager 
 } from "@/lib/editor";
 import { FileItem } from "@/data/file-tree";
+import { TabStatusIndicator } from "./tab-status-indicator";
 import { cn } from "@/lib/utils";
 
 // Simplified tab interface
@@ -51,6 +56,7 @@ export interface EditorTab {
 interface EditorWorkspaceProps {
   selectedFile?: FileItem | null;
   projectId: string;
+  onFileDeselect?: (fileId: string) => void;
 }
 
 // Sortable Tab Component
@@ -81,60 +87,52 @@ function SortableTab({ tab, isActive, onActivate, onClose, hasDraft }: SortableT
     <div
       ref={setNodeRef}
       style={style}
+      data-tab-id={tab.id}
       className={cn(
-        "group relative flex items-center px-4 py-2 text-sm border-r cursor-pointer min-w-[120px] max-w-[200px] flex-shrink-0",
+        "group relative flex items-center text-sm border-r cursor-pointer min-w-[120px] max-w-[200px] flex-shrink-0",
         isActive
           ? "bg-background text-foreground border-b-2 border-b-primary"
           : "hover:bg-secondary/50 text-muted-foreground bg-secondary/20",
         isDragging && "opacity-50 z-50"
       )}
-      onClick={() => onActivate(tab.id)}
-      {...attributes}
-      {...listeners}
     >
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        {tab.isTemp && <FileEdit className="h-3 w-3 flex-shrink-0 text-muted-foreground" />}
+      {/* Drag handle area - takes up most of the tab */}
+      <div 
+        className="flex items-center gap-2 min-w-0 flex-1 pr-6 py-2 pl-2"
+        onClick={() => onActivate(tab.id)}
+        {...attributes}
+        {...listeners}
+      >
+        {tab.isTemp && <FileEdit className="h-2 w-2 flex-shrink-0 text-muted-foreground" />}
         <span className="truncate">{tab.title}</span>
-        {(tab.isDirty || hasDraft) && (
-          <span className="text-xs text-orange-500 flex-shrink-0">•</span>
-        )}
       </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose(tab.id);
-        }}
-        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 h-5 w-5 p-0 transition-opacity hover:bg-destructive/10"
-      >
-        <X className="h-3 w-3" />
-      </Button>
+      <TabStatusIndicator
+        isDirty={tab.isDirty}
+        hasDraft={hasDraft}
+        onClose={() => onClose(tab.id)}
+        variant="tab"
+      />
     </div>
   );
 }
 
-export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProps) {
+export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: EditorWorkspaceProps) {
   // State management
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
-  const [tempCounter, setTempCounter] = useState(1);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const allowDropdownCloseRef = useRef(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const tabContainerRef = useRef<HTMLDivElement>(null);
   
   // Data fetching
   const { data: projectData, isLoading: projectLoading, error: projectError } = useProjectDataWithStorage(projectId);
-  const createDocumentMutation = useCreateDocumentWithStorage();
-  const saveDocumentMutation = useSaveDocument();
 
   // Active tab data
   const activeTab = tabs.find(tab => tab.id === activeTabId);
-  const { data: activeDocumentData } = useDocumentWithStorage(activeTabId);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -209,6 +207,115 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     }
   }, [tabs, activeTabId, isInitialized]);
 
+  // Handle tab activation with auto-scroll
+  const activateTab = useCallback((tabId: string, skipAutoScroll = false) => {
+    setActiveTabId(tabId);
+    
+    // Skip auto-scroll if requested (e.g., when called from dropdown)
+    if (skipAutoScroll) return;
+    
+    // Use setTimeout to ensure DOM is updated before scrolling
+    setTimeout(() => {
+      if (!scrollAreaRef.current) return;
+      
+      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
+      const tabElement = viewport?.querySelector(`[data-tab-id="${tabId}"]`) as HTMLElement;
+      
+      if (viewport && tabElement) {
+        const tabRect = tabElement.getBoundingClientRect();
+        const viewportRect = viewport.getBoundingClientRect();
+        
+        // Check if tab is already fully visible
+        const isFullyVisible = tabRect.left >= viewportRect.left && tabRect.right <= viewportRect.right;
+        
+        if (!isFullyVisible) {
+          // Calculate scroll position to center the tab in view
+          const tabCenter = tabRect.left + tabRect.width / 2;
+          const viewportCenter = viewportRect.left + viewportRect.width / 2;
+          const scrollAmount = tabCenter - viewportCenter;
+          
+          viewport.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+      }
+    }, 0);
+  }, []);
+
+  // Helper function to find lowest available untitled number
+  const getLowestAvailableUntitledNumber = useCallback(() => {
+    const untitledNumbers = tabs
+      .filter(tab => tab.title.startsWith('Untitled-'))
+      .map(tab => {
+        const match = tab.title.match(/^Untitled-(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(num => num > 0);
+
+    // Find the lowest available number starting from 1
+    for (let i = 1; i <= untitledNumbers.length + 1; i++) {
+      if (!untitledNumbers.includes(i)) {
+        return i;
+      }
+    }
+    return 1; // Fallback
+  }, [tabs]);
+
+  // Create new temporary document
+  const createNewDocument = useCallback(async () => {
+    const untitledNumber = getLowestAvailableUntitledNumber();
+    const newTab: EditorTab = {
+      id: `temp-${Date.now()}-${untitledNumber}`,
+      title: `Untitled-${untitledNumber}`,
+      content: { type: 'doc', content: [{ type: 'paragraph' }] },
+      isDirty: true,
+      isTemp: true,
+      order: Math.max(...tabs.map(t => t.order), -1) + 1,
+    };
+
+    setTabs(prev => [...prev, newTab]);
+    activateTab(newTab.id);
+  }, [tabs, getLowestAvailableUntitledNumber, activateTab]);
+
+  // Close tab
+  const closeTab = useCallback((tabId: string, fromDropdown = false) => {
+    setTabs(prev => {
+      const newTabs = prev.filter(tab => tab.id !== tabId);
+      
+      // If closing active tab, switch to adjacent tab
+      if (tabId === activeTabId) {
+        const tabIndex = prev.findIndex(tab => tab.id === tabId);
+        if (newTabs.length === 0) {
+          setActiveTabId("");
+        } else {
+          const newIndex = Math.min(tabIndex, newTabs.length - 1);
+          // Skip auto-scroll when closing from dropdown to prevent dropdown from closing
+          activateTab(newTabs[newIndex].id, fromDropdown);
+        }
+      }
+      
+      return newTabs;
+    });
+
+    // Notify parent that file should be deselected
+    onFileDeselect?.(tabId);
+
+    // Clean up draft
+    DraftManager.removeDraft(tabId);
+  }, [activeTabId, activateTab, onFileDeselect]);
+
+  // Close all tabs
+  const closeAllTabs = useCallback(() => {
+    // Clean up all drafts
+    tabs.forEach(tab => {
+      DraftManager.removeDraft(tab.id);
+      // Notify parent that each file should be deselected
+      onFileDeselect?.(tab.id);
+    });
+    
+    // Clear all tabs and active tab
+    setTabs([]);
+    setActiveTabId("");
+  }, [tabs, onFileDeselect]);
+
   // Handle file selection
   const handleFileSelect = useCallback((file: FileItem) => {
     if (file.type === "folder" || !projectData) return;
@@ -216,7 +323,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     // Check if tab already exists
     const existingTab = tabs.find(tab => tab.id === file.id);
     if (existingTab) {
-      setActiveTabId(file.id);
+      activateTab(file.id);
       return;
     }
 
@@ -235,8 +342,8 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     };
 
     setTabs(prev => [...prev, newTab]);
-    setActiveTabId(file.id);
-  }, [tabs, projectData]);
+    activateTab(file.id);
+  }, [tabs, projectData, activateTab]);
 
   // Handle selectedFile prop
   useEffect(() => {
@@ -244,45 +351,6 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
       handleFileSelect(selectedFile);
     }
   }, [selectedFile, handleFileSelect]);
-
-  // Create new temporary document
-  const createNewDocument = useCallback(async () => {
-    const newTab: EditorTab = {
-      id: `temp-${Date.now()}-${tempCounter}`,
-      title: `Untitled-${tempCounter}`,
-      content: { type: 'doc', content: [{ type: 'paragraph' }] },
-      isDirty: true,
-      isTemp: true,
-      order: Math.max(...tabs.map(t => t.order), -1) + 1,
-    };
-
-    setTabs(prev => [...prev, newTab]);
-    setActiveTabId(newTab.id);
-    setTempCounter(prev => prev + 1);
-  }, [tabs, tempCounter]);
-
-  // Close tab
-  const closeTab = useCallback((tabId: string) => {
-    setTabs(prev => {
-      const newTabs = prev.filter(tab => tab.id !== tabId);
-      
-      // If closing active tab, switch to adjacent tab
-      if (tabId === activeTabId) {
-        const tabIndex = prev.findIndex(tab => tab.id === tabId);
-        if (newTabs.length === 0) {
-          setActiveTabId("");
-        } else {
-          const newIndex = Math.min(tabIndex, newTabs.length - 1);
-          setActiveTabId(newTabs[newIndex].id);
-        }
-      }
-      
-      return newTabs;
-    });
-
-    // Clean up draft
-    DraftManager.removeDraft(tabId);
-  }, [activeTabId]);
 
   // Handle drag end
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -317,44 +385,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     // Auto-save will be handled by the editor component
   }, [activeTabId]);
 
-  // Check scroll state
-  const checkScrollState = useCallback(() => {
-    if (scrollAreaRef.current) {
-      // Access the actual scrollable viewport element inside the ScrollArea
-      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
-      if (viewport) {
-        const { scrollLeft, scrollWidth, clientWidth } = viewport;
-        setCanScrollLeft(scrollLeft > 0);
-        setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
-      }
-    }
-  }, []);
 
-  // Handle scroll events
-  const handleScroll = useCallback(() => {
-    checkScrollState();
-  }, [checkScrollState]);
-
-  // Scroll controls with better sensitivity
-  const scrollLeft = useCallback(() => {
-    if (scrollAreaRef.current) {
-      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
-      if (viewport) {
-        const scrollAmount = Math.min(150, viewport.clientWidth / 3);
-        viewport.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-      }
-    }
-  }, []);
-
-  const scrollRight = useCallback(() => {
-    if (scrollAreaRef.current) {
-      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
-      if (viewport) {
-        const scrollAmount = Math.min(150, viewport.clientWidth / 3);
-        viewport.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-      }
-    }
-  }, []);
 
   // Handle wheel scroll
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -373,32 +404,6 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     }
   }, []);
 
-  // Check scroll state when tabs change
-  useEffect(() => {
-    checkScrollState();
-  }, [tabs, checkScrollState]);
-
-  // Monitor scroll state with ResizeObserver
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
-      if (viewport) {
-        // Check initial state
-        checkScrollState();
-        
-        // Create ResizeObserver to detect container size changes
-        const resizeObserver = new ResizeObserver(() => {
-          checkScrollState();
-        });
-        
-        resizeObserver.observe(viewport);
-        
-        return () => {
-          resizeObserver.disconnect();
-        };
-      }
-    }
-  }, [checkScrollState]);
 
   if (projectLoading) {
     return (
@@ -426,24 +431,11 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     <div className="h-full flex flex-col">
       {/* Tab Bar */}
       <div className="flex items-center border-b bg-secondary/10 h-10">
-        {/* Scroll Left Button */}
-        {canScrollLeft && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={scrollLeft}
-            className="h-full rounded-none border-r px-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        )}
-
         {/* Tabs */}
         <div className="flex-1 overflow-hidden">
           <ScrollArea 
             ref={scrollAreaRef} 
             className="w-full"
-            onScroll={handleScroll}
           >
             <DndContext
               sensors={sensors}
@@ -464,7 +456,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
                       key={tab.id}
                       tab={tab}
                       isActive={activeTabId === tab.id}
-                      onActivate={setActiveTabId}
+                      onActivate={activateTab}
                       onClose={closeTab}
                       hasDraft={DraftManager.hasDraft(tab.id)}
                     />
@@ -476,16 +468,91 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
           </ScrollArea>
         </div>
 
-        {/* Scroll Right Button */}
-        {canScrollRight && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={scrollRight}
-            className="h-full rounded-none border-l px-2"
+        {/* All Tabs Dropdown */}
+        {tabs.length > 1 && (
+          <DropdownMenu 
+            open={isDropdownOpen} 
+            onOpenChange={(open) => {
+              // Only allow closing when explicitly permitted
+              if (!open && !allowDropdownCloseRef.current) {
+                // Prevent automatic closing - keep dropdown open
+                return;
+              }
+              setIsDropdownOpen(open);
+              // Reset the flag after use
+              allowDropdownCloseRef.current = false;
+            }}
           >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-full rounded-none border-l px-2"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="end" 
+              className="max-h-80 overflow-y-auto"
+              style={{ 
+                width: '17rem', /* 272px - slightly wider to account for scrollbar */
+                scrollbarGutter: 'stable' /* Reserve space for scrollbar */
+              }}
+            >
+              <DropdownMenuLabel>All Tabs</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {tabs.map((tab) => (
+                <DropdownMenuItem
+                  key={tab.id}
+                  onSelect={(event) => {
+                    // Prevent dropdown auto-close - we handle activation manually
+                    event.preventDefault();
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 group",
+                    activeTabId === tab.id && "bg-accent"
+                  )}
+                >
+                  {tab.isTemp && <FileEdit className="h-3 w-3 text-muted-foreground" />}
+                  <span 
+                    className="flex-1 truncate cursor-pointer" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      activateTab(tab.id);
+                      allowDropdownCloseRef.current = true;
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    {tab.title}
+                  </span>
+                  <TabStatusIndicator
+                    isDirty={tab.isDirty}
+                    hasDraft={DraftManager.hasDraft(tab.id)}
+                    onClose={(e) => {
+                      e?.preventDefault();
+                      e?.stopPropagation();
+                      closeTab(tab.id, true); // fromDropdown = true
+                      // Keep dropdown open for multiple closures
+                    }}
+                    variant="dropdown"
+                  />
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  closeAllTabs();
+                  allowDropdownCloseRef.current = true;
+                  setIsDropdownOpen(false);
+                }}
+                className="flex items-center gap-2 text-destructive focus:text-destructive"
+              >
+                <X className="h-3 w-3" />
+                <span>Close All Tabs</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {/* New Tab Button */}

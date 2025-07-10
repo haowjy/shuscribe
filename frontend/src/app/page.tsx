@@ -29,11 +29,18 @@ export default function HomePage() {
     setSelectedFile(file);
   };
 
+  const handleFileDeselect = (fileId: string) => {
+    // Clear selected file if it matches the closed tab
+    if (selectedFile?.id === fileId) {
+      setSelectedFile(null);
+    }
+  };
+
   return (
     <WorkspaceLayout
       projectId={projectId}
       fileExplorer={<FileExplorer projectId={projectId || "project-fantasy-novel"} onFileSelect={handleFileSelect} />}
-      editor={<EditorWorkspace selectedFile={selectedFile} projectId={projectId || "project-fantasy-novel"} />}
+      editor={<EditorWorkspace selectedFile={selectedFile} projectId={projectId || "project-fantasy-novel"} onFileDeselect={handleFileDeselect} />}
       aiPanel={<AiPanel />}
     />
   );

@@ -53,6 +53,9 @@ importers:
       '@tiptap/core':
         specifier: ^2.25.0
         version: 2.25.0(@tiptap/pm@2.25.0)
+      '@tiptap/extension-character-count':
+        specifier: ^2.25.0
+        version: 2.25.0(@tiptap/core@2.25.0(@tiptap/pm@2.25.0))(@tiptap/pm@2.25.0)
       '@tiptap/extension-code-block-lowlight':
         specifier: ^2.25.0
         version: 2.25.0(@tiptap/core@2.25.0(@tiptap/pm@2.25.0))(@tiptap/extension-code-block@2.25.0(@tiptap/core@2.25.0(@tiptap/pm@2.25.0))(@tiptap/pm@2.25.0))(@tiptap/pm@2.25.0)(highlight.js@11.11.1)(lowlight@3.3.0)
@@ -1005,6 +1008,12 @@ packages:
     resolution: {integrity: sha512-KD+q/q6KIU2anedjtjG8vELkL5rYFdNHWc5XcUJgQoxbOCK3/sBuOgcn9mnFA2eAS6UkraN9Yx0BXEDbXX2HOw==}
     peerDependencies:
       '@tiptap/core': ^2.7.0
+
+  '@tiptap/extension-character-count@2.25.0':
+    resolution: {integrity: sha512-F+4DxJFptbX3oioqNwS38zOTi6gH9CumV/ISeOIvr4ao7Iija3tNonGDsHhxD05njjbYNIp1OKsxtnzbWukgMA==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+      '@tiptap/pm': ^2.7.0
 
   '@tiptap/extension-code-block-lowlight@2.25.0':
     resolution: {integrity: sha512-RunmpexQ+sYNmQbBdjQq/6s1aYYx7lQxOzPO5Q64qx5FjVbekZkQI9c98jv4v0ez7qjRLZBcyG2ETD3bQuHs4Q==}
@@ -3573,6 +3582,11 @@ snapshots:
   '@tiptap/extension-bullet-list@2.25.0(@tiptap/core@2.25.0(@tiptap/pm@2.25.0))':
     dependencies:
       '@tiptap/core': 2.25.0(@tiptap/pm@2.25.0)
+
+  '@tiptap/extension-character-count@2.25.0(@tiptap/core@2.25.0(@tiptap/pm@2.25.0))(@tiptap/pm@2.25.0)':
+    dependencies:
+      '@tiptap/core': 2.25.0(@tiptap/pm@2.25.0)
+      '@tiptap/pm': 2.25.0
 
   '@tiptap/extension-code-block-lowlight@2.25.0(@tiptap/core@2.25.0(@tiptap/pm@2.25.0))(@tiptap/extension-code-block@2.25.0(@tiptap/core@2.25.0(@tiptap/pm@2.25.0))(@tiptap/pm@2.25.0))(@tiptap/pm@2.25.0)(highlight.js@11.11.1)(lowlight@3.3.0)':
     dependencies:

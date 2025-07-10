@@ -5,6 +5,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import CharacterCount from '@tiptap/extension-character-count';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Selection } from '@tiptap/pm/state';
@@ -126,6 +127,9 @@ export function TiptapEditor({
       }),
       CodeBlockLowlight.configure({
         lowlight,
+      }),
+      CharacterCount.configure({
+        limit: null, // No character limit
       }),
       ClickToFocusExtension,
       ...extensions
