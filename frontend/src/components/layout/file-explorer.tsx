@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FileItem } from "@/data/file-tree";
 import { useProjectData } from "@/lib/query/hooks";
-import { ProjectData } from "@/types/project";
 import { cn } from "@/lib/utils";
 
 // No conversion needed - API already returns FileItem format
@@ -188,7 +188,6 @@ interface FileExplorerProps {
 export function FileExplorer({ projectId, onFileSelect }: FileExplorerProps) {
   const { data: projectData, isLoading, error } = useProjectData(projectId);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
-  
 
   const handleFileSelect = (file: FileItem) => {
     setSelectedFile(file);
@@ -270,18 +269,21 @@ export function FileExplorer({ projectId, onFileSelect }: FileExplorerProps) {
       </div>
       
       {/* File Tree */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-1">
-        {fileTree.map((item) => (
-          <FileTreeItem
-            key={item.id}
-            item={item}
-            depth={0}
-            selectedFileId={selectedFile?.id}
-            onFileSelect={handleFileSelect}
-            onFileAction={handleFileAction}
-          />
-        ))}
-      </div>
+      <ScrollArea className="h-[calc(100vh-200px)] p-1">
+        <div className="space-y-1">
+          {fileTree.map((item) => (
+            <FileTreeItem
+              key={item.id}
+              item={item}
+              depth={0}
+              selectedFileId={selectedFile?.id}
+              onFileSelect={handleFileSelect}
+              onFileAction={handleFileAction}
+            />
+          ))}
+        </div>
+        <ScrollBar orientation="vertical" />
+      </ScrollArea>
       
       {/* File Info */}
       {selectedFile && (

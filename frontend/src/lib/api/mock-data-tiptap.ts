@@ -545,7 +545,43 @@ export const mockDocuments: Record<string, Document> = {
     wordCount: 156,
     createdAt: '2024-01-15T12:00:00Z',
     updatedAt: '2024-01-16T15:30:00Z'
-  }
+  },
+
+  // TEST FOLDER: Many documents for scroll testing
+  ...Array.from({ length: 30 }, (_, i) => ({
+    [`test-doc-${i + 1}`]: {
+      id: `test-doc-${i + 1}`,
+      projectId: 'project-fantasy-novel',
+      title: `Test Document ${i + 1}`,
+      path: `/test-docs/document-${String(i + 1).padStart(2, '0')}.md`,
+      content: {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": { "level": 1 },
+            "content": [{ "type": "text", "text": `Test Document ${i + 1}` }]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              { "type": "text", "text": `This is test document number ${i + 1}. It's created to test the scrolling functionality in the file explorer.` }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              { "type": "text", "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua." }
+            ]
+          }
+        ]
+      },
+      tags: ['test', 'scrolling', `doc-${i + 1}`],
+      wordCount: 25,
+      createdAt: '2024-01-20T10:00:00Z',
+      updatedAt: '2024-01-20T10:00:00Z'
+    }
+  })).reduce((acc, item) => ({ ...acc, ...item }), {})
 };
 
 // Project data structure with updated documents
@@ -560,6 +596,8 @@ export const mockProjectData: Record<string, ProjectData> = {
       mockDocuments['doc-chapter1-789'],
       mockDocuments['doc-capital-city-321'],
       mockDocuments['doc-magic-system-999'],
+      // Add all test documents
+      ...Array.from({ length: 30 }, (_, i) => mockDocuments[`test-doc-${i + 1}`]),
     ],
     fileTree: [
       {
@@ -649,6 +687,20 @@ export const mockProjectData: Record<string, ProjectData> = {
             tags: ['worldbuilding', 'magic', 'system']
           }
         ]
+      },
+      {
+        id: 'folder-test-docs',
+        name: 'test-docs',
+        type: 'folder',
+        path: '/test-docs',
+        children: Array.from({ length: 30 }, (_, i) => ({
+          id: `test-doc-${i + 1}`,
+          name: `Test Document ${i + 1}`,
+          type: 'file',
+          path: `/test-docs/document-${String(i + 1).padStart(2, '0')}.md`,
+          documentId: `test-doc-${i + 1}`,
+          tags: ['test', 'scrolling', `doc-${i + 1}`]
+        }))
       }
     ],
     tags: ['fire-magic', 'earth-magic', 'trauma', 'mentor', 'protagonist', 'settlement', 'urban', 'politics', 'opening-chapter', 'worldbuilding', 'magic', 'system'],

@@ -121,8 +121,11 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
   const [activeTabId, setActiveTabId] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
   const [tempCounter, setTempCounter] = useState(1);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const tabContainerRef = useRef<HTMLDivElement>(null);
   
   // Data fetching
   const { data: projectData, isLoading: projectLoading, error: projectError } = useProjectDataWithStorage(projectId);
@@ -150,24 +153,30 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     if (!isInitialized && projectData) {
       const savedState = EditorStateManager.getState();
       
-      if (savedState && savedState.openDocuments.length > 0) {
-        // Restore saved tabs
-        const restoredTabs: EditorTab[] = savedState.openDocuments.map((docId, index) => {
-          const projectDoc = projectData.documents.find(d => d.id === docId);
-          return {
-            id: docId,
-            title: projectDoc?.title || `Document ${docId}`,
-            content: projectDoc?.content || { type: 'doc', content: [{ type: 'paragraph' }] },
-            isDirty: false,
-            isTemp: false,
-            order: savedState.documentOrder[docId] || index,
-          };
-        }).sort((a, b) => a.order - b.order);
-        
-        setTabs(restoredTabs);
-        setActiveTabId(savedState.activeDocumentId || restoredTabs[0]?.id || "");
+      if (savedState) {
+        if (savedState.openDocuments.length > 0) {
+          // Restore saved tabs
+          const restoredTabs: EditorTab[] = savedState.openDocuments.map((docId, index) => {
+            const projectDoc = projectData.documents.find(d => d.id === docId);
+            return {
+              id: docId,
+              title: projectDoc?.title || `Document ${docId}`,
+              content: projectDoc?.content || { type: 'doc', content: [{ type: 'paragraph' }] },
+              isDirty: false,
+              isTemp: false,
+              order: savedState.documentOrder[docId] || index,
+            };
+          }).sort((a, b) => a.order - b.order);
+          
+          setTabs(restoredTabs);
+          setActiveTabId(savedState.activeDocumentId || restoredTabs[0]?.id || "");
+        } else {
+          // Respect saved empty state - user closed all tabs intentionally
+          setTabs([]);
+          setActiveTabId("");
+        }
       } else {
-        // Create initial tab from first document
+        // No saved state - create initial tab from first document (first time user)
         const firstDoc = projectData.documents[0];
         if (firstDoc) {
           const initialTab: EditorTab = {
@@ -187,9 +196,9 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     }
   }, [projectData, isInitialized]);
 
-  // Save editor state when tabs change
+  // Save editor state when tabs change (including empty state)
   useEffect(() => {
-    if (isInitialized && tabs.length > 0) {
+    if (isInitialized) {
       const state = {
         activeDocumentId: activeTabId,
         openDocuments: tabs.map(t => t.id),
@@ -308,18 +317,88 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
     // Auto-save will be handled by the editor component
   }, [activeTabId]);
 
-  // Scroll controls
-  const scrollLeft = () => {
+  // Check scroll state
+  const checkScrollState = useCallback(() => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+      // Access the actual scrollable viewport element inside the ScrollArea
+      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
+      if (viewport) {
+        const { scrollLeft, scrollWidth, clientWidth } = viewport;
+        setCanScrollLeft(scrollLeft > 0);
+        setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+      }
     }
-  };
+  }, []);
 
-  const scrollRight = () => {
+  // Handle scroll events
+  const handleScroll = useCallback(() => {
+    checkScrollState();
+  }, [checkScrollState]);
+
+  // Scroll controls with better sensitivity
+  const scrollLeft = useCallback(() => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
+      if (viewport) {
+        const scrollAmount = Math.min(150, viewport.clientWidth / 3);
+        viewport.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      }
     }
-  };
+  }, []);
+
+  const scrollRight = useCallback(() => {
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
+      if (viewport) {
+        const scrollAmount = Math.min(150, viewport.clientWidth / 3);
+        viewport.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    }
+  }, []);
+
+  // Handle wheel scroll
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (scrollAreaRef.current) {
+      // Access the actual scrollable viewport element inside the ScrollArea
+      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
+      if (viewport) {
+        // Check if there's actually scrollable content
+        const { scrollWidth, clientWidth } = viewport;
+        if (scrollWidth > clientWidth) {
+          e.preventDefault();
+          const scrollAmount = e.deltaY * 0.5; // Adjust sensitivity
+          viewport.scrollBy({ left: scrollAmount, behavior: 'auto' });
+        }
+      }
+    }
+  }, []);
+
+  // Check scroll state when tabs change
+  useEffect(() => {
+    checkScrollState();
+  }, [tabs, checkScrollState]);
+
+  // Monitor scroll state with ResizeObserver
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
+      if (viewport) {
+        // Check initial state
+        checkScrollState();
+        
+        // Create ResizeObserver to detect container size changes
+        const resizeObserver = new ResizeObserver(() => {
+          checkScrollState();
+        });
+        
+        resizeObserver.observe(viewport);
+        
+        return () => {
+          resizeObserver.disconnect();
+        };
+      }
+    }
+  }, [checkScrollState]);
 
   if (projectLoading) {
     return (
@@ -348,7 +427,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
       {/* Tab Bar */}
       <div className="flex items-center border-b bg-secondary/10 h-10">
         {/* Scroll Left Button */}
-        {tabs.length > 4 && (
+        {canScrollLeft && (
           <Button
             variant="ghost"
             size="sm"
@@ -361,7 +440,11 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
 
         {/* Tabs */}
         <div className="flex-1 overflow-hidden">
-          <ScrollArea ref={scrollAreaRef} className="w-full">
+          <ScrollArea 
+            ref={scrollAreaRef} 
+            className="w-full"
+            onScroll={handleScroll}
+          >
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -371,7 +454,11 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
                 items={tabs.map(tab => tab.id)}
                 strategy={horizontalListSortingStrategy}
               >
-                <div className="flex">
+                <div 
+                  ref={tabContainerRef} 
+                  className="flex"
+                  onWheel={handleWheel}
+                >
                   {tabs.map(tab => (
                     <SortableTab
                       key={tab.id}
@@ -390,7 +477,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
         </div>
 
         {/* Scroll Right Button */}
-        {tabs.length > 4 && (
+        {canScrollRight && (
           <Button
             variant="ghost"
             size="sm"
