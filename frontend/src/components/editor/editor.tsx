@@ -5,7 +5,11 @@ import { EditorView } from "prosemirror-view";
 import { EditorState } from "prosemirror-state";
 import { keymap } from "prosemirror-keymap";
 import { history, undo, redo } from "prosemirror-history";
-import { baseKeymap } from "prosemirror-commands";
+import { baseKeymap, exitCode, splitBlockKeepMarks, chainCommands, newlineInCode, createParagraphNear, liftEmptyBlock, toggleMark } from "prosemirror-commands";
+import { wrapInList, liftListItem, sinkListItem, splitListItem } from "prosemirror-schema-list";
+import { inputRules, wrappingInputRule, textblockTypeInputRule, smartQuotes, emDash, ellipsis, InputRule } from "prosemirror-inputrules";
+import codemark from "prosemirror-codemark";
+import "prosemirror-codemark/dist/codemark.css";
 import { dropCursor } from "prosemirror-dropcursor";
 import { gapCursor } from "prosemirror-gapcursor";
 import { DOMParser, DOMSerializer } from "prosemirror-model";
@@ -20,7 +24,52 @@ import { useSearchIndex } from "@/lib/search/index";
 import { convertSearchToReferenceItems, createReferenceString, getReferenceType } from "@/lib/search/reference-utils";
 import { cn } from "@/lib/utils";
 
-interface FictionEditorProps {
+
+// Custom command to handle backspace in lists
+function backspaceCommand(state: EditorState, dispatch?: any) {
+  const { $cursor } = state.selection as any;
+  if (!$cursor || $cursor.pos !== $cursor.start()) return false;
+
+  const $cut = $cursor;
+
+  // Check if we're in a list item
+  for (let d = $cut.depth; d >= 0; d--) {
+    const node = $cut.node(d);
+    if (node.type === state.schema.nodes.list_item) {
+      // If we're at the start of a list item and it's empty, lift it
+      if ($cut.index(d) === 0) {
+        if (node.content.size === 0 || (node.firstChild && node.firstChild.content.size === 0)) {
+          return liftListItem(state.schema.nodes.list_item)(state, dispatch);
+        }
+      }
+      break;
+    }
+  }
+
+  return false;
+}
+
+// Custom command to handle enter in lists
+function enterCommand(state: EditorState, dispatch?: any) {
+  const { $from, $to } = state.selection;
+
+  // Check if we're in a list item
+  for (let d = $from.depth; d >= 0; d--) {
+    const node = $from.node(d);
+    if (node.type === state.schema.nodes.list_item) {
+      // If the list item is empty, exit the list
+      if (node.content.size === 0 || (node.firstChild && node.firstChild.content.size === 0)) {
+        return liftListItem(state.schema.nodes.list_item)(state, dispatch);
+      }
+      // Otherwise, split the list item
+      return splitListItem(state.schema.nodes.list_item)(state, dispatch);
+    }
+  }
+
+  return false;
+}
+
+interface EditorProps {
   content?: object; // ProseMirror JSON content
   onChange?: (content: object) => void;
   onUpdate?: (content: object) => void;
@@ -30,7 +79,7 @@ interface FictionEditorProps {
   projectId?: string; // For search index
 }
 
-export function FictionEditor({
+export function Editor({
   content,
   onChange,
   onUpdate,
@@ -38,7 +87,7 @@ export function FictionEditor({
   className,
   editable = true,
   projectId,
-}: FictionEditorProps) {
+}: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [editorState, setEditorState] = useState<EditorState | null>(null);
@@ -169,7 +218,7 @@ export function FictionEditor({
     const state = EditorState.create({
       doc,
       plugins: [
-        // Markdown input rules
+        // Original markdown input rules (includes code blocks, basic headings, lists)
         createMarkdownInputRules(fictionSchema),
         
         // Input rules for references
@@ -178,14 +227,102 @@ export function FictionEditor({
         // Reference plugin for highlighting and autocomplete
         createReferencePlugin(fictionSchema, autocompleteCallbacks),
         
+        // Professional inline code handling with prosemirror-codemark
+        ...codemark({ markType: fictionSchema.marks.code }),
+        
         // History
         history(),
         
-        // Keymaps
+        // Enhanced keymap with comprehensive shortcuts
         keymap({
+          // Text formatting
+          "Mod-b": toggleMark(fictionSchema.marks.strong),
+          "Mod-i": toggleMark(fictionSchema.marks.em),
+          "Mod-`": toggleMark(fictionSchema.marks.code),
+          
+          // History
           "Mod-z": undo,
           "Mod-Shift-z": redo,
           "Mod-y": redo,
+          
+          // Enhanced Enter with mark persistence and list support
+          "Enter": chainCommands(
+            enterCommand, // Handle lists first
+            chainCommands(newlineInCode, createParagraphNear, liftEmptyBlock, splitBlockKeepMarks)
+          ),
+          
+          // Enhanced Backspace with list support
+          "Backspace": chainCommands(backspaceCommand, baseKeymap["Backspace"]),
+          
+          // List navigation
+          "Tab": sinkListItem(fictionSchema.nodes.list_item),
+          "Shift-Tab": liftListItem(fictionSchema.nodes.list_item),
+          
+          // List creation shortcuts
+          "Mod-Shift-8": wrapInList(fictionSchema.nodes.bullet_list),
+          "Mod-Shift-9": wrapInList(fictionSchema.nodes.ordered_list),
+          
+          // Code block handling
+          "Ctrl-Enter": exitCode,
+          "Shift-Enter": (state, dispatch) => {
+            // Try exitCode first for code blocks
+            if (exitCode(state, dispatch)) {
+              return true;
+            }
+            // Fall back to default behavior
+            return false;
+          },
+          
+          // Enhanced arrow key navigation for code blocks
+          "ArrowDown": (state, dispatch) => {
+            const { selection } = state;
+            const { $from } = selection;
+            
+            // Check if we're in a code block and at the end
+            if (selection.empty && $from.parent.type.name === "code_block") {
+              // Check if cursor is at the very end of the code block
+              const codeBlockNode = $from.parent;
+              const isAtEnd = $from.parentOffset === codeBlockNode.content.size;
+              
+              if (isAtEnd) {
+                // Exit the code block
+                if (exitCode(state, dispatch)) {
+                  return true;
+                }
+              }
+            }
+            
+            // Fall back to default arrow behavior
+            return false;
+          },
+          
+          "ArrowUp": (state, dispatch) => {
+            const { selection } = state;
+            const { $from } = selection;
+            
+            // Check if we're in a code block and at the beginning
+            if (selection.empty && $from.parent.type.name === "code_block") {
+              // Check if cursor is at the very beginning of the code block
+              const isAtStart = $from.parentOffset === 0;
+              
+              if (isAtStart) {
+                // Try to move cursor above the code block
+                const beforeCodeBlock = $from.before();
+                if (beforeCodeBlock > 0) {
+                  const $target = state.doc.resolve(beforeCodeBlock);
+                  if (dispatch) {
+                    dispatch(state.tr.setSelection(state.selection.constructor.near($target) as any));
+                  }
+                  return true;
+                }
+              }
+            }
+            
+            // Fall back to default arrow behavior
+            return false;
+          },
+          
+          // Keep other base keymap commands
           ...baseKeymap,
         }),
         
@@ -349,3 +486,5 @@ export function FictionEditor({
     </div>
   );
 }
+
+export default Editor;

@@ -1,9 +1,42 @@
-import { inputRules, wrappingInputRule, textblockTypeInputRule, InputRule } from "prosemirror-inputrules";
+import { inputRules, wrappingInputRule, textblockTypeInputRule, InputRule, smartQuotes, emDash, ellipsis } from "prosemirror-inputrules";
 import { NodeType, MarkType } from "prosemirror-model";
+
+/**
+ * Helper that turns a `RegExp` + `MarkType` into an `InputRule`
+ * with proper bounds checking
+ */
+function markInputRule(regexp: RegExp, markType: any) {
+  return new InputRule(regexp, (state, match, start, end) => {
+    const $start = state.doc.resolve(start);
+    const $end = state.doc.resolve(end);
+
+    if (!$start.parent.canReplaceWith($start.index(), $end.index(), state.schema.text(match[1]))) {
+      return null;
+    }
+
+    const tr = state.tr;
+    const matchStart = start + match.index;
+    const matchEnd = matchStart + match[0].length;
+
+    if (match[1]) {
+      const textStart = matchStart + match[0].indexOf(match[1]);
+      const textEnd = textStart + match[1].length;
+
+      // Delete the markdown syntax
+      tr.delete(matchStart, matchEnd);
+
+      // Insert the text with the mark
+      const node = state.schema.text(match[1], [markType.create()]);
+      tr.insert(matchStart, node);
+    }
+
+    return tr;
+  });
+}
 
 // Create input rules for markdown shortcuts
 export function createMarkdownInputRules(schema: any) {
-  const rules: InputRule[] = [];
+  const rules: InputRule[] = smartQuotes.concat(ellipsis, emDash);
 
   // Heading rules
   for (let level = 1; level <= 6; level++) {
@@ -41,50 +74,22 @@ export function createMarkdownInputRules(schema: any) {
     )
   );
 
-  // Bold rule: **text**
-  rules.push(
-    new InputRule(
-      /\*\*([^*]+)\*\*$/,
-      (state, match, start, end) => {
-        const { tr } = state;
-        if (match[1]) {
-          tr.replaceWith(start, end, schema.text(match[1], [schema.marks.strong.create()]));
-          return tr;
-        }
-        return null;
-      }
-    )
-  );
+  // Enhanced markdown input rules with smart conflict resolution
 
-  // Italic rule: *text*
-  rules.push(
-    new InputRule(
-      /(?<!\*)\*([^*]+)\*$/,
-      (state, match, start, end) => {
-        const { tr } = state;
-        if (match[1]) {
-          tr.replaceWith(start, end, schema.text(match[1], [schema.marks.em.create()]));
-          return tr;
-        }
-        return null;
-      }
-    )
-  );
+  // **bold** - improved pattern
+  if (schema.marks.strong) {
+    rules.push(markInputRule(/\*\*([^*\s][^*]*[^*\s]|\S)\*\*$/, schema.marks.strong));
+  }
 
-  // Code rule: `text`
-  rules.push(
-    new InputRule(
-      /`([^`]+)`$/,
-      (state, match, start, end) => {
-        const { tr } = state;
-        if (match[1]) {
-          tr.replaceWith(start, end, schema.text(match[1], [schema.marks.code.create()]));
-          return tr;
-        }
-        return null;
-      }
-    )
-  );
+  // *italic* - but not at start of line (to avoid conflict with bullet lists)
+  if (schema.marks.em) {
+    rules.push(markInputRule(/(?:^|[^*\s])\*([^*\s][^*]*[^*\s]|\S)\*$/, schema.marks.em));
+  }
+
+  // `code` - inline code (single backticks)
+  if (schema.marks.code) {
+    rules.push(markInputRule(/`([^`\s][^`]*[^`\s]|[^`\s])`$/, schema.marks.code));
+  }
 
   return inputRules({ rules });
 }

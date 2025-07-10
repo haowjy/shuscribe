@@ -32,7 +32,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useProjectData } from "@/lib/query/hooks";
 import { FileItem } from "@/data/file-tree";
 import { usePersistedEditorState } from "@/hooks/use-persisted-editor-state";
-import { FictionEditor } from "@/components/editor/fiction-editor";
+import { Editor } from "@/components/editor/editor";
 import { createEmptyDoc } from "@/lib/prosemirror/schema";
 import { cn } from "@/lib/utils";
 
@@ -652,7 +652,7 @@ export function EditorWorkspace({ selectedFile, projectId }: EditorWorkspaceProp
       {/* Editor Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab ? (
-          <FictionEditor
+          <Editor
             key={activeTab.id}
             content={activeTab.content}
             onChange={(content: object) => handleContentChange(activeTab.id, content)}
