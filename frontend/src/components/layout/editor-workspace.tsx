@@ -21,6 +21,7 @@ import {
   useSensors,
   DragEndEvent,
 } from "@dnd-kit/core";
+import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import {
   arrayMove,
   SortableContext,
@@ -93,7 +94,7 @@ function SortableTab({ tab, isActive, onActivate, onClose, hasDraft }: SortableT
         isActive
           ? "bg-background text-foreground border-b-2 border-b-primary"
           : "hover:bg-secondary/50 text-muted-foreground bg-secondary/20",
-        isDragging && "opacity-50 z-50"
+        isDragging && "opacity-50 z-[9999]"
       )}
     >
       {/* Drag handle area - takes up most of the tab */}
@@ -123,7 +124,7 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
   const [activeTabId, setActiveTabId] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const allowDropdownCloseRef = useRef(false);
+  const preventNextCloseRef = useRef(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const tabContainerRef = useRef<HTMLDivElement>(null);
@@ -440,6 +441,7 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
+              modifiers={[restrictToHorizontalAxis]}
               onDragEnd={handleDragEnd}
             >
               <SortableContext
@@ -473,14 +475,21 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
           <DropdownMenu 
             open={isDropdownOpen} 
             onOpenChange={(open) => {
-              // Only allow closing when explicitly permitted
-              if (!open && !allowDropdownCloseRef.current) {
-                // Prevent automatic closing - keep dropdown open
+              // Always allow opening
+              if (open) {
+                setIsDropdownOpen(true);
                 return;
               }
-              setIsDropdownOpen(open);
-              // Reset the flag after use
-              allowDropdownCloseRef.current = false;
+              
+              // For closing: check if we should prevent this close
+              if (preventNextCloseRef.current) {
+                // Reset the flag and prevent closing
+                preventNextCloseRef.current = false;
+                return;
+              }
+              
+              // Allow normal closing (outside clicks, escape key, etc.)
+              setIsDropdownOpen(false);
             }}
           >
             <DropdownMenuTrigger asChild>
@@ -520,7 +529,6 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
                     onClick={(e) => {
                       e.stopPropagation();
                       activateTab(tab.id);
-                      allowDropdownCloseRef.current = true;
                       setIsDropdownOpen(false);
                     }}
                   >
@@ -532,6 +540,8 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
                     onClose={(e) => {
                       e?.preventDefault();
                       e?.stopPropagation();
+                      // Prevent the next dropdown close event
+                      preventNextCloseRef.current = true;
                       closeTab(tab.id, true); // fromDropdown = true
                       // Keep dropdown open for multiple closures
                     }}
@@ -543,7 +553,6 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
               <DropdownMenuItem
                 onClick={() => {
                   closeAllTabs();
-                  allowDropdownCloseRef.current = true;
                   setIsDropdownOpen(false);
                 }}
                 className="flex items-center gap-2 text-destructive focus:text-destructive"
