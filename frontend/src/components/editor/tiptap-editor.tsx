@@ -6,6 +6,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import CharacterCount from '@tiptap/extension-character-count';
+import TextAlign from '@tiptap/extension-text-align';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Selection } from '@tiptap/pm/state';
@@ -74,11 +75,14 @@ const DEFAULT_TOOLBAR_OPTIONS: ToolbarOptions = {
   showBlockquote: true,
   showUndo: true,
   showRedo: true,
+  showTextAlign: true,
 };
 
 interface TiptapEditorProps extends BaseEditorProps {
   content?: EditorDocument;
   onContentChange?: (content: EditorDocument) => void;
+  isSaving?: boolean;
+  lastSaved?: string;
 }
 
 export function TiptapEditor({
@@ -109,9 +113,14 @@ export function TiptapEditor({
   onFocus,
   onBlur,
   onSelectionUpdate,
+  onSave,
+  onSaveSuccess,
+  onSaveError,
   
   // Document management
-  documentId
+  documentId,
+  isSaving = false,
+  lastSaved
 }: TiptapEditorProps) {
   
   const lastContentRef = useRef<EditorDocument | null>(null);
@@ -130,6 +139,11 @@ export function TiptapEditor({
       }),
       CharacterCount.configure({
         limit: null, // No character limit
+      }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph', 'listItem'],
+        alignments: ['left', 'center', 'right', 'justify'],
+        defaultAlignment: 'left',
       }),
       ClickToFocusExtension,
       ...extensions
@@ -222,6 +236,27 @@ export function TiptapEditor({
     };
   }, [documentId]);
   
+  // Manual save function
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (!editor || !onSave) return false;
+    
+    try {
+      const content = editor.getJSON() as EditorDocument;
+      const success = await onSave(content);
+      
+      if (success) {
+        onSaveSuccess?.();
+        return true;
+      } else {
+        onSaveError?.('Save failed');
+        return false;
+      }
+    } catch (error) {
+      onSaveError?.(error instanceof Error ? error.message : 'Save failed');
+      return false;
+    }
+  }, [editor, onSave, onSaveSuccess, onSaveError]);
+
   // Create editor instance API
   const editorInstance: EditorInstance = useMemo(() => ({
     editor,
@@ -243,7 +278,8 @@ export function TiptapEditor({
     canRedo: () => editor?.can().redo() || false,
     undo: () => editor?.commands.undo(),
     redo: () => editor?.commands.redo(),
-  }), [editor]);
+    save: handleSave,
+  }), [editor, handleSave]);
   
   // Expose editor instance to parent (useful for imperative operations)
   React.useImperativeHandle(React.forwardRef(function EditorRef() { return null; }).ref, () => editorInstance, [editorInstance]);
@@ -280,8 +316,8 @@ export function TiptapEditor({
           editor={editor}
           className={cn(
             "w-full h-full min-h-[200px]",
-            "prose prose-sm max-w-none focus:outline-none",
-            "text-foreground text-sm leading-relaxed",
+            "prose prose-base max-w-[70ch] mx-auto focus:outline-none",
+            "text-foreground text-base leading-relaxed",
             "[&_.ProseMirror]:outline-none [&_.ProseMirror]:p-4 [&_.ProseMirror]:min-h-[calc(100vh-200px)]",
             "[&_.ProseMirror]:cursor-text", // Make entire editor area show text cursor
             "[&_.ProseMirror_h1]:text-2xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:mb-4 [&_.ProseMirror_h1]:mt-6",
@@ -304,7 +340,15 @@ export function TiptapEditor({
       {documentId && (
         <div className="border-t px-4 py-1 bg-secondary/20 text-xs text-muted-foreground flex justify-between">
           <span>
-            {DraftManager.hasDraft(documentId) ? 'Draft saved' : 'Ready'}
+            {isSaving ? (
+              'Saving...'
+            ) : lastSaved ? (
+              `Saved ${lastSaved}`
+            ) : DraftManager.hasDraft(documentId) ? (
+              'Draft saved'
+            ) : (
+              'Ready'
+            )}
           </span>
           <span>
             Words: {editor.storage.characterCount?.words() || 0} | 

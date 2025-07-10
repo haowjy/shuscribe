@@ -200,9 +200,6 @@ export function WorkspaceLayout({
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-4">
-          <div className="text-sm text-muted-foreground">
-            Auto-saved
-          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-2">

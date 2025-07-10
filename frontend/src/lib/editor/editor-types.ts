@@ -43,6 +43,7 @@ export interface ToolbarOptions {
   showLink?: boolean;
   showUndo?: boolean;
   showRedo?: boolean;
+  showTextAlign?: boolean;
 }
 
 // Editor variant types
@@ -89,6 +90,7 @@ export interface EditorInstance {
   canRedo: () => void;
   undo: () => void;
   redo: () => void;
+  save: () => Promise<boolean>;
 }
 
 // Event handlers
@@ -99,6 +101,9 @@ export interface EditorEventHandlers {
   onFocus?: () => void;
   onBlur?: () => void;
   onSelectionUpdate?: () => void;
+  onSave?: (content: EditorDocument) => Promise<boolean>;
+  onSaveSuccess?: () => void;
+  onSaveError?: (error: string) => void;
 }
 
 // Complete editor props

@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 export interface TabStatusIndicatorProps {
   isDirty: boolean;
   hasDraft: boolean;
+  isSaving?: boolean;
+  lastSaved?: string;
   onClose: (e?: React.MouseEvent) => void;
   variant?: 'tab' | 'dropdown';
   className?: string;
@@ -16,12 +18,19 @@ export interface TabStatusIndicatorProps {
 export function TabStatusIndicator({ 
   isDirty, 
   hasDraft, 
+  isSaving = false,
+  lastSaved,
   onClose, 
   variant = 'tab',
   className 
 }: TabStatusIndicatorProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const isUnsaved = isDirty || hasDraft;
+  
+  // Document is unsaved if:
+  // 1. It's dirty (has unsaved changes), OR
+  // 2. It has a draft but was never properly saved (no lastSaved)
+  // BUT NOT if it was recently saved (has lastSaved) even if there's still a draft
+  const isUnsaved = isDirty || (hasDraft && !lastSaved);
 
   if (variant === 'dropdown') {
     // For dropdown items - inline layout

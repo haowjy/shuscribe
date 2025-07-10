@@ -43,6 +43,9 @@ import {
 import { FileItem } from "@/data/file-tree";
 import { TabStatusIndicator } from "./tab-status-indicator";
 import { cn } from "@/lib/utils";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useBeforeUnloadProtection, hasAnyUnsavedChanges } from "@/hooks/use-beforeunload-protection";
+import { documentsApi } from "@/lib/api/mock-documents";
 
 // Simplified tab interface
 export interface EditorTab {
@@ -52,6 +55,8 @@ export interface EditorTab {
   isDirty: boolean;
   isTemp: boolean;
   order: number;
+  isSaving?: boolean;
+  lastSaved?: string;
 }
 
 interface EditorWorkspaceProps {
@@ -111,6 +116,8 @@ function SortableTab({ tab, isActive, onActivate, onClose, hasDraft }: SortableT
       <TabStatusIndicator
         isDirty={tab.isDirty}
         hasDraft={hasDraft}
+        isSaving={tab.isSaving}
+        lastSaved={tab.lastSaved}
         onClose={() => onClose(tab.id)}
         variant="tab"
       />
@@ -386,7 +393,61 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
     // Auto-save will be handled by the editor component
   }, [activeTabId]);
 
+  // Save current document
+  const saveCurrentDocument = useCallback(async () => {
+    if (!activeTab) return false;
+    
+    // Update tab to show saving state
+    setTabs(prev => prev.map(tab => 
+      tab.id === activeTab.id 
+        ? { ...tab, isSaving: true }
+        : tab
+    ));
 
+    try {
+      const response = await documentsApi.saveDocument(activeTab.id, activeTab.content, activeTab.title);
+      
+      if (response.success) {
+        // Update tab with successful save
+        setTabs(prev => prev.map(tab => 
+          tab.id === activeTab.id 
+            ? { 
+                ...tab, 
+                isDirty: false, 
+                isSaving: false,
+                lastSaved: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              }
+            : tab
+        ));
+        
+        // Clear draft since document is now saved
+        DraftManager.removeDraft(activeTab.id);
+        return true;
+      } else {
+        throw new Error(response.error || 'Save failed');
+      }
+    } catch (error) {
+      // Update tab to show save failed
+      setTabs(prev => prev.map(tab => 
+        tab.id === activeTab.id 
+          ? { ...tab, isSaving: false }
+          : tab
+      ));
+      
+      console.error('Save failed:', error);
+      return false;
+    }
+  }, [activeTab]);
+
+
+  // Keyboard shortcuts (only Ctrl+S works reliably across browsers)
+  useKeyboardShortcuts({
+    onSave: saveCurrentDocument,
+  });
+
+  // Protect against accidental data loss when closing tab/browser
+  const hasUnsaved = hasAnyUnsavedChanges(tabs);
+  useBeforeUnloadProtection(hasUnsaved);
 
   // Handle wheel scroll
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -537,6 +598,8 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
                   <TabStatusIndicator
                     isDirty={tab.isDirty}
                     hasDraft={DraftManager.hasDraft(tab.id)}
+                    isSaving={tab.isSaving}
+                    lastSaved={tab.lastSaved}
                     onClose={(e) => {
                       e?.preventDefault();
                       e?.stopPropagation();
@@ -588,6 +651,12 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
             enableDrafts={true}
             autofocus={true}
             className="h-full"
+            isSaving={activeTab.isSaving}
+            lastSaved={activeTab.lastSaved}
+            onSave={async () => {
+              const success = await saveCurrentDocument();
+              return success;
+            }}
           />
         ) : (
           <div className="h-full flex items-center justify-center">

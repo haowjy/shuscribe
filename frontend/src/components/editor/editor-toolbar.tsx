@@ -15,7 +15,11 @@ import {
   Heading3,
   Undo,
   Redo,
-  Type
+  Type,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -48,6 +52,7 @@ export function EditorToolbar({
     showBlockquote = true,
     showUndo = true,
     showRedo = true,
+    showTextAlign = true,
   } = options;
 
   return (
@@ -189,6 +194,57 @@ export function EditorToolbar({
             )}
           >
             <Type className="h-4 w-4" />
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+        </>
+      )}
+
+      {/* Text Alignment */}
+      {showTextAlign && (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            className={cn(
+              "h-8 w-8 p-0",
+              editor.isActive({ textAlign: 'left' }) && "bg-secondary"
+            )}
+          >
+            <AlignLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            className={cn(
+              "h-8 w-8 p-0",
+              editor.isActive({ textAlign: 'center' }) && "bg-secondary"
+            )}
+          >
+            <AlignCenter className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            className={cn(
+              "h-8 w-8 p-0",
+              editor.isActive({ textAlign: 'right' }) && "bg-secondary"
+            )}
+          >
+            <AlignRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            className={cn(
+              "h-8 w-8 p-0",
+              editor.isActive({ textAlign: 'justify' }) && "bg-secondary"
+            )}
+          >
+            <AlignJustify className="h-4 w-4" />
           </Button>
           <Separator orientation="vertical" className="h-6" />
         </>
