@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDocuments } from '@/lib/api/mock-data';
+import { mockDocuments } from '@/lib/api/mock-data-tiptap';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {

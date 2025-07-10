@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDocuments } from '@/lib/api/mock-data';
+import { mockDocuments } from '@/lib/api/mock-data-tiptap';
 
 export async function GET(
   request: NextRequest,
