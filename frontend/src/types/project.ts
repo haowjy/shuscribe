@@ -6,6 +6,7 @@ export interface FileItem {
   type: "file" | "folder";
   children?: FileItem[];
   tags?: string[];
+  icon?: string; // Icon name for the file/folder
   documentId?: string; // For API integration
   path?: string; // File path
 }

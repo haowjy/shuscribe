@@ -25,18 +25,18 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { FileItem } from "@/data/file-tree";
-import { useProjectData } from "@/lib/query/hooks";
+import { FileTreeItem } from "@/types/api";
+import { useActiveFile, useFileTree } from "@/lib/query/hooks";
 import { cn } from "@/lib/utils";
 
 // No conversion needed - API already returns FileItem format
 
 interface FileTreeItemProps {
-  item: FileItem;
+  item: FileTreeItem;
   depth: number;
   selectedFileId?: string;
-  onFileSelect?: (file: FileItem) => void;
-  onFileAction?: (action: string, file: FileItem) => void;
+  onFileSelect?: (file: FileTreeItem) => void;
+  onFileAction?: (action: string, file: FileTreeItem) => void;
 }
 
 function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction }: FileTreeItemProps) {
@@ -182,19 +182,24 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
 
 interface FileExplorerProps {
   projectId: string;
-  onFileSelect?: (file: FileItem) => void;
 }
 
-export function FileExplorer({ projectId, onFileSelect }: FileExplorerProps) {
-  const { data: projectData, isLoading, error } = useProjectData(projectId);
-  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+export function FileExplorer({ projectId }: FileExplorerProps) {
+  // Use centralized file tree and active file state
+  const { data: fileTree = [], isLoading, error } = useFileTree(projectId);
+  const { selectedFileId, openFile, setSelectedFile } = useActiveFile(projectId);
 
-  const handleFileSelect = (file: FileItem) => {
-    setSelectedFile(file);
-    onFileSelect?.(file);
+  const handleFileSelect = (file: FileTreeItem) => {
+    if (file.type === "file") {
+      // For files, open them (this will also update selectedFileId)
+      openFile(file.id);
+    } else {
+      // For folders, just update the selected state for highlighting
+      setSelectedFile(file.id);
+    }
   };
 
-  const handleFileAction = (action: string, file: FileItem) => {
+  const handleFileAction = (action: string, file: FileTreeItem) => {
     // TODO: Implement file operations
     console.log(`Action: ${action} on file:`, file);
     
@@ -236,25 +241,23 @@ export function FileExplorer({ projectId, onFileSelect }: FileExplorerProps) {
 
   // Show error state
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return (
       <div className="h-full flex items-center justify-center p-4">
         <div className="text-center">
           <p className="text-xs text-destructive mb-1">Failed to load files</p>
-          <p className="text-xs text-muted-foreground">{error.message}</p>
+          <p className="text-xs text-muted-foreground">{errorMessage}</p>
         </div>
       </div>
     );
   }
-
-  // FileTree is already in the correct format
-  const fileTree = projectData?.fileTree || [];
 
   return (
     <div className="h-full flex flex-col">
       {/* Header with actions */}
       <div className="flex items-center justify-between p-2 border-b">
         <span className="text-sm font-medium text-muted-foreground">
-          {projectData?.title || 'Project Files'}
+          Project Files
         </span>
         <div className="flex gap-1">
           <Button
@@ -276,7 +279,7 @@ export function FileExplorer({ projectId, onFileSelect }: FileExplorerProps) {
               key={item.id}
               item={item}
               depth={0}
-              selectedFileId={selectedFile?.id}
+              selectedFileId={selectedFileId}
               onFileSelect={handleFileSelect}
               onFileAction={handleFileAction}
             />
@@ -286,31 +289,50 @@ export function FileExplorer({ projectId, onFileSelect }: FileExplorerProps) {
       </ScrollArea>
       
       {/* File Info */}
-      {selectedFile && (
-        <Card className="m-2 mt-0">
-          <CardContent className="p-2">
-            <div className="text-xs space-y-1">
-              <div className="font-medium">{selectedFile.name}</div>
-              <div className="text-muted-foreground">
-                {selectedFile.type === "file" ? "Document" : "Folder"}
-              </div>
-              {selectedFile.tags && selectedFile.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedFile.tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="outline"
-                      className="text-xs px-1 py-0 h-auto"
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
+      {(() => {
+        if (!selectedFileId) return null;
+        
+        // Find the selected file in the tree
+        const findFileInTree = (items: FileTreeItem[], id: string): FileTreeItem | null => {
+          for (const item of items) {
+            if (item.id === id) return item;
+            if (item.children) {
+              const found = findFileInTree(item.children, id);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        
+        const selectedFile = findFileInTree(fileTree, selectedFileId);
+        if (!selectedFile) return null;
+        
+        return (
+          <Card className="m-2 mt-0">
+            <CardContent className="p-2">
+              <div className="text-xs space-y-1">
+                <div className="font-medium">{selectedFile.name}</div>
+                <div className="text-muted-foreground">
+                  {selectedFile.type === "file" ? "Document" : "Folder"}
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                {selectedFile.tags && selectedFile.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedFile.tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="text-xs px-1 py-0 h-auto"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }

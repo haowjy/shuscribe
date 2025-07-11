@@ -11,6 +11,8 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Selection } from '@tiptap/pm/state';
 import { common, createLowlight } from 'lowlight';
+import { ReferenceExtension } from '@/lib/editor/extensions/reference-extension';
+import { useSuggestionItems } from '@/hooks/use-reference-items';
 
 import { 
   BaseEditorProps, 
@@ -29,6 +31,7 @@ import {
 } from '@/lib/editor/storage-utils';
 import { EditorToolbar } from './editor-toolbar';
 import { cn } from '@/lib/utils';
+import { FileItem } from '@/types/project';
 
 // Lowlight instance for syntax highlighting
 const lowlight = createLowlight(common);
@@ -83,6 +86,8 @@ interface TiptapEditorProps extends BaseEditorProps {
   onContentChange?: (content: EditorDocument) => void;
   isSaving?: boolean;
   lastSaved?: string;
+  onReferenceClick?: (referenceId: string, referenceLabel: string) => void;
+  fileTree?: FileItem[]; // File tree for @ references
 }
 
 export function TiptapEditor({
@@ -120,10 +125,15 @@ export function TiptapEditor({
   // Document management
   documentId,
   isSaving = false,
-  lastSaved
+  lastSaved,
+  onReferenceClick,
+  fileTree = []
 }: TiptapEditorProps) {
   
   const lastContentRef = useRef<EditorDocument | null>(null);
+  
+  // Get suggestion items for @ references
+  const { getSuggestionItems } = useSuggestionItems(fileTree);
   
   // Create base extensions
   const createExtensions = useCallback(() => {
@@ -145,12 +155,18 @@ export function TiptapEditor({
         alignments: ['left', 'center', 'right', 'justify'],
         defaultAlignment: 'left',
       }),
+      ReferenceExtension.configure({
+        suggestion: {
+          items: getSuggestionItems,
+        },
+        onReferenceClick,
+      }),
       ClickToFocusExtension,
       ...extensions
     ];
     
     return baseExtensions;
-  }, [extensions, placeholder]);
+  }, [extensions, placeholder, getSuggestionItems, onReferenceClick, fileTree]);
   
   // Initialize editor
   const editor = useEditor({

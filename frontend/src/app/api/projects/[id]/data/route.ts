@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockProjectData } from '@/lib/api/mock-data-tiptap';
+import { getMockProjectData } from '@/lib/api/mock-project-data';
 
 export async function GET(
   request: NextRequest,
@@ -11,8 +11,8 @@ export async function GET(
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Return mock project data
-    const projectData = mockProjectData[projectId];
+    // Return mock project data using consolidated source
+    const projectData = getMockProjectData(projectId);
     
     if (!projectData) {
       return NextResponse.json(

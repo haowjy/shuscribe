@@ -1,23 +1,14 @@
+# backend/src/database/interfaces/__init__.py
 """
-Repository interfaces for the ShuScribe database layer.
-
-These abstract interfaces define the contract that all repository
-implementations must follow, enabling easy swapping between different
-storage backends (memory, file, database).
+Repository interface definitions for ShuScribe
 """
 
-from src.database.interfaces.user_repository import IUserRepository
-from src.database.interfaces.agent_repository import IAgentRepository
-from src.database.interfaces.workspace_repository import IWorkspaceRepository
-from src.database.interfaces.story_repository import IStoryRepository
-from src.database.interfaces.wiki_repository import IWikiRepository
-from src.database.interfaces.writing_repository import IWritingRepository
+from .project_repository import ProjectRepository
+from .document_repository import DocumentRepository  
+from .file_tree_repository import FileTreeRepository
 
 __all__ = [
-    "IUserRepository",
-    "IAgentRepository",
-    "IWorkspaceRepository",
-    "IStoryRepository", 
-    "IWikiRepository",
-    "IWritingRepository",
+    "ProjectRepository",
+    "DocumentRepository", 
+    "FileTreeRepository",
 ]

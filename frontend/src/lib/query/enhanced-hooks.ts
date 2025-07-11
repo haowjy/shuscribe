@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ProjectData, Document, CreateDocumentRequest, UpdateDocumentRequest } from '@/types/project';
+import { getMockProjectData } from '@/lib/api/mock-project-data';
 import { 
   DocumentStorage, 
   DraftManager, 
@@ -136,69 +137,68 @@ export function useProjectDataWithStorage(projectId: string) {
   return useQuery({
     queryKey: enhancedQueryKeys.projectData(projectId),
     queryFn: async () => {
-      // Check if we have any local documents first
+      console.log('Loading project data with storage for project:', projectId);
+      
+      // Always start with mock project data as baseline to ensure file tree documents exist
+      const mockProjectData = getMockProjectData(projectId);
+      console.log('Mock project data loaded with', mockProjectData.documents.length, 'documents');
+      
+      // Get all local documents
       const allLocalDocs = DocumentStorage.getAllDocuments();
       const hasAnyLocalData = Object.keys(allLocalDocs).length > 0;
+      console.log('Local documents found:', Object.keys(allLocalDocs).length);
       
-      // Only fetch from API if we have no local data at all
-      if (!hasAnyLocalData) {
-        try {
-          // Try API for project data (only when no local data exists)
-          const response = await apiClient.getProjectData(projectId);
-          if (response.error) {
-            throw new Error(response.error);
-          }
-
-          const projectData = response.data!;
-          
-          // Enhance documents with localStorage data
-          const enhancedDocuments = projectData.documents.map(doc => {
-            const localDoc = DocumentStorage.getDocument(doc.id);
-            const draft = DraftManager.getDraft(doc.id);
-            
-            return {
-              ...doc,
-              hasLocalChanges: !!localDoc && localDoc.isDirty,
-              hasDraft: !!draft,
-              lastLocalModified: localDoc?.lastModified || null,
-            };
+      // Create a map of documents starting with mock data
+      const documentsMap = new Map<string, Document>();
+      
+      // Add all mock documents to the map first
+      mockProjectData.documents.forEach(doc => {
+        documentsMap.set(doc.id, doc);
+      });
+      
+      // If we have local data, overlay it on top of mock data
+      if (hasAnyLocalData) {
+        const projectDocs = Object.values(allLocalDocs).filter(
+          doc => doc.id.startsWith(projectId) || doc.projectId === projectId
+        );
+        
+        // Overlay local documents (they take precedence over mock data for same IDs)
+        projectDocs.forEach(localDoc => {
+          documentsMap.set(localDoc.id, {
+            id: localDoc.id,
+            title: localDoc.title,
+            content: localDoc.content,
+            path: localDoc.title.toLowerCase().replace(/\s+/g, '-'),
+            projectId: projectId,
+            createdAt: new Date(localDoc.lastModified).toISOString(),
+            updatedAt: new Date(localDoc.lastModified).toISOString(),
+            tags: [],
+            wordCount: 0,
+            hasLocalChanges: localDoc.isDirty,
+            hasDraft: DraftManager.hasDraft(localDoc.id),
+            lastLocalModified: localDoc.lastModified,
           });
-
-          return {
-            ...projectData,
-            documents: enhancedDocuments,
-          };
-        } catch (error) {
-          console.error('Failed to load project data from API:', error);
-        }
+        });
       }
       
-      // Fallback: create project data from localStorage documents
-      const projectDocs = Object.values(allLocalDocs).filter(
-        doc => doc.id.startsWith(projectId) || doc.projectId === projectId
-      );
-
+      // Convert map back to array and enhance all documents with storage metadata
+      const finalDocuments = Array.from(documentsMap.values()).map(doc => {
+        const localDoc = DocumentStorage.getDocument(doc.id);
+        const draft = DraftManager.getDraft(doc.id);
+        
+        return {
+          ...doc,
+          hasLocalChanges: !!localDoc && localDoc.isDirty,
+          hasDraft: !!draft,
+          lastLocalModified: localDoc?.lastModified || null,
+        };
+      });
+      
+      console.log('Final project data contains', finalDocuments.length, 'documents with IDs:', finalDocuments.map(d => d.id));
+      
       return {
-        id: projectId,
-        name: `Project ${projectId}`,
-        description: hasAnyLocalData ? 'Local project' : 'New project',
-        documents: projectDocs.map(doc => ({
-          id: doc.id,
-          title: doc.title,
-          content: doc.content,
-          path: doc.title.toLowerCase().replace(/\s+/g, '-'),
-          projectId: projectId,
-          createdAt: new Date(doc.lastModified).toISOString(),
-          updatedAt: new Date(doc.lastModified).toISOString(),
-          hasLocalChanges: doc.isDirty,
-          hasDraft: DraftManager.hasDraft(doc.id),
-          tags: [],
-          wordCount: 0,
-        })),
-        fileTree: [],
-        tags: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        ...mockProjectData,
+        documents: finalDocuments,
       };
     },
     enabled: !!projectId,

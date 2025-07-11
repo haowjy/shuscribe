@@ -15,7 +15,6 @@ from src.core.exceptions import ShuScribeException
 from src.core.logging import configure_console_logging
 
 
-# backend/src/main.py - Update lifespan
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
@@ -23,16 +22,34 @@ async def lifespan(app: FastAPI):
     configure_console_logging(log_level="DEBUG")
     logging.info("ShuScribe backend starting up...")
     
-    # Initialize database (for development only)
-    if settings.ENVIRONMENT == "development":
-        raise NotImplementedError("Database initialization not implemented")
-        # from src.database.supabase_connection import init_db
-        # await init_db()
-        logging.info("Database initialized")
+    # Initialize database connection and repositories
+    from src.database.connection import init_database, create_tables, close_database
+    from src.database.factory import init_repositories
+    
+    try:
+        # Initialize database connection
+        init_database()
+        logging.info("Database connection initialized")
+        
+        # Create tables if needed (no migrations approach)
+        if settings.DATABASE_BACKEND != "memory":
+            await create_tables()
+            logging.info("Database tables created")
+        
+        # Initialize repositories
+        init_repositories(backend=settings.DATABASE_BACKEND)
+        logging.info(f"Repositories initialized with {settings.DATABASE_BACKEND} backend")
+        
+    except Exception as e:
+        logging.error(f"Failed to initialize database: {e}")
+        # Continue with memory backend as fallback
+        logging.warning("Falling back to memory backend")
+        init_repositories(backend="memory")
     
     yield
     
     # Shutdown
+    await close_database()
     logging.info("ShuScribe backend shutting down...")
 
 

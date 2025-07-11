@@ -3,6 +3,7 @@
 import React from 'react';
 import { TiptapEditor } from '../tiptap-editor';
 import { BaseEditorProps } from '@/lib/editor/editor-types';
+import { FileItem } from '@/types/project';
 
 // Rich editor with all formatting options
 const RICH_TOOLBAR_OPTIONS = {
@@ -22,11 +23,15 @@ interface RichEditorProps extends Omit<BaseEditorProps, 'variant'> {
   // Additional props specific to rich editor
   enableCodeBlocks?: boolean;
   enableTables?: boolean;
+  onReferenceClick?: (referenceId: string, referenceLabel: string) => void;
+  fileTree?: FileItem[]; // File tree for @ references
 }
 
 export function RichEditor({
   enableCodeBlocks = true,
   enableTables = false,
+  onReferenceClick,
+  fileTree = [],
   ...props
 }: RichEditorProps) {
   const toolbarOptions = {
@@ -44,6 +49,8 @@ export function RichEditor({
       extensions={extensions}
       toolbarOptions={toolbarOptions}
       placeholder={props.placeholder || "Start writing with rich formatting..."}
+      onReferenceClick={onReferenceClick}
+      fileTree={fileTree}
     />
   );
 }

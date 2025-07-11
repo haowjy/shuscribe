@@ -4,6 +4,7 @@ export interface FileItem {
   type: "file" | "folder";
   children?: FileItem[];
   tags?: string[];
+  icon?: string; // Icon name for the file/folder
 }
 
 export const mockFileTree: FileItem[] = [
@@ -17,8 +18,8 @@ export const mockFileTree: FileItem[] = [
         name: "protagonists",
         type: "folder",
         children: [
-          { id: "3", name: "elara.md", type: "file", tags: ["fire-magic", "trauma"] },
-          { id: "4", name: "marcus.md", type: "file", tags: ["earth-magic", "mentor"] },
+          { id: "3", name: "elara.md", type: "file", tags: ["fire-magic", "trauma"], icon: "User" },
+          { id: "4", name: "marcus.md", type: "file", tags: ["earth-magic", "mentor"], icon: "User" },
         ],
       },
       {
@@ -26,7 +27,7 @@ export const mockFileTree: FileItem[] = [
         name: "antagonists",
         type: "folder",
         children: [
-          { id: "6", name: "shadow-lord.md", type: "file", tags: ["dark-magic", "villain"] },
+          { id: "6", name: "shadow-lord.md", type: "file", tags: ["dark-magic", "villain"], icon: "Skull" },
         ],
       },
     ],
@@ -36,8 +37,8 @@ export const mockFileTree: FileItem[] = [
     name: "locations",
     type: "folder",
     children: [
-      { id: "8", name: "capital-city.md", type: "file", tags: ["urban", "politics"] },
-      { id: "9", name: "ancient-temple.md", type: "file", tags: ["mystical", "ruins"] },
+      { id: "8", name: "capital-city.md", type: "file", tags: ["urban", "politics"], icon: "Building" },
+      { id: "9", name: "ancient-temple.md", type: "file", tags: ["mystical", "ruins"], icon: "Landmark" },
     ],
   },
   {
@@ -45,8 +46,8 @@ export const mockFileTree: FileItem[] = [
     name: "timeline",
     type: "folder",
     children: [
-      { id: "11", name: "main-story.md", type: "file" },
-      { id: "12", name: "backstory.md", type: "file" },
+      { id: "11", name: "main-story.md", type: "file", icon: "Clock" },
+      { id: "12", name: "backstory.md", type: "file", icon: "History" },
     ],
   },
   {
@@ -54,9 +55,9 @@ export const mockFileTree: FileItem[] = [
     name: "chapters",
     type: "folder",
     children: [
-      { id: "14", name: "chapter-01.md", type: "file" },
-      { id: "15", name: "chapter-02.md", type: "file" },
-      { id: "16", name: "chapter-03.md", type: "file" },
+      { id: "14", name: "chapter-01.md", type: "file", icon: "BookOpen" },
+      { id: "15", name: "chapter-02.md", type: "file", icon: "BookOpen" },
+      { id: "16", name: "chapter-03.md", type: "file", icon: "BookOpen" },
     ],
   },
 ];

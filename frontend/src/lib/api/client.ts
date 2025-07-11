@@ -1,28 +1,43 @@
 // API client for ShuScribe backend communication
 
 import { 
-  ApiResponse, 
-  Document, 
-  ProjectData, 
-  CreateDocumentRequest, 
-  UpdateDocumentRequest 
-} from '@/types/project';
-
-// Re-export types for convenience
-export type { 
-  ApiResponse, 
-  Document, 
-  ProjectData, 
+  Document,
   CreateDocumentRequest, 
   UpdateDocumentRequest,
-  FileItem
-} from '@/types/project';
+  FileTreeResponse,
+  ProjectDetails,
+  ApiErrorResponse
+} from '@/types/api';
+
+// Legacy API response type for backward compatibility
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  status: number;
+}
 
 class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = '/api') {
-    this.baseUrl = baseUrl;
+  constructor() {
+    // Use environment variable for API base URL, fallback to localhost:8000
+    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+  }
+
+  private getAuthToken(): string {
+    if (typeof window === 'undefined') return '';
+    
+    try {
+      const auth = localStorage.getItem('shuscribe_auth');
+      if (auth) {
+        const authData = JSON.parse(auth);
+        return authData.token || '';
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+    
+    return '';
   }
 
   private async request<T>(
@@ -31,9 +46,12 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
+      const authToken = this.getAuthToken();
+      
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
           ...options.headers,
         },
         ...options,
@@ -42,8 +60,9 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
+        const errorData = data as ApiErrorResponse;
         return {
-          error: data.error || 'An error occurred',
+          error: errorData.message || errorData.error || 'An error occurred',
           status: response.status,
         };
       }
@@ -61,8 +80,12 @@ class ApiClient {
   }
 
   // Project endpoints
-  async getProjectData(projectId: string): Promise<ApiResponse<ProjectData>> {
-    return this.request<ProjectData>(`/projects/${projectId}/data`);
+  async getProjectData(projectId: string): Promise<ApiResponse<ProjectDetails>> {
+    return this.request<ProjectDetails>(`/projects/${projectId}`);
+  }
+  
+  async getProjectFileTree(projectId: string): Promise<ApiResponse<FileTreeResponse>> {
+    return this.request<FileTreeResponse>(`/projects/${projectId}/file-tree`);
   }
 
   // Document endpoints

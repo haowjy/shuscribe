@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDocuments } from '@/lib/api/mock-data-tiptap';
+import { getMockDocument } from '@/lib/api/mock-project-data';
 
 export async function GET(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function GET(
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 50));
     
-    const document = mockDocuments[documentId];
+    const document = getMockDocument(documentId, '1'); // Using project ID 1
     
     if (!document) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function PUT(
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 200));
     
-    const document = mockDocuments[documentId];
+    const document = getMockDocument(documentId, '1');
     
     if (!document) {
       return NextResponse.json(
@@ -57,7 +57,8 @@ export async function PUT(
       wordCount: body.content ? countWords(body.content) : document.wordCount
     };
     
-    mockDocuments[documentId] = updatedDocument;
+    // TODO: Implement proper document storage/persistence
+    // For now, just return the updated document without persisting
     
     return NextResponse.json(updatedDocument);
   } catch {
@@ -78,7 +79,7 @@ export async function DELETE(
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 150));
     
-    const document = mockDocuments[documentId];
+    const document = getMockDocument(documentId, '1');
     
     if (!document) {
       return NextResponse.json(
@@ -87,7 +88,8 @@ export async function DELETE(
       );
     }
     
-    delete mockDocuments[documentId];
+    // TODO: Implement proper document deletion
+    // For now, just return success without actually deleting
     
     return NextResponse.json({ success: true });
   } catch {
@@ -99,21 +101,23 @@ export async function DELETE(
 }
 
 // Helper function to count words in ProseMirror content
-function countWords(content: unknown): number {
+function countWords(content: any): number {
   if (!content || !content.content) return 0;
   
   let wordCount = 0;
   
-  function countNode(node: Record<string, unknown>) {
+  function countNode(node: any) {
     if (node.type === 'text' && node.text) {
-      wordCount += node.text.split(/\s+/).filter(Boolean).length;
+      wordCount += String(node.text).split(/\s+/).filter(Boolean).length;
     }
     
-    if (node.content) {
+    if (node.content && Array.isArray(node.content)) {
       node.content.forEach(countNode);
     }
   }
   
-  content.content.forEach(countNode);
+  if (Array.isArray(content.content)) {
+    content.content.forEach(countNode);
+  }
   return wordCount;
 }

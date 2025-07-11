@@ -1,187 +1,93 @@
+# backend/src/database/factory.py
 """
-Repository factory for creating appropriate repository implementations
-based on the configured backend (memory, file, or database).
+Repository factory for dependency injection
+Supports multiple backends: database, memory
 """
-
-import os
+import logging
 from typing import Optional
-from pathlib import Path
-from dataclasses import dataclass
 
-from src.config import settings
-from src.database.interfaces import (
-    IUserRepository,
-    IAgentRepository,
-    IWorkspaceRepository,
-    IStoryRepository,
-    IWikiRepository,
-    IWritingRepository,
-)
+from src.database.interfaces import ProjectRepository, DocumentRepository, FileTreeRepository
+
+logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 class RepositoryContainer:
-    """
-    Typed container for all repository instances.
+    """Container for all repositories"""
     
-    Provides type-safe access to repositories with IDE autocompletion.
-    Use repos.user, repos.wiki, etc. instead of repos["user"].
-    """
-    user: IUserRepository
-    workspace: IWorkspaceRepository
-    story: IStoryRepository
-    wiki: IWikiRepository
-    writing: IWritingRepository
-    agent: IAgentRepository
+    def __init__(
+        self,
+        project: ProjectRepository,
+        document: DocumentRepository,
+        file_tree: FileTreeRepository,
+    ):
+        self.project = project
+        self.document = document
+        self.file_tree = file_tree
 
 
-class RepositoryFactory:
+def create_repositories(backend: str = "database") -> RepositoryContainer:
     """
-    Factory class for creating repository instances based on backend type.
+    Factory function to create repository instances
     
-    This factory supports three backend types:
-    - memory: In-memory storage for testing
-    - file: File-based storage for local development
-    - database: PostgreSQL/Supabase for production
+    Args:
+        backend: "database" for SQLAlchemy/Supabase, "memory" for in-memory testing
+    
+    Returns:
+        RepositoryContainer with all repositories
     """
-    
-    @staticmethod
-    def create_repositories(
-        backend: Optional[str] = None,
-        workspace_path: Optional[Path] = None,
-        database_url: Optional[str] = None,
-        **kwargs
-    ) -> RepositoryContainer:
-        """
-        Create repository instances based on backend type.
-        
-        Args:
-            backend: Backend type ('memory', 'file', 'database'). 
-                    Defaults to settings.DATABASE_BACKEND
-            workspace_path: Path for file-based storage. 
-                           Defaults to Path("temp")
-            database_url: Database connection URL. 
-                         Defaults to settings.DATABASE_URL
-            **kwargs: Additional backend-specific parameters
-            
-        Returns:
-            RepositoryContainer with typed repository instances
-        """
-        # Use settings if not provided
-        if backend is None:
-            backend = settings.DATABASE_BACKEND
-            
-        if backend == "memory":
-            return RepositoryFactory._create_memory_repositories(**kwargs)
-            
-        elif backend == "file":
-            if workspace_path is None:
-                workspace_path = Path("temp")
-            return RepositoryFactory._create_file_repositories(workspace_path, **kwargs)
-            
-        elif backend == "database":
-            if database_url is None:
-                database_url = settings.DATABASE_URL
-            return RepositoryFactory._create_database_repositories(database_url, **kwargs)
-            
-        else:
-            raise ValueError(f"Unknown backend type: {backend}")
-    
-    @staticmethod
-    def _create_memory_repositories(**kwargs) -> RepositoryContainer:
-        """Create in-memory repository implementations"""
-        # Import here to avoid circular dependencies
-        from src.database.memory import (
-            MemoryUserRepository,
-            MemoryAgentRepository,
-            MemoryWorkspaceRepository,
-            MemoryStoryRepository,
-            MemoryWikiRepository,
-            MemoryWritingRepository,
+    if backend == "memory":
+        logger.info("Creating in-memory repositories for testing")
+        from src.database.repositories import (
+            MemoryProjectRepository,
+            MemoryDocumentRepository, 
+            MemoryFileTreeRepository
         )
-        
         return RepositoryContainer(
-            user=MemoryUserRepository(),
-            workspace=MemoryWorkspaceRepository(),
-            story=MemoryStoryRepository(),
-            wiki=MemoryWikiRepository(),
-            writing=MemoryWritingRepository(),
-            agent=MemoryAgentRepository(),
+            project=MemoryProjectRepository(),
+            document=MemoryDocumentRepository(),
+            file_tree=MemoryFileTreeRepository(),
         )
-    
-    @staticmethod
-    def _create_file_repositories(workspace_path: Path, **kwargs) -> RepositoryContainer:
-        """Create file-based repository implementations"""
-        # Ensure workspace directory exists
-        # workspace_path.mkdir(parents=True, exist_ok=True)
-        
-        # Import here to avoid circular dependencies
-        # TODO: Update file implementations to use new interfaces
-        # from src.database.file import (
-        #     FileUserRepository,
-        #     FileAgentRepository,
-        #     FileWorkspaceRepository,
-        #     FileStoryRepository,
-        #     FileWikiRepository,
-        #     FileWritingRepository,
-        # )
-        
-        # return RepositoryContainer(
-        #     user=FileUserRepository(workspace_path),
-        #     workspace=FileWorkspaceRepository(workspace_path),
-        #     story=FileStoryRepository(workspace_path),
-        #     wiki=FileWikiRepository(workspace_path),
-        #     writing=FileWritingRepository(workspace_path),
-        #     agent=FileAgentRepository(workspace_path),
-        # )
-        
-        raise NotImplementedError("File backend not implemented")
-    
-    @staticmethod
-    def _create_database_repositories(database_url: str, **kwargs) -> RepositoryContainer:
-        """Create database-backed repository implementations"""
-        # Create database session
-        # from src.database.postgres import create_session
-        # session = create_session(database_url)
-        
-        # # Import here to avoid circular dependencies  
-        # from src.database.postgres import (
-        #     PostgresUserRepository,
-        #     PostgresAgentRepository,
-        #     PostgresWorkspaceRepository,
-        #     PostgresStoryRepository,
-        #     PostgresWikiRepository,
-        #     PostgresWritingRepository,
-        # )
-        
-        # return RepositoryContainer(
-        #     user=PostgresUserRepository(session),
-        #     workspace=PostgresWorkspaceRepository(session),
-        #     story=PostgresStoryRepository(session),
-        #     wiki=PostgresWikiRepository(session),
-        #     writing=PostgresWritingRepository(session),
-        #     agent=PostgresAgentRepository(session),
-        # )
-        raise NotImplementedError("Database backend not implemented")
+    elif backend == "database":
+        logger.info("Creating database repositories")
+        from src.database.repositories import (
+            DatabaseProjectRepository,
+            DatabaseDocumentRepository,
+            DatabaseFileTreeRepository
+        )
+        return RepositoryContainer(
+            project=DatabaseProjectRepository(),
+            document=DatabaseDocumentRepository(),
+            file_tree=DatabaseFileTreeRepository(),
+        )
+    else:
+        raise ValueError(f"Unknown backend: {backend}")
 
 
-def get_repositories(
-    backend: Optional[str] = None,
-    workspace_path: Optional[Path] = None,
-    **kwargs
-) -> RepositoryContainer:
-    """
-    Convenience function to get repository instances.
-    
-    This is the main entry point for the application to get repositories.
-    
-    Example:
-        repos = get_repositories(backend="memory")
-        user = await repos.user.get_user(user_id)
-        articles = await repos.wiki.get_articles_by_workspace(workspace_id)
-    """
-    return RepositoryFactory.create_repositories(
-        backend=backend,
-        workspace_path=workspace_path,
-        **kwargs
-    )
+# Global repository container (will be initialized in main.py)
+_repositories: Optional[RepositoryContainer] = None
+
+
+def get_repositories() -> RepositoryContainer:
+    """Get the global repository container"""
+    if _repositories is None:
+        raise RuntimeError("Repositories not initialized. Call init_repositories() first.")
+    return _repositories
+
+
+def init_repositories(backend: str = "database") -> None:
+    """Initialize the global repository container"""
+    global _repositories
+    _repositories = create_repositories(backend)
+    logger.info(f"Repositories initialized with backend: {backend}")
+
+
+def is_initialized() -> bool:
+    """Check if repositories are initialized"""
+    return _repositories is not None
+
+
+def reset_repositories() -> None:
+    """Reset repositories (useful for testing)"""
+    global _repositories
+    _repositories = None
+    logger.info("Repositories reset")

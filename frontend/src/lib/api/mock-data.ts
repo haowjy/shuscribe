@@ -1,6 +1,6 @@
 // Mock API data with proper UUIDs and project structure
 
-import { Document, ProjectData, FileItem } from '@/types/project';
+import { Document, ProjectData } from '@/types/project';
 
 // Document storage
 export const mockDocuments: Record<string, Document> = {

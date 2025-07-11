@@ -1,6 +1,6 @@
 // Mock API data with proper Tiptap JSON format (no custom references)
 
-import { Document, ProjectData, FileItem } from '@/types/project';
+import { Document, ProjectData } from '@/types/project';
 
 // Document storage with clean Tiptap format
 export const mockDocuments: Record<string, Document> = {

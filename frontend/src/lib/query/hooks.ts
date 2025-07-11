@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
-import { ProjectData, Document, CreateDocumentRequest, UpdateDocumentRequest } from '@/types/project';
+import { 
+  Document, 
+  CreateDocumentRequest, 
+  UpdateDocumentRequest,
+  ProjectDetails 
+} from '@/types/api';
+import { loadFileTree } from '@/lib/api/file-tree-service';
 
 // Query keys
 export const queryKeys = {
@@ -9,6 +16,8 @@ export const queryKeys = {
   projectData: (id: string) => ['projects', id, 'data'] as const,
   documents: ['documents'] as const,
   document: (id: string) => ['documents', id] as const,
+  fileTree: (projectId: string) => ['projects', projectId, 'fileTree'] as const,
+  activeFile: (projectId: string) => ['projects', projectId, 'activeFile'] as const,
 };
 
 // Project hooks
@@ -58,7 +67,11 @@ export function useCreateDocument() {
     onSuccess: (newDocument) => {
       // Invalidate project data to refresh file tree
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectData(newDocument.projectId),
+        queryKey: queryKeys.projectData(newDocument.project_id),
+      });
+      
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileTree(newDocument.project_id),
       });
       
       // Add document to cache
@@ -94,21 +107,14 @@ export function useUpdateDocument() {
         updatedDocument
       );
       
-      // Update project data to reflect changes
-      queryClient.setQueryData(
-        queryKeys.projectData(updatedDocument.projectId),
-        (oldData: ProjectData | undefined) => {
-          if (!oldData) return oldData;
-          
-          return {
-            ...oldData,
-            documents: oldData.documents.map(doc =>
-              doc.id === updatedDocument.id ? updatedDocument : doc
-            ),
-            updatedAt: new Date().toISOString(),
-          };
-        }
-      );
+      // Invalidate project data to refresh file tree and metadata
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projectData(updatedDocument.project_id),
+      });
+      
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileTree(updatedDocument.project_id),
+      });
     },
   });
 }
@@ -135,9 +141,119 @@ export function useDeleteDocument() {
       const documentData = queryClient.getQueryData(queryKeys.document(documentId)) as Document;
       if (documentData) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.projectData(documentData.projectId),
+          queryKey: queryKeys.projectData(documentData.project_id),
         });
       }
     },
   });
+}
+
+// File Tree hook
+export function useFileTree(projectId: string) {
+  return useQuery({
+    queryKey: queryKeys.fileTree(projectId),
+    queryFn: async () => {
+      const result = await loadFileTree(projectId);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return result.fileTree;
+    },
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - file tree doesn't change often
+  });
+}
+
+// Active File State Management Interface
+interface ActiveFileState {
+  selectedFileId: string | null;
+  activeTabId: string | null;
+  openTabs: string[];
+}
+
+// Centralized Active File State Hook
+export function useActiveFile(projectId: string) {
+  const queryClient = useQueryClient();
+  const queryKey = queryKeys.activeFile(projectId);
+  
+  // Initialize state with default values
+  const defaultState: ActiveFileState = {
+    selectedFileId: null,
+    activeTabId: null,
+    openTabs: []
+  };
+
+  // Use TanStack Query as state manager (with no fetching)
+  const { data: state = defaultState } = useQuery({
+    queryKey,
+    queryFn: () => Promise.resolve(defaultState),
+    enabled: !!projectId,
+    staleTime: Infinity, // Never stale - purely client state
+    gcTime: Infinity, // Never garbage collect
+  });
+
+  // Update state function
+  const updateState = useCallback((updates: Partial<ActiveFileState>) => {
+    const newState = { ...state, ...updates };
+    queryClient.setQueryData(queryKey, newState);
+  }, [queryClient, queryKey, state]);
+
+  // Helper functions for common operations
+  const setSelectedFile = useCallback((fileId: string | null) => {
+    updateState({ selectedFileId: fileId });
+  }, [updateState]);
+
+  const setActiveTab = useCallback((tabId: string | null) => {
+    updateState({ 
+      activeTabId: tabId,
+      selectedFileId: tabId // Keep selected file in sync with active tab
+    });
+  }, [updateState]);
+
+  const addTab = useCallback((tabId: string) => {
+    const newOpenTabs = state.openTabs.includes(tabId) 
+      ? state.openTabs 
+      : [...state.openTabs, tabId];
+    
+    updateState({ 
+      openTabs: newOpenTabs,
+      activeTabId: tabId,
+      selectedFileId: tabId // Keep selected file in sync
+    });
+  }, [updateState, state.openTabs]);
+
+  const removeTab = useCallback((tabId: string) => {
+    const newOpenTabs = state.openTabs.filter(id => id !== tabId);
+    const newActiveTab = state.activeTabId === tabId 
+      ? (newOpenTabs.length > 0 ? newOpenTabs[newOpenTabs.length - 1] : null)
+      : state.activeTabId;
+    
+    updateState({ 
+      openTabs: newOpenTabs,
+      activeTabId: newActiveTab,
+      selectedFileId: newActiveTab // Keep selected file in sync
+    });
+  }, [updateState, state.openTabs, state.activeTabId]);
+
+  const openFile = useCallback((fileId: string) => {
+    addTab(fileId);
+  }, [addTab]);
+
+  return {
+    // State
+    selectedFileId: state.selectedFileId,
+    activeTabId: state.activeTabId,
+    openTabs: state.openTabs,
+    
+    // Actions
+    setSelectedFile,
+    setActiveTab,
+    addTab,
+    removeTab,
+    openFile,
+    
+    // Raw state for advanced usage
+    state,
+    updateState,
+  };
 }

@@ -32,15 +32,15 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { RichEditor } from "@/components/editor";
-import { 
-  useProjectDataWithStorage 
-} from "@/lib/query/enhanced-hooks";
+// Removed unused import: useProjectDataWithStorage
+import { findFileById } from "@/lib/api/file-tree-service";
+import { loadDocument } from "@/lib/api/document-service";
+import { useActiveFile, useFileTree } from "@/lib/query/hooks";
 import { 
   EditorDocument, 
   DraftManager,
   EditorStateManager 
 } from "@/lib/editor";
-import { FileItem } from "@/data/file-tree";
 import { TabStatusIndicator } from "./tab-status-indicator";
 import { cn } from "@/lib/utils";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -60,9 +60,7 @@ export interface EditorTab {
 }
 
 interface EditorWorkspaceProps {
-  selectedFile?: FileItem | null;
   projectId: string;
-  onFileDeselect?: (fileId: string) => void;
 }
 
 // Sortable Tab Component
@@ -125,19 +123,19 @@ function SortableTab({ tab, isActive, onActivate, onClose, hasDraft }: SortableT
   );
 }
 
-export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: EditorWorkspaceProps) {
-  // State management
+export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
+  // Centralized state management
+  const { data: fileTree = [], isLoading: isLoadingFileTree, error: fileTreeError } = useFileTree(projectId);
+  const { activeTabId, setActiveTab, addTab, removeTab } = useActiveFile(projectId);
+  
+  // Local state management
   const [tabs, setTabs] = useState<EditorTab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const preventNextCloseRef = useRef(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const tabContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Data fetching
-  const { data: projectData, isLoading: projectLoading, error: projectError } = useProjectDataWithStorage(projectId);
 
   // Active tab data
   const activeTab = tabs.find(tab => tab.id === activeTabId);
@@ -156,51 +154,76 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
 
   // Load saved editor state on mount
   useEffect(() => {
-    if (!isInitialized && projectData) {
-      const savedState = EditorStateManager.getState();
-      
-      if (savedState) {
-        if (savedState.openDocuments.length > 0) {
-          // Restore saved tabs
-          const restoredTabs: EditorTab[] = savedState.openDocuments.map((docId, index) => {
-            const projectDoc = projectData.documents.find(d => d.id === docId);
-            return {
-              id: docId,
-              title: projectDoc?.title || `Document ${docId}`,
-              content: projectDoc?.content || { type: 'doc', content: [{ type: 'paragraph' }] },
-              isDirty: false,
-              isTemp: false,
-              order: savedState.documentOrder[docId] || index,
-            };
-          }).sort((a, b) => a.order - b.order);
-          
-          setTabs(restoredTabs);
-          setActiveTabId(savedState.activeDocumentId || restoredTabs[0]?.id || "");
+    if (!isInitialized && !isLoadingFileTree && fileTree.length > 0) {
+      const restoreEditorState = async () => {
+        const savedState = EditorStateManager.getState();
+        
+        if (savedState) {
+          if (savedState.openDocuments.length > 0) {
+            // Restore saved tabs by loading documents through the new service
+            const restoredTabs: EditorTab[] = [];
+            
+            for (const [index, docId] of savedState.openDocuments.entries()) {
+              try {
+                const result = await loadDocument(docId);
+                const tab: EditorTab = {
+                  id: docId,
+                  title: result.document.title,
+                  content: result.document.content,
+                  isDirty: false,
+                  isTemp: result.document.isTemp || false,
+                  order: savedState.documentOrder[docId] || index,
+                };
+                restoredTabs.push(tab);
+              } catch (error) {
+                console.warn(`Failed to restore document ${docId}:`, error);
+                // Skip this document but continue with others
+              }
+            }
+            
+            if (restoredTabs.length > 0) {
+              const sortedTabs = restoredTabs.sort((a, b) => a.order - b.order);
+              setTabs(sortedTabs);
+              setActiveTabId(savedState.activeDocumentId || sortedTabs[0]?.id || "");
+            }
+          } else {
+            // Respect saved empty state - user closed all tabs intentionally
+            setTabs([]);
+            setActiveTabId("");
+          }
         } else {
-          // Respect saved empty state - user closed all tabs intentionally
-          setTabs([]);
-          setActiveTabId("");
+          // No saved state - create initial tab from first file in tree (first time user)
+          const allFiles = fileTree.flatMap(item => 
+            item.type === 'file' ? [item] : 
+            item.children?.filter(child => child.type === 'file') || []
+          );
+          
+          if (allFiles.length > 0) {
+            const firstFile = allFiles[0];
+            try {
+              const result = await loadDocument(firstFile.id);
+              const initialTab: EditorTab = {
+                id: firstFile.id,
+                title: result.document.title,
+                content: result.document.content,
+                isDirty: false,
+                isTemp: result.document.isTemp || false,
+                order: 0,
+              };
+              setTabs([initialTab]);
+              setActiveTabId(firstFile.id);
+            } catch (error) {
+              console.warn(`Failed to load initial document ${firstFile.id}:`, error);
+            }
+          }
         }
-      } else {
-        // No saved state - create initial tab from first document (first time user)
-        const firstDoc = projectData.documents[0];
-        if (firstDoc) {
-          const initialTab: EditorTab = {
-            id: firstDoc.id,
-            title: firstDoc.title,
-            content: firstDoc.content,
-            isDirty: false,
-            isTemp: false,
-            order: 0,
-          };
-          setTabs([initialTab]);
-          setActiveTabId(firstDoc.id);
-        }
-      }
+        
+        setIsInitialized(true);
+      };
       
-      setIsInitialized(true);
+      restoreEditorState();
     }
-  }, [projectData, isInitialized]);
+  }, [fileTree, isLoadingFileTree, isInitialized]);
 
   // Save editor state when tabs change (including empty state)
   useEffect(() => {
@@ -217,7 +240,7 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
 
   // Handle tab activation with auto-scroll
   const activateTab = useCallback((tabId: string, skipAutoScroll = false) => {
-    setActiveTabId(tabId);
+    setActiveTab(tabId);
     
     // Skip auto-scroll if requested (e.g., when called from dropdown)
     if (skipAutoScroll) return;
@@ -246,7 +269,7 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
         }
       }
     }, 0);
-  }, []);
+  }, [setActiveTab]);
 
   // Helper function to find lowest available untitled number
   const getLowestAvailableUntitledNumber = useCallback(() => {
@@ -284,81 +307,131 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
   }, [tabs, getLowestAvailableUntitledNumber, activateTab]);
 
   // Close tab
-  const closeTab = useCallback((tabId: string, fromDropdown = false) => {
-    setTabs(prev => {
-      const newTabs = prev.filter(tab => tab.id !== tabId);
-      
-      // If closing active tab, switch to adjacent tab
-      if (tabId === activeTabId) {
-        const tabIndex = prev.findIndex(tab => tab.id === tabId);
-        if (newTabs.length === 0) {
-          setActiveTabId("");
-        } else {
-          const newIndex = Math.min(tabIndex, newTabs.length - 1);
-          // Skip auto-scroll when closing from dropdown to prevent dropdown from closing
-          activateTab(newTabs[newIndex].id, fromDropdown);
-        }
-      }
-      
-      return newTabs;
-    });
-
-    // Notify parent that file should be deselected
-    onFileDeselect?.(tabId);
+  const closeTab = useCallback((tabId: string) => {
+    // Use centralized tab removal (this handles active tab switching automatically)
+    removeTab(tabId);
+    
+    // Update local tabs state
+    setTabs(prev => prev.filter(tab => tab.id !== tabId));
 
     // Clean up draft
     DraftManager.removeDraft(tabId);
-  }, [activeTabId, activateTab, onFileDeselect]);
+  }, [removeTab]);
 
   // Close all tabs
   const closeAllTabs = useCallback(() => {
     // Clean up all drafts
     tabs.forEach(tab => {
       DraftManager.removeDraft(tab.id);
-      // Notify parent that each file should be deselected
-      onFileDeselect?.(tab.id);
     });
     
-    // Clear all tabs and active tab
+    // Clear centralized state
+    tabs.forEach(tab => removeTab(tab.id));
+    
+    // Clear local tabs state
     setTabs([]);
-    setActiveTabId("");
-  }, [tabs, onFileDeselect]);
+  }, [tabs, removeTab]);
 
-  // Handle file selection
-  const handleFileSelect = useCallback((file: FileItem) => {
-    if (file.type === "folder" || !projectData) return;
-
-    // Check if tab already exists
-    const existingTab = tabs.find(tab => tab.id === file.id);
-    if (existingTab) {
-      activateTab(file.id);
+  // Central navigation handler - can be called from any pane
+  const handleOpenFile = useCallback(async (fileId: string, source: 'file-explorer' | 'reference' | 'api' = 'file-explorer') => {
+    console.log(`🔍 Opening file ${fileId} from ${source}`);
+    
+    // Validation: Check file ID format
+    if (!fileId || typeof fileId !== 'string' || fileId.trim() === '') {
+      console.error(`❌ Invalid file ID: "${fileId}"`);
       return;
     }
-
-    // Find document data
-    const document = projectData.documents.find(doc => doc.id === file.id);
-    if (!document) return;
-
-    // Create new tab
-    const newTab: EditorTab = {
-      id: file.id,
-      title: document.title,
-      content: document.content,
-      isDirty: false,
-      isTemp: false,
-      order: Math.max(...tabs.map(t => t.order), -1) + 1,
-    };
-
-    setTabs(prev => [...prev, newTab]);
-    activateTab(file.id);
-  }, [tabs, projectData, activateTab]);
-
-  // Handle selectedFile prop
-  useEffect(() => {
-    if (selectedFile) {
-      handleFileSelect(selectedFile);
+    
+    // Check if tab already exists
+    const existingTab = tabs.find(tab => tab.id === fileId);
+    if (existingTab) {
+      // Tab exists, just activate it
+      console.log(`✅ File ${fileId} already open, activating tab`);
+      activateTab(fileId);
+      return;
     }
-  }, [selectedFile, handleFileSelect]);
+    
+    // Find file in file tree with detailed logging
+    const fileItem = findFileById(fileTree, fileId);
+    if (!fileItem) {
+      console.error(`❌ File not found in file tree: ${fileId}`);
+      console.log(`📋 Available files in tree:`, fileTree.flatMap(item => 
+        item.type === 'file' ? [{ id: item.id, name: item.name }] : 
+        item.children?.filter(child => child.type === 'file').map(child => ({ id: child.id, name: child.name })) || []
+      ));
+      
+      // For @ references, show user-friendly error
+      if (source === 'reference') {
+        console.warn(`🔗 Reference points to non-existent file: ${fileId}`);
+        // TODO: Show user notification toast
+      }
+      return;
+    }
+    
+    // Runtime validation: Ensure file IDs match between file tree and reference system
+    console.log(`✅ File found in tree: ${fileItem.name} (ID: ${fileItem.id}, Type: ${fileItem.type})`);
+    
+    // Only handle file types, not folders
+    if (fileItem.type === 'folder') {
+      console.log(`📁 Folder clicked: ${fileItem.name} (future: filter file explorer)`);
+      // TODO: Implement folder filtering in file explorer
+      return;
+    }
+    
+    try {
+      // Load document using new service
+      console.log(`📄 Loading document ${fileId} using document service`);
+      const result = await loadDocument(fileId);
+      
+      if (result.error) {
+        console.warn(`⚠️ Document load warning for ${fileId}:`, result.error);
+        // Continue with fallback document if available
+      }
+      
+      // Validation: Ensure document ID matches file ID
+      if (result.document.id !== fileId) {
+        console.warn(`⚠️ Document ID mismatch: file=${fileId}, document=${result.document.id}`);
+      }
+      
+      // Create new tab with loaded document
+      const activeTabIndex = tabs.findIndex(tab => tab.id === activeTabId);
+      const newOrder = activeTabIndex >= 0 ? tabs[activeTabIndex].order + 0.5 : Math.max(...tabs.map(t => t.order), -1) + 1;
+      
+      const newTab: EditorTab = {
+        id: fileId,
+        title: result.document.title,
+        content: result.document.content,
+        isDirty: false,
+        isTemp: result.document.isTemp || false,
+        order: newOrder,
+      };
+      
+      console.log(`✅ Creating new tab for file ${fileId}: "${newTab.title}"`);
+      
+      // Add to centralized state (this also activates the tab)
+      addTab(fileId);
+      
+      // Update local tabs state
+      setTabs(prev => {
+        const newTabs = [...prev, newTab];
+        // Reorder all tabs based on their order values
+        return newTabs.sort((a, b) => a.order - b.order).map((tab, index) => ({
+          ...tab,
+          order: index,
+        }));
+      });
+      
+    } catch (error) {
+      console.error(`❌ Error opening file ${fileId}:`, error);
+      
+      // Show user-friendly error for @ references
+      if (source === 'reference') {
+        console.error(`🔗 Failed to open reference: ${fileId}`);
+        // TODO: Show user notification toast
+      }
+    }
+  }, [fileTree, tabs, activeTabId, addTab, activateTab]);
+
 
   // Handle drag end
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -392,6 +465,12 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
 
     // Auto-save will be handled by the editor component
   }, [activeTabId]);
+  
+  // Handle reference click - delegates to central navigation
+  const handleReferenceClick = useCallback((referenceId: string, referenceLabel: string) => {
+    console.log(`Reference clicked: ${referenceId} (${referenceLabel})`);
+    handleOpenFile(referenceId, 'reference');
+  }, [handleOpenFile]);
 
   // Save current document
   const saveCurrentDocument = useCallback(async () => {
@@ -467,7 +546,7 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
   }, []);
 
 
-  if (projectLoading) {
+  if (isLoadingFileTree) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
@@ -478,12 +557,12 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
     );
   }
 
-  if (projectError || !projectData) {
+  if (fileTreeError || fileTree.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <p className="text-sm text-destructive mb-2">Failed to load project</p>
-          <p className="text-xs text-muted-foreground">{projectError?.message}</p>
+          <p className="text-xs text-muted-foreground">{fileTreeError}</p>
         </div>
       </div>
     );
@@ -657,6 +736,8 @@ export function EditorWorkspace({ selectedFile, projectId, onFileDeselect }: Edi
               const success = await saveCurrentDocument();
               return success;
             }}
+            onReferenceClick={handleReferenceClick}
+            fileTree={fileTree}
           />
         ) : (
           <div className="h-full flex items-center justify-center">
