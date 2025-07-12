@@ -5,11 +5,13 @@ Document API endpoints matching frontend expectations
 import logging
 from typing import Dict, Any, List
 
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, field_validator
+from fastapi import APIRouter, HTTPException, status, Depends
+from pydantic import BaseModel, field_validator, Field
 
 from src.database.factory import get_repositories
 from src.database.models import Document
+from src.schemas.base import ApiResponse
+from src.api.dependencies import require_auth, get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -36,22 +38,32 @@ class DocumentContent(BaseModel):
             # Convert other types to empty content
             return []
         return v
+    
+    @field_validator('type')
+    @classmethod
+    def validate_type(cls, v):
+        """Ensure type is always 'doc' for ProseMirror documents"""
+        if v != "doc":
+            return "doc"
+        return v
 
 
 class DocumentMeta(BaseModel):
     """Document metadata"""
+    model_config = {"populate_by_name": True}
+    
     id: str
-    project_id: str
+    project_id: str = Field(alias="projectId")
     title: str
     path: str
     tags: List[str]
-    word_count: int
-    created_at: str
-    updated_at: str
+    word_count: int = Field(alias="wordCount")
+    created_at: str = Field(alias="createdAt")
+    updated_at: str = Field(alias="updatedAt")
     version: str
-    is_locked: bool
-    locked_by: str | None = None
-    file_tree_id: str | None = None
+    is_locked: bool = Field(alias="isLocked")
+    locked_by: str | None = Field(default=None, alias="lockedBy")
+    file_tree_id: str | None = Field(default=None, alias="fileTreeId")
 
 
 class DocumentResponse(DocumentMeta):
@@ -61,12 +73,14 @@ class DocumentResponse(DocumentMeta):
 
 class CreateDocumentRequest(BaseModel):
     """Request to create a new document"""
-    project_id: str
+    model_config = {"populate_by_name": True}
+    
+    project_id: str = Field(alias="projectId")
     title: str
     path: str
     content: DocumentContent = DocumentContent()
     tags: List[str] = []
-    file_tree_parent_id: str | None = None
+    file_tree_parent_id: str | None = Field(default=None, alias="fileTreeParentId")
 
 
 class UpdateDocumentRequest(BaseModel):
@@ -156,8 +170,11 @@ def calculate_word_count(content: DocumentContent) -> int:
 # API Endpoints
 # ============================================================================
 
-@router.get("/{document_id}", response_model=DocumentResponse)
-async def get_document(document_id: str) -> DocumentResponse:
+@router.get("/{document_id}", response_model=ApiResponse[DocumentResponse])
+async def get_document(
+    document_id: str,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[DocumentResponse]:
     """
     Get document by ID
     
@@ -174,7 +191,7 @@ async def get_document(document_id: str) -> DocumentResponse:
             )
         
         logger.info(f"Retrieved document: {document.title} (ID: {document_id})")
-        return document_to_response(document)
+        return ApiResponse.success(document_to_response(document))
         
     except HTTPException:
         raise
@@ -186,8 +203,11 @@ async def get_document(document_id: str) -> DocumentResponse:
         )
 
 
-@router.post("", response_model=DocumentResponse)
-async def create_document(request: CreateDocumentRequest) -> DocumentResponse:
+@router.post("", response_model=ApiResponse[DocumentResponse])
+async def create_document(
+    request: CreateDocumentRequest,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[DocumentResponse]:
     """
     Create a new document
     
@@ -230,7 +250,7 @@ async def create_document(request: CreateDocumentRequest) -> DocumentResponse:
         })
         
         logger.info(f"Created document: {document.title} (ID: {document.id})")
-        return document_to_response(document)
+        return ApiResponse.success(document_to_response(document), status=201)
         
     except HTTPException:
         raise
@@ -242,8 +262,12 @@ async def create_document(request: CreateDocumentRequest) -> DocumentResponse:
         )
 
 
-@router.put("/{document_id}", response_model=DocumentResponse)
-async def update_document(document_id: str, request: UpdateDocumentRequest) -> DocumentResponse:
+@router.put("/{document_id}", response_model=ApiResponse[DocumentResponse])
+async def update_document(
+    document_id: str, 
+    request: UpdateDocumentRequest,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[DocumentResponse]:
     """
     Update an existing document
     
@@ -294,7 +318,7 @@ async def update_document(document_id: str, request: UpdateDocumentRequest) -> D
                 })
         
         logger.info(f"Updated document: {updated_document.title} (ID: {document_id})")
-        return document_to_response(updated_document)
+        return ApiResponse.success(document_to_response(updated_document))
         
     except HTTPException:
         raise
@@ -306,8 +330,11 @@ async def update_document(document_id: str, request: UpdateDocumentRequest) -> D
         )
 
 
-@router.delete("/{document_id}", response_model=DeleteResponse)
-async def delete_document(document_id: str) -> DeleteResponse:
+@router.delete("/{document_id}", response_model=ApiResponse[DeleteResponse])
+async def delete_document(
+    document_id: str,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[DeleteResponse]:
     """
     Delete a document
     
@@ -338,7 +365,7 @@ async def delete_document(document_id: str) -> DeleteResponse:
             
             logger.info(f"Deleted document: {document.title} (ID: {document_id})")
         
-        return DeleteResponse(success=success)
+        return ApiResponse.success(DeleteResponse(success=success))
         
     except HTTPException:
         raise

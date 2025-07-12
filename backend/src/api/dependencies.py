@@ -1,146 +1,163 @@
 # backend/src/api/dependencies.py
 """
-FastAPI dependencies
+FastAPI dependencies for authentication and authorization
 """
-from pathlib import Path
-from uuid import UUID
+from typing import Optional, Dict, Any
+from fastapi import Header, HTTPException, status, Depends
 
-from src.database.factory import get_repositories, RepositoryContainer
-from src.database.interfaces.user_repository import IUserRepository
-from src.database.interfaces.workspace_repository import IWorkspaceRepository
-from src.database.interfaces.story_repository import IStoryRepository
-from src.database.interfaces.wiki_repository import IWikiRepository
-from src.database.interfaces.writing_repository import IWritingRepository
-from src.database.interfaces.agent_repository import IAgentRepository
-
-from src.services.user.user_service import UserService
-from src.services.workspace.workspace_service import WorkspaceService
-from src.services.story.story_service import StoryService
-from src.services.wiki.wiki_service import WikiService
-from src.services.writing.writing_service import WritingService
-from src.services.agent.agent_service import AgentService
+from src.services.auth.supabase_auth import get_supabase_auth_service
 
 
-def get_repository_container() -> RepositoryContainer:
-    """Get repository container based on configuration"""
-    from src.config import settings
-
-    if settings.DATABASE_BACKEND == "memory":
-        # Use memory-based repository for local development
-        return get_repositories(backend="memory", workspace_path=Path("temp"))
-    else:
-        # TODO: Use database repository when implemented
-        # For now, fall back to memory-based even in database mode
-        return get_repositories(backend="memory", workspace_path=Path("temp"))
-
-
-def get_user_repository_dependency() -> IUserRepository:
-    """Get user repository instance based on configuration"""
-    return get_repository_container().user
+async def get_auth_token(authorization: Optional[str] = Header(None)) -> Optional[str]:
+    """
+    Extract authentication token from Authorization header
+    
+    This is a simple token extraction that doesn't validate the token.
+    Use require_auth() or get_optional_user_context() for token validation.
+    """
+    if not authorization:
+        return None
+    
+    if not authorization.startswith("Bearer "):
+        return None
+    
+    return authorization[7:]  # Remove "Bearer " prefix
 
 
-def get_workspace_repository_dependency() -> IWorkspaceRepository:
-    """Get workspace repository instance based on configuration"""
-    return get_repository_container().workspace
+async def get_current_user_context(token: Optional[str] = None) -> dict:
+    """
+    Get current user context from token
+    
+    Note: This is a simple wrapper that doesn't validate the token.
+    Use require_auth() or get_optional_user_context() for proper JWT validation.
+    """
+    return {
+        "token": token,
+        "authenticated": token is not None,
+    }
 
 
-def get_story_repository_dependency() -> IStoryRepository:
-    """Get story repository instance based on configuration"""
-    return get_repository_container().story
+async def require_auth(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """
+    Require authentication - validates Supabase JWT token locally and returns user context
+    
+    Uses fast local JWT validation (< 1ms) instead of API calls to Supabase.
+    Validates token signature, expiration, and audience claims.
+    
+    Use this dependency when an endpoint requires authentication.
+    
+    Returns:
+        Dict containing user information: {
+            'user_id': str,
+            'email': str, 
+            'token': str,
+            'authenticated': bool,
+            'expires_at': datetime,
+            'metadata': dict
+        }
+    
+    Raises:
+        HTTPException: If token is missing, invalid, expired, or has invalid signature
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header required"
+        )
+    
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format"
+        )
+    
+    token = authorization[7:]  # Remove "Bearer " prefix
+    
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token required"
+        )
+    
+    # Validate token locally using JWT validation and get user context
+    auth_service = get_supabase_auth_service()
+    user_context = await auth_service.validate_token(token)
+    
+    return user_context
 
 
-def get_wiki_repository_dependency() -> IWikiRepository:
-    """Get wiki repository instance based on configuration"""
-    return get_repository_container().wiki
+async def get_optional_user_context(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """
+    Get user context if available, but don't require authentication
+    
+    Use this dependency when an endpoint can work with or without authentication.
+    
+    Returns:
+        Dict containing user information if token is valid, or minimal context if not:
+        - With valid token: Same as require_auth()
+        - Without token: {'authenticated': False, 'user_id': None, 'email': None}
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        return {
+            'authenticated': False,
+            'user_id': None,
+            'email': None,
+            'token': None,
+            'metadata': {}
+        }
+    
+    token = authorization[7:]  # Remove "Bearer " prefix
+    if not token:
+        return {
+            'authenticated': False,
+            'user_id': None,
+            'email': None,
+            'token': None,
+            'metadata': {}
+        }
+    
+    try:
+        # Try to validate token locally using JWT validation
+        auth_service = get_supabase_auth_service()
+        user_context = await auth_service.validate_token(token)
+        return user_context
+    except HTTPException:
+        # Token is invalid, but that's OK for optional auth
+        return {
+            'authenticated': False,
+            'user_id': None,
+            'email': None,
+            'token': token,  # Keep token for logging purposes
+            'metadata': {}
+        }
 
 
-def get_writing_repository_dependency() -> IWritingRepository:
-    """Get writing repository instance based on configuration"""
-    return get_repository_container().writing
-
-
-def get_agent_repository_dependency() -> IAgentRepository:
-    """Get agent repository instance based on configuration"""
-    return get_repository_container().agent
-
-
-# Service Dependencies
-def get_user_service_dependency() -> UserService:
-    """Get user service instance"""
-    user_repo = get_user_repository_dependency()
-    return UserService(user_repo)
-
-
-def get_workspace_service_dependency() -> WorkspaceService:
-    """Get workspace service instance"""
-    workspace_repo = get_workspace_repository_dependency()
-    return WorkspaceService(workspace_repo)
-
-
-def get_story_service_dependency() -> StoryService:
-    """Get story service instance"""
-    story_repo = get_story_repository_dependency()
-    workspace_repo = get_workspace_repository_dependency()
-    return StoryService(story_repo, workspace_repo)
-
-
-def get_wiki_service_dependency() -> WikiService:
-    """Get wiki service instance"""
-    wiki_repo = get_wiki_repository_dependency()
-    workspace_repo = get_workspace_repository_dependency()
-    return WikiService(wiki_repo, workspace_repo)
-
-
-def get_writing_service_dependency() -> WritingService:
-    """Get writing service instance"""
-    writing_repo = get_writing_repository_dependency()
-    workspace_repo = get_workspace_repository_dependency()
-    return WritingService(writing_repo, workspace_repo)
-
-
-def get_agent_service_dependency() -> AgentService:
-    """Get agent service instance"""
-    agent_repo = get_agent_repository_dependency()
-    workspace_repo = get_workspace_repository_dependency()
-    return AgentService(agent_repo, workspace_repo)
-
-
-async def get_current_user_id_dependency() -> UUID:
-    """Get current user ID based on repository type"""
-    from src.config import settings
-
-    if settings.DATABASE_BACKEND == "memory":
-        # For development, use a consistent development user
-        user_service = get_user_service_dependency()
+async def get_current_user_id(user_context: Dict[str, Any] = Depends(require_auth)) -> str:
+    """
+    Extract user ID from authenticated user context.
+    
+    Use this dependency when you only need the user ID for database operations.
+    This dependency requires authentication (uses require_auth internally).
+    
+    Args:
+        user_context: User context from require_auth dependency
         
-        # Try to get existing development user first
-        dev_email = "dev@localhost"
-        existing_user = await user_service.get_user_by_email(dev_email)
+    Returns:
+        str: The authenticated user's ID
+    """
+    return user_context['user_id']
+
+
+async def get_optional_user_id(user_context: Dict[str, Any] = Depends(get_optional_user_context)) -> Optional[str]:
+    """
+    Extract user ID from optional user context.
+    
+    Use this dependency when you need the user ID but authentication is optional.
+    
+    Args:
+        user_context: User context from get_optional_user_context dependency
         
-        if existing_user:
-            return existing_user.id
-        
-        # Create development user if it doesn't exist
-        from src.schemas.db.user import UserCreate
-        try:
-            user_data = UserCreate(
-                email=dev_email,
-                display_name="Development User"
-            )
-            user = await user_service.create_user(user_data)
-            return user.id
-        except Exception:
-            # If creation fails, return a consistent UUID for development
-            # This handles the case where the user was created between our check and creation attempt
-            retry_user = await user_service.get_user_by_email(dev_email)
-            if retry_user:
-                return retry_user.id
-            
-            # Fallback to consistent UUID if all else fails
-            from uuid import UUID
-            return UUID("00000000-0000-0000-0000-000000000001")
-    else:
-        # TODO: Implement proper auth when database is enabled
-        # For now, return a mock UUID for testing
-        from uuid import uuid4
-        return uuid4()
+    Returns:
+        str | None: The user's ID if authenticated, None otherwise
+    """
+    return user_context.get('user_id')

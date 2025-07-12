@@ -21,27 +21,13 @@ async_session_factory = None
 
 
 def get_database_url() -> str:
-    """Get the database URL for Supabase connection"""
+    """Get the database URL for connection"""
     if settings.DATABASE_BACKEND == "memory":
         # In-memory SQLite for testing
         return "sqlite+aiosqlite:///:memory:"
     
-    # Use Supabase PostgreSQL
-    supabase_url = settings.SUPABASE_URL
-    if not supabase_url or supabase_url == "https://your-project.supabase.co":
-        logger.warning("SUPABASE_URL not configured, falling back to local PostgreSQL")
-        return settings.DATABASE_URL
-    
-    # Extract project ID from Supabase URL
-    # Format: https://[project-id].supabase.co
-    project_id = supabase_url.replace("https://", "").replace(".supabase.co", "")
-    
-    # Use service key for backend connections (not anon key)
-    # If no service key, use the anon key (less secure but works for development)
-    db_password = settings.SUPABASE_SERVICE_KEY or settings.SUPABASE_KEY
-    
-    # Construct PostgreSQL connection string for Supabase
-    return f"postgresql+asyncpg://postgres:{db_password}@db.{project_id}.supabase.co:5432/postgres"
+    # Use configured DATABASE_URL directly (it already has the correct credentials)
+    return settings.DATABASE_URL
 
 
 def init_database() -> None:
@@ -50,23 +36,34 @@ def init_database() -> None:
     
     database_url = get_database_url()
     logger.info(f"Initializing database connection to: {database_url.split('@')[0]}@[REDACTED]")
+    logger.debug(f"Database backend: {settings.DATABASE_BACKEND}")
+    logger.debug(f"Full database URL (password redacted): {database_url.replace(database_url.split('@')[0].split(':')[-1], '[REDACTED]')}")
     
-    # Create async engine
-    engine = create_async_engine(
-        database_url,
-        echo=settings.DEBUG,  # Log SQL queries in debug mode
-        pool_pre_ping=True,  # Verify connections before use
-        pool_recycle=3600,   # Recycle connections every hour
-    )
-    
-    # Create session factory
-    async_session_factory = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
-    
-    logger.info("Database connection initialized successfully")
+    try:
+        # Create async engine
+        engine = create_async_engine(
+            database_url,
+            echo=settings.DEBUG,  # Log SQL queries in debug mode
+            pool_pre_ping=True,  # Verify connections before use
+            pool_recycle=3600,   # Recycle connections every hour
+            connect_args={
+                "command_timeout": 10,  # 10 second timeout for connections
+            } if database_url.startswith("postgresql") else {}
+        )
+        
+        # Create session factory
+        async_session_factory = async_sessionmaker(
+            engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
+        
+        logger.info("Database connection initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize database engine: {e}")
+        logger.error(f"Error type: {type(e)}")
+        raise
 
 
 async def create_tables() -> None:
@@ -74,16 +71,28 @@ async def create_tables() -> None:
     if not engine:
         raise RuntimeError("Database not initialized. Call init_database() first.")
     
+    logger.info("Starting table creation process...")
+    logger.debug(f"Table prefix configured: '{settings.table_prefix}'")
+    
     try:
+        logger.info("Attempting to connect to database for table creation...")
         async with engine.begin() as conn:
+            logger.info("Connected successfully, dropping existing tables...")
             # Drop all tables first (for development)
             await conn.run_sync(Base.metadata.drop_all)
+            logger.info("Existing tables dropped, creating new tables...")
             # Create all tables
             await conn.run_sync(Base.metadata.create_all)
+            logger.info("New tables created successfully")
         
         logger.info("Database tables created successfully")
     except SQLAlchemyError as e:
-        logger.error(f"Failed to create database tables: {e}")
+        logger.error(f"SQLAlchemy error during table creation: {e}")
+        logger.error(f"Error type: {type(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error during table creation: {e}")
+        logger.error(f"Error type: {type(e)}")
         raise
 
 
@@ -153,3 +162,8 @@ async def health_check() -> bool:
 def get_session_factory() -> Optional[async_sessionmaker[AsyncSession]]:
     """Get the session factory for manual session management"""
     return async_session_factory
+
+
+def get_engine():
+    """Get the database engine for direct operations"""
+    return engine

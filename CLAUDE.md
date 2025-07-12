@@ -2,223 +2,249 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Development Commands
+## Project Overview
 
-### Backend (Python/FastAPI)
-```bash
-cd backend
+ShuScribe is a **frontend-centric** full-stack application for fiction writers, built with Next.js 15 + React 19 (frontend) and FastAPI (backend).
 
-# Environment setup
-uv sync                                    # Install/update dependencies
-source .venv/bin/activate                  # Activate virtual environment (required for Python commands)
+### Development Philosophy: Frontend-First
 
-# Development server
-uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+**Core Principle**: The frontend drives the development process and user experience.
 
-# Testing
-uv run pytest                             # Run all tests
-uv run pytest tests/test_database/        # Run database tests
-uv run pytest --cov=src --cov-report=html # Run with coverage
+**Why Frontend-First?**
+- **User Experience First**: UI/UX decisions drive API design, not the other way around
+- **Rapid Prototyping**: Frontend can use mock data and Next.js API routes for immediate feedback
+- **Type Safety**: Frontend TypeScript interfaces define the API contract
+- **Authentication**: Supabase Auth handled entirely in frontend, backend trusts the auth tokens
+- **State Management**: TanStack Query + LocalStorage provides offline-first experience
 
-# Code quality
-uv run black .                            # Format code
-uv run isort .                            # Sort imports
-uv run flake8                             # Lint code
-uv run mypy src/                          # Type checking
+**How It Works**:
+1. **Design in Frontend**: Create UI components and define TypeScript interfaces
+2. **Mock Data**: Use MSW (Mock Service Worker) and Next.js API routes for development
+3. **API Contract**: Frontend `src/types/api.ts` defines the expected API structure
+4. **Backend Implementation**: Backend implements endpoints to match frontend expectations
+5. **Validation**: Frontend types become backend Pydantic models with field aliases
 
-# Database migrations
-uv run alembic revision --autogenerate -m "Description"  # Create migration
-uv run alembic upgrade head                              # Apply migrations
+## Quick Start
 
-# Dependencies
-uv add package-name                       # Add runtime dependency
-uv add --dev package-name                 # Add development dependency
-```
+### Essential Commands
 
-### Frontend (Next.js/TypeScript)
+**Frontend Development**:
 ```bash
 cd frontend
+pnpm install                              # Install dependencies
+npm run build                             # Production build
+npm run lint                              # Run ESLint
+pnpm dlx shadcn@latest add [component]    # Add UI components
 
-# Dependencies
-pnpm install                              # Install dependencies (preferred)
-npm install                               # Alternative: npm install
-
-# Development
 # IMPORTANT: Never run dev server via Claude Code - let user handle this
 # User will run: npm run dev or pnpm dev
-npm run build                             # Production build
-npm run start                             # Start production server
-npm run lint                              # Run ESLint
-
-# UI Components (shadcn/ui)
-pnpm dlx shadcn@latest add [component]    # Add shadcn components
 ```
 
-### Docker Services
+**Backend Development**:
+```bash
+cd backend
+uv sync && source .venv/bin/activate     # Setup environment
+uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000  # Dev server
+uv run pytest                            # Run tests
+uv run black . && uv run isort .         # Format code
+```
+
+**Docker Services**:
 ```bash
 # From project root
-docker-compose up -d                      # Start PostgreSQL & Portkey Gateway
-docker-compose down                       # Stop all services
-docker-compose logs -f                    # View logs
-docker-compose exec postgres psql -U postgres -d shuscribe  # Connect to database
+docker-compose up -d                     # Start PostgreSQL & Portkey Gateway
+docker-compose down                      # Stop all services
 ```
+
+## Specialized Development Guides
+
+### When to Use Which Guide
+
+- **🎨 Frontend Work**: Refer to [`/frontend/CLAUDE-frontend.md`](frontend/CLAUDE-frontend.md)
+  - Component patterns, state management, and UI development
+  - Authentication integration and @-reference system
+  - shadcn/ui components and Tailwind CSS patterns
+
+- **⚙️ Backend Work**: Refer to [`/backend/CLAUDE-backend.md`](backend/CLAUDE-backend.md)  
+  - Repository patterns, database models, and agent systems
+  - LLM integration, API endpoints, and security
+  - FastAPI development and testing strategies
+
+- **🔗 Integration Work**: Use this guide for understanding how frontend and backend work together
+
+## Frontend-Backend Integration
+
+### Core Integration Principles
+
+**Authentication Strategy**:
+- **Frontend**: Handles all authentication via Supabase Auth
+- **Backend**: Extracts tokens from Authorization header, trusts frontend validation
+- **No Token Validation**: Backend doesn't validate tokens, just extracts for context
+
+**Data Flow**:
+- **Frontend-First**: UI state drives API requirements
+- **Offline-First**: LocalStorage + TanStack Query provide offline functionality
+- **API Consistency**: Both systems use `ApiResponse<T>` wrapper for all responses
+- **Error Handling**: Consistent error format across frontend and backend
+
+**Field Naming Conventions**:
+- **Frontend**: camelCase (`projectId`, `createdAt`, `wordCount`)
+- **Backend**: snake_case with Pydantic aliases for automatic conversion
+- **API**: Backend handles both formats seamlessly
+
+### Integration Development Workflow
+
+**For Frontend Features**:
+1. **Design First**: Create UI components and define TypeScript interfaces in `/frontend/src/types/api.ts`
+2. **Mock Implementation**: Use MSW and Next.js API routes for rapid prototyping
+3. **Backend Alignment**: Backend implements endpoints to match frontend TypeScript interfaces
+4. **Integration**: Both systems use consistent `ApiResponse<T>` wrapper and field naming
+
+**For Backend Features**:
+1. **API Contract**: Check frontend expectations in `/frontend/src/types/api.ts`
+2. **Implementation**: Create backend endpoints with proper response format and field aliases
+3. **Frontend Integration**: Update frontend to use new endpoints if needed
+4. **Validation**: Ensure ProseMirror content structure matches between systems
+
+## Documentation Structure
+
+### Core Documentation
+
+- **📚 API Reference**: [`/_docs/core/api-reference.md`](_docs/core/api-reference.md)
+  - Complete API documentation with request/response examples
+  - Authentication, error handling, and field naming conventions
+  - Insomnia/Postman testing guidance
+
+### High-Level Documentation
+
+- **📖 Product Overview**: [`/_docs/high-level/1-product-overview.md`](_docs/high-level/1-product-overview.md)
+- **🎯 MVP Specification**: [`/_docs/high-level/2-mvp.md`](_docs/high-level/2-mvp.md)
+- **🎨 Frontend Architecture**: [`/_docs/high-level/3-frontend.md`](_docs/high-level/3-frontend.md)
+- **⚙️ Backend Architecture**: [`/_docs/high-level/4-backend.md`](_docs/high-level/4-backend.md)
+
+### API & Integration Documentation
+
+- **📝 API Contracts**: [`/_docs/api/contracts.md`](_docs/api/contracts.md) - Frontend-backend interface definitions
+- **🔗 Field Mapping**: [`/_docs/api/field-mapping.md`](_docs/api/field-mapping.md) - camelCase/snake_case conversion guide (planned)
+- **🔐 Authentication**: [`/_docs/api/authentication.md`](_docs/api/authentication.md) - Auth implementation details (planned)
+
+### Development Documentation
+
+- **🛠️ Environment Setup**: [`/_docs/development/environment-setup.md`](_docs/development/environment-setup.md) - Complete dev environment guide (planned)
+- **🧪 Testing Strategy**: [`/_docs/development/testing-strategy.md`](_docs/development/testing-strategy.md) - Testing approach and tools (planned)
+- **🚀 Deployment Guide**: [`/_docs/development/deployment-guide.md`](_docs/development/deployment-guide.md) - Production deployment process (planned)
 
 ## Architecture Overview
 
-### Overall System Architecture
-ShuScribe is a **context-aware fiction writing platform** with a three-panel VS Code-like workspace. The system consists of:
+ShuScribe is a **context-aware fiction writing platform** with a three-panel VS Code-like workspace:
 
-- **Backend**: FastAPI with repository pattern for data persistence
-- **Frontend**: Next.js 15 with React 19, implementing a workspace UI for fiction writers
-- **Authentication**: Supabase Auth with OAuth support
-- **Database**: Supabase (PostgreSQL) for production, file-based repos for development
-
-### Frontend Architecture (Next.js)
-
-**Core Design**: Three-panel workspace layout for fiction writing:
 1. **File Explorer** - Hierarchical project organization (characters, locations, chapters)
 2. **Editor** - Tabbed document editor with @-reference system
 3. **AI Panel** - Context-aware AI assistance (future implementation)
 
 **Key Technologies**:
-- **Next.js 15.3.5** with App Router and Turbopack
-- **React 19** with TypeScript
-- **shadcn/ui** + **Radix UI** for component library
-- **Tailwind CSS v4** for styling
-- **react-resizable-panels** for workspace layout
-- **Supabase Auth** with SSR support
+- **Frontend**: Next.js 15.3.5, React 19, TypeScript, shadcn/ui, TanStack Query
+- **Backend**: FastAPI, SQLAlchemy, Supabase (PostgreSQL), Repository pattern
+- **Authentication**: Supabase Auth with OAuth support
+- **AI**: Self-hosted Portkey Gateway with multiple LLM providers
 
-**Authentication Flow**:
-- Middleware-based route protection (`src/middleware.ts`)
-- Dual Supabase clients: browser (`src/lib/supabase/client.ts`) and server (`src/lib/supabase/server.ts`)
-- AuthContext provider for global auth state
-- OAuth callback handling at `/auth/callback`
+## Environment Setup
 
-**Component Patterns**:
-- **Composition**: WorkspaceLayout accepts pluggable panels
-- **Client Components**: Most components use `"use client"` for interactivity
-- **Context Pattern**: AuthContext for user state management
+### Quick Environment Setup
 
-### Backend Repository Pattern
-ShuScribe uses a repository pattern with multiple backends:
-- **File repositories**: Local file-based storage for development (`src/database/file/`)
-- **Database repositories**: PostgreSQL for production (planned, see `src/database/models/`)
-- **Interfaces**: Abstract base classes define repository contracts (`src/database/interfaces/`)
-
-The `RepositoryFactory` (`src/database/factory.py`) creates appropriate repository implementations based on configuration.
-
-**IMPORTANT**: File repositories always use `backend/temp/` directory to avoid accidentally committing local data files to git. This directory is gitignored.
-
-### LLM Architecture
-**Core Service**: `src/services/llm/llm_service.py` handles all LLM interactions through self-hosted Portkey Gateway.
-
-**Agent System**: WikiGen agents (`src/agents/`) inherit from `BaseAgent`:
-- Default model: `google/gemini-2.0-flash-001` (cost optimization)
-- Supports streaming, structured output, and thinking modes
-- Built-in error handling and model validation
-
-**Key Components**:
-- `src/core/llm/catalog.py`: Model definitions and capabilities
-- `src/schemas/llm/`: Pydantic models for LLM requests/responses
-- `src/agents/wikigen/`: Specialized agents for wiki generation workflow
-
-### Configuration
-`src/config.py` uses Pydantic Settings with `.env` file support:
-- **Database**: Supabase URL/keys, skip database flag for in-memory mode
-- **LLM**: Portkey Gateway configuration, encryption keys
-- **Environment**: Development vs production settings
-
-### API Structure
-FastAPI app with versioned routing:
-- `src/main.py`: Application entry point and middleware
-- `src/api/v1/`: API endpoints organized by domain (stories, wiki, users, etc.)
-- `src/services/`: Business logic layer
-
-## Development Notes
-
-### Environment Setup
-
-**Backend Setup**:
+**Backend**:
 1. Copy `.env.example` to `.env` and configure
 2. Generate encryption key: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
 3. Start Docker services: `docker-compose up -d`
-4. Backend: `cd backend && uv sync`
-
-**Frontend Setup**:
-1. `cd frontend && pnpm install`
-2. Copy `.env.local.example` to `.env.local`
-3. Configure Supabase environment variables:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-   ```
-4. In Supabase dashboard:
-   - Enable authentication providers (Email, Google OAuth)
-   - Add redirect URLs: `http://localhost:3000/auth/callback`
-   - Set Site URL: `http://localhost:3000`
-
-### Testing Strategy
-- **Backend**: pytest with async support, coverage threshold 40%
-- Database tests: `tests/test_database/` with test runner
-- Factories: `tests/factories.py` for test data generation
-- **Frontend**: No tests currently configured (recommended: Jest + Testing Library)
-
-### Code Quality
-**Backend**:
-- **Formatting**: Black (88 char line length)
-- **Type checking**: mypy with strict settings
-- **Import sorting**: isort with black profile
-- **Linting**: flake8
 
 **Frontend**:
-- **TypeScript**: Strict type checking with path aliases (`@/*`)
-- **ESLint**: Next.js recommended configuration
-- **Prettier**: Auto-formatting via Tailwind CSS classes
-- **Component Library**: shadcn/ui with consistent design tokens
+1. Copy `.env.local.example` to `.env.local`
+2. Configure Supabase environment variables
+3. In Supabase dashboard: Enable auth providers, add redirect URLs
 
-### File Repository Storage
-**CRITICAL**: When using file-based repositories for local development:
-- All file repositories MUST use `backend/temp/` as the workspace directory
-- Never use current directory (`.`) or project root for file storage
-- The `temp/` directory is gitignored to prevent accidental commits of local data
-- Dependencies and API endpoints are configured to use `temp/` automatically
+## Key Development Notes
 
-Example:
-```python
-# Correct - uses temp directory
-repos = get_repositories(backend="file", workspace_path=Path("temp"))
+### Critical Rules
 
-# Wrong - could commit local files
-repos = get_repositories(backend="file", workspace_path=Path("."))
-```
+- **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
+- **File Storage**: Backend file repositories MUST use `backend/temp/` directory (gitignored)
+- **API Documentation**: ALWAYS update `/_docs/core/api-reference.md` when modifying API endpoints
+- **Cross-References**: Update all CLAUDE.md files when making documentation changes
 
-### Frontend Development Patterns
+### @-Reference System (Core Feature)
 
-**Component Architecture**:
-- Components follow composition pattern: `<WorkspaceLayout fileExplorer={<FileExplorer />} />`
-- Use `"use client"` directive for interactive components
-- Leverage shadcn/ui components: `pnpm dlx shadcn@latest add [component-name]`
-- UI state managed with React hooks (`useState`, `useContext`)
-
-**Authentication Integration**:
-- Use `useAuth()` hook to access user state: `const { user, signOut } = useAuth()`
-- Protected routes handled by middleware, not component-level guards
-- Supabase client selection: browser context uses `createClient()`, server uses `await createClient()`
-
-**@-Reference System** (Core Feature):
-- Documents support `@character/name` syntax for cross-references
+- Documents support `@character/name`, `@location/place` syntax for cross-references
 - References are highlighted and clickable in editor
-- File explorer shows contextual tags on hover
-- Future: Will integrate with backend for validation and autocomplete
+- **Frontend-Only Implementation**: Search uses local file tree data for instant results
+- **No Backend Integration**: Reference search stays in frontend for performance
 
-**Development Server Behavior**:
-- **CRITICAL**: Claude Code should NEVER run `npm run dev`, `pnpm dev`, or similar
-- Environment changes require server restart (user handles this)
-- Turbopack provides fast rebuilds during development
+### Common Patterns
 
-**Component State Patterns**:
-- Resizable panels: Use `react-resizable-panels` with persistence
-- Modal/Dialog state: Prefer controlled components with explicit state
-- Form handling: `react-hook-form` with `zod` validation (when needed)
-- Loading states: Use skeleton components from shadcn/ui
+- Frontend `src/types/api.ts` defines the API contract
+- Backend `src/schemas/` models match frontend types with field aliases
+- Both systems use `ApiResponse<T>` wrapper for consistent responses
+- Authentication context flows from frontend to backend via Bearer tokens
 
+## Documentation Maintenance
+
+### Critical Documentation Rules
+
+- **ALWAYS update relevant `/_docs/` files** when making changes to the codebase
+- **ALWAYS update the appropriate CLAUDE.md file** when documentation changes
+- **ALWAYS maintain cross-references** between all documentation files
+- All documentation must include complete examples and clear descriptions
+
+### Documentation Update Workflow
+
+When making changes, update documentation in this order:
+
+#### 1. API Changes
+- **Update**: `/_docs/core/api-reference.md` - Complete API documentation
+- **Update**: Main `CLAUDE.md` - If integration patterns change
+- **Update**: `/_docs/api/contracts.md` - If interface definitions change
+
+#### 2. Frontend Changes
+- **Update**: Relevant `/_docs/core/` or `/_docs/development/` files
+- **Update**: `/frontend/CLAUDE-frontend.md` - Add short description of change
+- **Update**: Main `CLAUDE.md` - If core patterns change
+
+#### 3. Backend Changes  
+- **Update**: Relevant `/_docs/core/` or `/_docs/development/` files
+- **Update**: `/backend/CLAUDE-backend.md` - Add short description of change
+- **Update**: Main `CLAUDE.md` - If core patterns change
+
+#### 4. Integration/Architecture Changes
+- **Update**: `/_docs/core/integration-guide.md` (when created)
+- **Update**: Main `CLAUDE.md` - Core integration principles
+- **Update**: Both specialized CLAUDE files if relevant
+
+### Documentation Location Guidelines
+
+**Core Technical Documentation** (`/_docs/core/`):
+- Detailed technical guides, implementation patterns
+- API reference, frontend/backend architecture guides
+
+**High-Level Documentation** (`/_docs/high-level/`):
+- Product overview, MVP specs, architectural decisions
+- Business logic and system design documentation
+
+**API Documentation** (`/_docs/api/`):
+- Interface definitions, contracts, field mapping
+- Authentication patterns, integration guides
+
+**Development Documentation** (`/_docs/development/`):
+- Environment setup, testing, deployment
+- Workflow guides and development standards
+
+### CLAUDE.md File Responsibilities
+
+- **Main `CLAUDE.md`**: Project overview, navigation hub, core integration principles
+- **Backend CLAUDE**: Backend-specific workflows, short descriptions of backend doc updates
+- **Frontend CLAUDE**: Frontend-specific workflows, short descriptions of frontend doc updates
+
+---
+
+**Need specific guidance?** Check the specialized guides:
+- 🎨 **Frontend**: [`/frontend/CLAUDE-frontend.md`](frontend/CLAUDE-frontend.md)
+- ⚙️ **Backend**: [`/backend/CLAUDE-backend.md`](backend/CLAUDE-backend.md)
+- 📚 **API**: [`/_docs/core/api-reference.md`](_docs/core/api-reference.md)

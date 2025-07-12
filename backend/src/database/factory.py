@@ -6,7 +6,10 @@ Supports multiple backends: database, memory
 import logging
 from typing import Optional
 
-from src.database.interfaces import ProjectRepository, DocumentRepository, FileTreeRepository
+from src.database.interfaces.project_repository import ProjectRepository
+from src.database.interfaces.document_repository import DocumentRepository
+from src.database.interfaces.file_tree_repository import FileTreeRepository
+from src.database.interfaces.user_repository import IUserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +22,12 @@ class RepositoryContainer:
         project: ProjectRepository,
         document: DocumentRepository,
         file_tree: FileTreeRepository,
+        user: IUserRepository,
     ):
         self.project = project
         self.document = document
         self.file_tree = file_tree
+        self.user = user
 
 
 def create_repositories(backend: str = "database") -> RepositoryContainer:
@@ -42,10 +47,12 @@ def create_repositories(backend: str = "database") -> RepositoryContainer:
             MemoryDocumentRepository, 
             MemoryFileTreeRepository
         )
+        from src.database.memory import MemoryUserRepository
         return RepositoryContainer(
             project=MemoryProjectRepository(),
             document=MemoryDocumentRepository(),
             file_tree=MemoryFileTreeRepository(),
+            user=MemoryUserRepository(),
         )
     elif backend == "database":
         logger.info("Creating database repositories")
@@ -54,10 +61,12 @@ def create_repositories(backend: str = "database") -> RepositoryContainer:
             DatabaseDocumentRepository,
             DatabaseFileTreeRepository
         )
+        from src.database.memory import MemoryUserRepository  # TODO: Replace with DatabaseUserRepository
         return RepositoryContainer(
             project=DatabaseProjectRepository(),
             document=DatabaseDocumentRepository(),
             file_tree=DatabaseFileTreeRepository(),
+            user=MemoryUserRepository(),  # TODO: Replace with DatabaseUserRepository
         )
     else:
         raise ValueError(f"Unknown backend: {backend}")

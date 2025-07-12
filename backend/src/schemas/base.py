@@ -3,10 +3,10 @@
 Base Pydantic schemas
 """
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Generic, TypeVar, Union
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BaseSchema(BaseModel):
@@ -22,8 +22,8 @@ class BaseSchema(BaseModel):
 
 class TimestampSchema(BaseSchema):
     """Schema with timestamp fields"""
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: Optional[datetime] = Field(None, alias="updatedAt")
 
 
 class UUIDSchema(BaseSchema):
@@ -34,7 +34,7 @@ class UUIDSchema(BaseSchema):
 class PaginationParams(BaseSchema):
     """Pagination parameters"""
     page: int = 1
-    page_size: int = 20
+    page_size: int = Field(default=20, alias="pageSize")
     
     def offset(self) -> int:
         return (self.page - 1) * self.page_size
@@ -45,8 +45,8 @@ class PaginatedResponse(BaseSchema):
     items: list
     total: int
     page: int
-    page_size: int
-    total_pages: int
+    page_size: int = Field(alias="pageSize")
+    total_pages: int = Field(alias="totalPages")
     
     @classmethod
     def create(cls, items: list, total: int, pagination: PaginationParams):
@@ -55,6 +55,36 @@ class PaginatedResponse(BaseSchema):
             items=items,
             total=total,
             page=pagination.page,
-            page_size=pagination.page_size,
-            total_pages=total_pages,
+            pageSize=pagination.page_size,
+            totalPages=total_pages,
         )
+
+
+# Type variable for generic response wrapper
+T = TypeVar('T')
+
+
+class ApiResponse(BaseSchema, Generic[T]):
+    """API response wrapper matching frontend ApiResponse<T> interface"""
+    data: Optional[T] = None
+    error: Optional[str] = None
+    message: Optional[str] = None
+    status: int
+    
+    @classmethod
+    def success(cls, data: T, message: Optional[str] = None, status: int = 200):
+        """Create successful response"""
+        return cls(data=data, error=None, message=message, status=status)
+    
+    @classmethod
+    def create_error(cls, error: str, message: Optional[str] = None, status: int = 400):
+        """Create error response"""
+        return cls(data=None, error=error, message=message, status=status)
+
+
+class ApiError(BaseSchema):
+    """API error response matching frontend ApiError interface"""
+    error: str
+    message: str
+    details: Optional[dict] = None
+    request_id: Optional[str] = None

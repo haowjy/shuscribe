@@ -34,7 +34,7 @@ These instructions assume you have already followed the **main `shuscribe/README
 
 -   **Python 3.12+**
 -   **uv** (Python package manager, installed globally as per main README)
--   **Cryptography Key**: A 32-character (or longer) random string for symmetric encryption of user API keys. Generate one using: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
+-   **Cryptography Key**: A 32-character (or longer) random string for symmetric encryption of user API keys. Generate one using: `uv run python -c "import secrets; print(secrets.token_urlsafe(32))"`
 -   **`asyncpg`**: The asynchronous PostgreSQL driver. This will be installed via `uv sync`.
 
 ### 1. Navigate to the Backend Directory
@@ -95,6 +95,8 @@ uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The `--reload` flag enables hot-reloading for development.
+
+> **Note**: `uv run` automatically activates the virtual environment and runs the command with the correct Python interpreter and dependencies. No need to manually activate the virtual environment!
 
 ### 7. Access the API
 
@@ -222,7 +224,8 @@ Current immediate backend development tasks include:
 **Backend import errors / VS Code not recognizing dependencies:**
 -   Ensure you are in the `backend/` directory (`cd backend`).
 -   Run `uv sync` to ensure all dependencies are installed.
--   Verify your VS Code Python interpreter is set to the `.venv` inside this `backend/` directory (see main `shuscribe/README.md` for VS Code setup).
+-   Verify your VS Code Python interpreter is set to the `backend/.venv/bin/python` created by `uv`.
+-   If still having issues, try `uv sync --reinstall` to force reinstallation.
 
 **FastAPI application not starting:**
 -   Check the console output for error messages.

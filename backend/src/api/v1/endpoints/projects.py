@@ -5,11 +5,13 @@ Project API endpoints matching frontend expectations
 import logging
 from typing import List, Dict, Any
 
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, status, Depends, Query
+from pydantic import BaseModel, Field
 
 from src.database.factory import get_repositories
 from src.database.models import Project, FileTreeItem
+from src.schemas.base import ApiResponse
+from src.api.dependencies import require_auth, get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,9 @@ router = APIRouter()
 
 class ProjectCollaborator(BaseModel):
     """Project collaborator info"""
-    user_id: str
+    model_config = {"populate_by_name": True}
+    
+    user_id: str = Field(alias="userId")
     role: str  # 'owner' | 'editor' | 'viewer'
     name: str
     avatar: str | None = None
@@ -30,55 +34,119 @@ class ProjectCollaborator(BaseModel):
 
 class ProjectSettings(BaseModel):
     """Project settings"""
-    auto_save_interval: int = 30000  # 30 seconds
-    word_count_target: int = 0
-    backup_enabled: bool = True
+    model_config = {"populate_by_name": True}
+    
+    auto_save_interval: int = Field(default=30000, alias="autoSaveInterval")  # 30 seconds
+    word_count_target: int = Field(default=0, alias="wordCountTarget")
+    backup_enabled: bool = Field(default=True, alias="backupEnabled")
+
+
+class ProjectSummary(BaseModel):
+    """Project summary for listing (subset of ProjectDetails)"""
+    model_config = {"populate_by_name": True}
+    
+    id: str
+    title: str
+    description: str
+    word_count: int = Field(alias="wordCount")
+    document_count: int = Field(alias="documentCount")
+    created_at: str = Field(alias="createdAt")
+    updated_at: str = Field(alias="updatedAt")
+    tags: List[str]
+    collaborators: List[ProjectCollaborator]
 
 
 class ProjectDetails(BaseModel):
     """Complete project details matching frontend ProjectDetails interface"""
+    model_config = {"populate_by_name": True}
+    
     id: str
     title: str
     description: str
-    word_count: int
-    document_count: int
-    created_at: str
-    updated_at: str
+    word_count: int = Field(alias="wordCount")
+    document_count: int = Field(alias="documentCount")
+    created_at: str = Field(alias="createdAt")
+    updated_at: str = Field(alias="updatedAt")
     tags: List[str]
     collaborators: List[ProjectCollaborator]
     settings: ProjectSettings
 
 
+class PaginationMeta(BaseModel):
+    """Pagination metadata"""
+    model_config = {"populate_by_name": True}
+    
+    total: int
+    limit: int
+    offset: int
+    has_more: bool = Field(alias="hasMore")
+    next_offset: int | None = Field(default=None, alias="nextOffset")
+
+
+class ProjectListResponse(BaseModel):
+    """Paginated list of projects"""
+    model_config = {"populate_by_name": True}
+    
+    data: List[ProjectSummary]
+    pagination: PaginationMeta
+
+
+class CreateProjectRequest(BaseModel):
+    """Request model for creating a new project"""
+    model_config = {"populate_by_name": True}
+    
+    title: str
+    description: str
+    tags: List[str] = []
+    settings: ProjectSettings | None = None
+
+
+class UpdateProjectRequest(BaseModel):
+    """Request model for updating a project"""
+    model_config = {"populate_by_name": True}
+    
+    title: str | None = None
+    description: str | None = None
+    tags: List[str] | None = None
+    settings: ProjectSettings | None = None
+
+
 class FileTreeItemResponse(BaseModel):
     """File tree item response matching frontend FileTreeItem interface"""
+    model_config = {"populate_by_name": True}
+    
     id: str
     name: str
     type: str  # 'file' | 'folder'
     path: str
-    parent_id: str | None = None
+    parent_id: str | None = Field(default=None, alias="parentId")
     children: List["FileTreeItemResponse"] | None = None
     
     # File-specific properties
-    document_id: str | None = None
+    document_id: str | None = Field(default=None, alias="documentId")
     icon: str | None = None
     tags: List[str] = []
-    word_count: int | None = None
+    word_count: int | None = Field(default=None, alias="wordCount")
     
     # Timestamps
-    created_at: str
-    updated_at: str
+    created_at: str = Field(alias="createdAt")
+    updated_at: str = Field(alias="updatedAt")
 
 
 class FileTreeMetadata(BaseModel):
     """File tree metadata"""
-    total_files: int
-    total_folders: int
-    last_updated: str
+    model_config = {"populate_by_name": True}
+    
+    total_files: int = Field(alias="totalFiles")
+    total_folders: int = Field(alias="totalFolders")
+    last_updated: str = Field(alias="lastUpdated")
 
 
 class FileTreeResponse(BaseModel):
     """File tree response matching frontend FileTreeResponse interface"""
-    file_tree: List[FileTreeItemResponse]
+    model_config = {"populate_by_name": True}
+    
+    file_tree: List[FileTreeItemResponse] = Field(alias="fileTree")
     metadata: FileTreeMetadata
 
 
@@ -86,13 +154,38 @@ class FileTreeResponse(BaseModel):
 # Helper Functions
 # ============================================================================
 
+def project_to_summary(project: Project) -> ProjectSummary:
+    """Convert Project model to ProjectSummary response"""
+    # Parse collaborators from JSON
+    collaborators = []
+    for collab in project.collaborators:
+        collaborators.append(ProjectCollaborator(
+            userId=collab.get("user_id", ""),
+            role=collab.get("role", "viewer"),
+            name=collab.get("name", ""),
+            avatar=collab.get("avatar"),
+        ))
+    
+    return ProjectSummary(
+        id=project.id,
+        title=project.title,
+        description=project.description,
+        wordCount=project.word_count,
+        documentCount=project.document_count,
+        createdAt=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
+        updatedAt=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
+        tags=project.tags,
+        collaborators=collaborators,
+    )
+
+
 def project_to_response(project: Project) -> ProjectDetails:
     """Convert Project model to ProjectDetails response"""
     # Parse collaborators from JSON
     collaborators = []
     for collab in project.collaborators:
         collaborators.append(ProjectCollaborator(
-            user_id=collab.get("user_id", ""),
+            userId=collab.get("user_id", ""),
             role=collab.get("role", "viewer"),
             name=collab.get("name", ""),
             avatar=collab.get("avatar"),
@@ -101,40 +194,40 @@ def project_to_response(project: Project) -> ProjectDetails:
     # Parse settings from JSON with defaults
     settings_data = project.settings or {}
     settings = ProjectSettings(
-        auto_save_interval=settings_data.get("auto_save_interval", 30000),
-        word_count_target=settings_data.get("word_count_target", 0),
-        backup_enabled=settings_data.get("backup_enabled", True),
+        autoSaveInterval=settings_data.get("auto_save_interval", 30000),
+        wordCountTarget=settings_data.get("word_count_target", 0),
+        backupEnabled=settings_data.get("backup_enabled", True),
     )
     
     return ProjectDetails(
         id=project.id,
         title=project.title,
         description=project.description,
-        word_count=project.word_count,
-        document_count=project.document_count,
-        created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
-        updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
+        wordCount=project.word_count,
+        documentCount=project.document_count,
+        createdAt=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
+        updatedAt=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
         tags=project.tags,
         collaborators=collaborators,
         settings=settings,
     )
 
 
-def file_tree_item_to_response(item: FileTreeItem, children: List["FileTreeItemResponse"] = None) -> FileTreeItemResponse:
+def file_tree_item_to_response(item: FileTreeItem, children: List["FileTreeItemResponse"] | None = None) -> FileTreeItemResponse:
     """Convert FileTreeItem model to FileTreeItemResponse"""
     return FileTreeItemResponse(
         id=item.id,
         name=item.name,
         type=item.type,
         path=item.path,
-        parent_id=item.parent_id,
+        parentId=item.parent_id,
         children=children if children else None,
-        document_id=item.document_id,
+        documentId=item.document_id,
         icon=item.icon,
         tags=item.tags,
-        word_count=item.word_count,
-        created_at=item.created_at.isoformat() if hasattr(item.created_at, 'isoformat') else str(item.created_at),
-        updated_at=item.updated_at.isoformat() if hasattr(item.updated_at, 'isoformat') else str(item.updated_at),
+        wordCount=item.word_count,
+        createdAt=item.created_at.isoformat() if hasattr(item.created_at, 'isoformat') else str(item.created_at),
+        updatedAt=item.updated_at.isoformat() if hasattr(item.updated_at, 'isoformat') else str(item.updated_at),
     )
 
 
@@ -158,7 +251,7 @@ def build_file_tree_hierarchy(items: List[FileTreeItem]) -> List[FileTreeItemRes
             children = build_children(item.id)
             # Pass children as None if empty list, or the actual list if not empty
             children_to_pass = children if children else None
-            children_responses.append(file_tree_item_to_response(item, children_to_pass))
+            children_responses.append(file_tree_item_to_response(item, children_to_pass or []))
         
         return children_responses
     
@@ -170,8 +263,72 @@ def build_file_tree_hierarchy(items: List[FileTreeItem]) -> List[FileTreeItemRes
 # API Endpoints
 # ============================================================================
 
-@router.get("/{project_id}", response_model=ProjectDetails)
-async def get_project(project_id: str) -> ProjectDetails:
+@router.get("/", response_model=ApiResponse[ProjectListResponse])
+async def list_projects(
+    limit: int = Query(default=20, ge=1, le=100, description="Number of projects to return"),
+    offset: int = Query(default=0, ge=0, description="Number of projects to skip"),
+    sort: str = Query(default="updated_at", regex="^(title|created_at|updated_at)$", description="Field to sort by"),
+    order: str = Query(default="desc", regex="^(asc|desc)$", description="Sort order"),
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[ProjectListResponse]:
+    """
+    List all projects with pagination
+    
+    Matches frontend expectation: GET /projects
+    Returns ProjectListResponse with pagination metadata
+    """
+    try:
+        repos = get_repositories()
+        all_projects = await repos.project.list_all()
+        
+        # Apply sorting
+        if sort == "title":
+            all_projects.sort(key=lambda p: p.title, reverse=(order == "desc"))
+        elif sort == "created_at":
+            all_projects.sort(key=lambda p: p.created_at, reverse=(order == "desc"))
+        else:  # updated_at (default)
+            all_projects.sort(key=lambda p: p.updated_at, reverse=(order == "desc"))
+        
+        # Apply pagination
+        total = len(all_projects)
+        paginated_projects = all_projects[offset:offset + limit]
+        
+        # Convert to response format
+        project_summaries = [project_to_summary(project) for project in paginated_projects]
+        
+        # Calculate pagination metadata
+        has_more = offset + limit < total
+        next_offset = offset + limit if has_more else None
+        
+        pagination = PaginationMeta(
+            total=total,
+            limit=limit,
+            offset=offset,
+            hasMore=has_more,
+            nextOffset=next_offset
+        )
+        
+        response_data = ProjectListResponse(
+            data=project_summaries,
+            pagination=pagination
+        )
+        
+        logger.info(f"Listed {len(project_summaries)} projects (total: {total}) for user: {user_id}")
+        return ApiResponse.success(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error listing projects: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+
+@router.get("/{project_id}", response_model=ApiResponse[ProjectDetails])
+async def get_project(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[ProjectDetails]:
     """
     Get project details by ID
     
@@ -187,8 +344,9 @@ async def get_project(project_id: str) -> ProjectDetails:
                 detail=f"Project with ID {project_id} not found"
             )
         
-        logger.info(f"Retrieved project: {project.title} (ID: {project_id})")
-        return project_to_response(project)
+        logger.info(f"Retrieved project: {project.title} (ID: {project_id}) for user: {user_id}")
+        response_data = project_to_response(project)
+        return ApiResponse.success(response_data)
         
     except HTTPException:
         raise
@@ -200,8 +358,11 @@ async def get_project(project_id: str) -> ProjectDetails:
         )
 
 
-@router.get("/{project_id}/file-tree", response_model=FileTreeResponse)
-async def get_project_file_tree(project_id: str) -> FileTreeResponse:
+@router.get("/{project_id}/file-tree", response_model=ApiResponse[FileTreeResponse])
+async def get_project_file_tree(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[FileTreeResponse]:
     """
     Get file tree for a project
     
@@ -234,22 +395,155 @@ async def get_project_file_tree(project_id: str) -> FileTreeResponse:
         last_updated = last_updated_obj.isoformat() if hasattr(last_updated_obj, 'isoformat') else str(last_updated_obj)
         
         metadata = FileTreeMetadata(
-            total_files=total_files,
-            total_folders=total_folders,
-            last_updated=last_updated,
+            totalFiles=total_files,
+            totalFolders=total_folders,
+            lastUpdated=last_updated,
         )
         
         logger.info(f"Retrieved file tree for project {project_id}: {total_files} files, {total_folders} folders")
         
-        return FileTreeResponse(
-            file_tree=file_tree,
+        response_data = FileTreeResponse(
+            fileTree=file_tree,
             metadata=metadata,
         )
+        return ApiResponse.success(response_data)
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error retrieving file tree for project {project_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+
+@router.post("/", response_model=ApiResponse[ProjectDetails], status_code=status.HTTP_201_CREATED)
+async def create_project(
+    request: CreateProjectRequest,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[ProjectDetails]:
+    """
+    Create a new project
+    
+    Matches frontend expectation: POST /projects
+    """
+    try:
+        repos = get_repositories()
+        
+        # Prepare project data
+        project_data = {
+            "title": request.title,
+            "description": request.description,
+            "tags": request.tags,
+            "collaborators": [],  # Start with empty collaborators
+            "settings": request.settings.model_dump() if request.settings else {},
+            "word_count": 0,
+            "document_count": 0,
+        }
+        
+        project = await repos.project.create(project_data)
+        
+        logger.info(f"Created project: {project.title} (ID: {project.id}) for user: {user_id}")
+        response_data = project_to_response(project)
+        return ApiResponse.success(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error creating project: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+
+@router.put("/{project_id}", response_model=ApiResponse[ProjectDetails])
+async def update_project(
+    project_id: str,
+    request: UpdateProjectRequest,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[ProjectDetails]:
+    """
+    Update an existing project
+    
+    Matches frontend expectation: PUT /projects/{projectId}
+    """
+    try:
+        repos = get_repositories()
+        
+        # Check if project exists
+        existing_project = await repos.project.get_by_id(project_id)
+        if not existing_project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Project with ID {project_id} not found"
+            )
+        
+        # Prepare updates (only include non-None values)
+        updates = {}
+        if request.title is not None:
+            updates["title"] = request.title
+        if request.description is not None:
+            updates["description"] = request.description
+        if request.tags is not None:
+            updates["tags"] = request.tags
+        if request.settings is not None:
+            updates["settings"] = request.settings.model_dump()
+        
+        # Update project
+        updated_project = await repos.project.update(project_id, updates)
+        
+        logger.info(f"Updated project: {project_id} for user: {user_id}")
+        response_data = project_to_response(updated_project)
+        return ApiResponse.success(response_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating project {project_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+
+@router.delete("/{project_id}", response_model=ApiResponse[Dict[str, str]])
+async def delete_project(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id)
+) -> ApiResponse[Dict[str, str]]:
+    """
+    Delete a project
+    
+    Matches frontend expectation: DELETE /projects/{projectId}
+    """
+    try:
+        repos = get_repositories()
+        
+        # Check if project exists
+        existing_project = await repos.project.get_by_id(project_id)
+        if not existing_project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Project with ID {project_id} not found"
+            )
+        
+        # Delete project
+        success = await repos.project.delete(project_id)
+        
+        if success:
+            logger.info(f"Deleted project: {project_id} for user: {user_id}")
+            response_data = {"message": f"Project {project_id} deleted successfully"}
+            return ApiResponse.success(response_data)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete project"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting project {project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"

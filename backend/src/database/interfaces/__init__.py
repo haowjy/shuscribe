@@ -3,9 +3,9 @@
 Repository interface definitions for ShuScribe
 """
 
-from .project_repository import ProjectRepository
-from .document_repository import DocumentRepository  
-from .file_tree_repository import FileTreeRepository
+from src.database.interfaces.project_repository import ProjectRepository
+from src.database.interfaces.document_repository import DocumentRepository  
+from src.database.interfaces.file_tree_repository import FileTreeRepository
 
 __all__ = [
     "ProjectRepository",

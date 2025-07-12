@@ -3,7 +3,7 @@
 Project repository interface
 """
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from src.database.models import Project
 
@@ -29,4 +29,9 @@ class ProjectRepository(ABC):
     @abstractmethod
     async def delete(self, project_id: str) -> bool:
         """Delete project"""
+        pass
+    
+    @abstractmethod
+    async def list_all(self) -> List[Project]:
+        """List all projects"""
         pass

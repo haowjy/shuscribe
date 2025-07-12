@@ -1,0 +1,109 @@
+"""
+Common response schemas used across multiple API endpoints
+"""
+from typing import List, Optional, Dict, Any, Generic, TypeVar
+from pydantic import BaseModel, Field
+
+from src.schemas.base import BaseSchema
+
+T = TypeVar('T')
+
+
+class PaginatedResponse(BaseSchema, Generic[T]):
+    """Standard paginated response"""
+    model_config = {"populate_by_name": True}
+    
+    data: List[T]
+    pagination: Dict[str, Any] = Field(default_factory=lambda: {
+        "total": 0,
+        "limit": 20,
+        "offset": 0,
+        "hasMore": False,
+        "nextOffset": None
+    })
+    
+    @classmethod
+    def create(cls, data: List[T], total: int, limit: int, offset: int):
+        """Create paginated response with calculated pagination info"""
+        has_more = offset + limit < total
+        next_offset = offset + limit if has_more else None
+        
+        return cls(
+            data=data,
+            pagination={
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "hasMore": has_more,
+                "nextOffset": next_offset
+            }
+        )
+
+
+class SuccessResponse(BaseSchema):
+    """Standard success response"""
+    model_config = {"populate_by_name": True}
+    
+    success: bool = True
+    message: str
+
+
+class ErrorResponse(BaseSchema):
+    """Standard error response"""
+    model_config = {"populate_by_name": True}
+    
+    success: bool = False
+    error: str
+    message: str
+    details: Optional[Dict[str, Any]] = None
+    request_id: Optional[str] = Field(default=None, alias="requestId")
+
+
+class ValidationErrorResponse(BaseSchema):
+    """Validation error response"""
+    model_config = {"populate_by_name": True}
+    
+    success: bool = False
+    error: str = "validation_error"
+    message: str
+    field_errors: Dict[str, List[str]] = Field(default_factory=dict, alias="fieldErrors")
+
+
+class TagResponse(BaseSchema):
+    """Tag operation response"""
+    model_config = {"populate_by_name": True}
+    
+    success: bool
+    message: str
+    tags: List[str] = Field(default_factory=list)
+
+
+class ReferenceSearchResponse(BaseSchema):
+    """Response for @-reference search"""
+    model_config = {"populate_by_name": True}
+    
+    results: List[Dict[str, Any]] = Field(default_factory=list)
+    total: int
+    query: str
+    limit: int
+    has_more: bool = Field(alias="hasMore")
+
+
+class HealthCheckResponse(BaseSchema):
+    """Health check response"""
+    model_config = {"populate_by_name": True}
+    
+    status: str  # 'healthy' | 'unhealthy'
+    timestamp: str
+    version: str
+    services: Dict[str, str] = Field(default_factory=dict)  # service_name -> status
+
+
+class MetricsResponse(BaseSchema):
+    """Metrics response"""
+    model_config = {"populate_by_name": True}
+    
+    total_requests: int = Field(alias="totalRequests")
+    average_response_time: float = Field(alias="averageResponseTime")
+    error_rate: float = Field(alias="errorRate")
+    uptime: str

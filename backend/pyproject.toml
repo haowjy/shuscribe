@@ -19,11 +19,14 @@ dependencies = [
     "pgvector>=0.2.0",
     "python-dotenv>=1.0.0",
     "cryptography>=41.0.0",
-    "supabase>=2.0.0",
     "jupyterlab>=4.4.3",
     "ipykernel>=6.29.5",
     "toml>=0.10.2",
     "pytest-asyncio>=1.0.0",
+    "supabase>=2.0.0",
+    "faker>=37.4.0",
+    "alembic>=1.16.4",
+    "psycopg2-binary>=2.9.10",
 ]
 
 [project.optional-dependencies]

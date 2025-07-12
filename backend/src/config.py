@@ -33,13 +33,23 @@ class Settings(BaseSettings):
     
     # Database - Supabase Configuration
     SUPABASE_URL: str = "https://your-project.supabase.co"
-    SUPABASE_KEY: str = "your-anon-key-here"
-    SUPABASE_SERVICE_KEY: Optional[str] = None  # For admin operations
+    
+    # New API Key System (2025+)
+    SUPABASE_PUBLISHABLE_KEY: str = "your-anon-key-here"
+    SUPABASE_SECRET_KEY: str = "your-service-key-here"
     
     # Legacy SQLAlchemy URL (kept for compatibility during migration)
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/shuscribe"
 
     DATABASE_BACKEND: Literal["memory", "file", "database"] = "memory"
+    
+    # Table prefix for environment isolation
+    TABLE_PREFIX: str = ""  # Empty for production, "test_" for development/testing
+    
+    # Database Seeding (Development Only)
+    ENABLE_DATABASE_SEEDING: bool = True  # Enable/disable seeding on startup
+    SEED_DATA_SIZE: str = "medium"        # "small", "medium", or "large"
+    CLEAR_BEFORE_SEED: bool = True        # Clear existing test data before seeding
     
     # CORS
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
@@ -62,6 +72,23 @@ class Settings(BaseSettings):
     THINKING_BUDGET_MEDIUM_PERCENT: float = 50.0   # 50% of available tokens for medium thinking  
     THINKING_BUDGET_HIGH_PERCENT: float = 100.0     # 100% of available tokens for high thinking
     THINKING_BUDGET_DEFAULT_TOKENS: int = 2048     # Default budget when context window unknown
+    
+    @property
+    def supabase_publishable_key(self) -> str:
+        """Get the publishable key"""
+        return self.SUPABASE_PUBLISHABLE_KEY
+    
+    @property
+    def supabase_secret_key(self) -> str:
+        """Get the secret key"""
+        return self.SUPABASE_SECRET_KEY
+    
+    @property
+    def table_prefix(self) -> str:
+        """Get table prefix based on environment"""
+        if self.ENVIRONMENT.lower() in ["development", "testing"]:
+            return self.TABLE_PREFIX or "test_"
+        return ""
     
     model_config = SettingsConfigDict(
         env_file=".env",

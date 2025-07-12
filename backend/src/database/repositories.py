@@ -52,7 +52,7 @@ class DatabaseProjectRepository(ProjectRepository):
     async def update(self, project_id: str, updates: Dict[str, Any]) -> Optional[Project]:
         async with get_session_context() as session:
             # Add updated_at timestamp
-            updates["updated_at"] = datetime.now(UTC)
+            updates["updated_at"] = datetime.now(UTC).replace(tzinfo=None)
             
             result = await session.execute(
                 update(Project).where(Project.id == project_id).values(**updates)
@@ -70,6 +70,13 @@ class DatabaseProjectRepository(ProjectRepository):
                 delete(Project).where(Project.id == project_id)
             )
             return result.rowcount > 0
+    
+    async def list_all(self) -> List[Project]:
+        async with get_session_context() as session:
+            result = await session.execute(
+                select(Project).order_by(Project.updated_at.desc())
+            )
+            return list(result.scalars().all())
 
 
 class DatabaseDocumentRepository(DocumentRepository):
@@ -112,7 +119,7 @@ class DatabaseDocumentRepository(DocumentRepository):
     async def update(self, document_id: str, updates: Dict[str, Any]) -> Optional[Document]:
         async with get_session_context() as session:
             # Add updated_at timestamp
-            updates["updated_at"] = datetime.now(UTC)
+            updates["updated_at"] = datetime.now(UTC).replace(tzinfo=None)
             
             result = await session.execute(
                 update(Document).where(Document.id == document_id).values(**updates)
@@ -165,7 +172,7 @@ class DatabaseFileTreeRepository(FileTreeRepository):
     
     async def update(self, item_id: str, updates: Dict[str, Any]) -> Optional[FileTreeItem]:
         async with get_session_context() as session:
-            updates["updated_at"] = datetime.now(UTC)
+            updates["updated_at"] = datetime.now(UTC).replace(tzinfo=None)
             
             result = await session.execute(
                 update(FileTreeItem).where(FileTreeItem.id == item_id).values(**updates)
@@ -212,8 +219,8 @@ class MemoryProjectRepository(ProjectRepository):
             tags=project_data.get("tags", []),
             collaborators=project_data.get("collaborators", []),
             settings=project_data.get("settings", {}),
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
+            created_at=datetime.now(UTC).replace(tzinfo=None),
+            updated_at=datetime.now(UTC).replace(tzinfo=None),
         )
         self._projects[project_id] = project
         return project
@@ -227,7 +234,7 @@ class MemoryProjectRepository(ProjectRepository):
             if hasattr(project, key):
                 setattr(project, key, value)
         
-        project.updated_at = datetime.now(UTC)
+        project.updated_at = datetime.now(UTC).replace(tzinfo=None)
         return project
     
     async def delete(self, project_id: str) -> bool:
@@ -235,6 +242,11 @@ class MemoryProjectRepository(ProjectRepository):
             del self._projects[project_id]
             return True
         return False
+    
+    async def list_all(self) -> List[Project]:
+        # Return sorted by updated_at descending
+        projects = list(self._projects.values())
+        return sorted(projects, key=lambda p: p.updated_at, reverse=True)
 
 
 class MemoryDocumentRepository(DocumentRepository):
@@ -263,8 +275,8 @@ class MemoryDocumentRepository(DocumentRepository):
             is_locked=document_data.get("is_locked", False),
             locked_by=document_data.get("locked_by"),
             file_tree_id=document_data.get("file_tree_id"),
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
+            created_at=datetime.now(UTC).replace(tzinfo=None),
+            updated_at=datetime.now(UTC).replace(tzinfo=None),
         )
         self._documents[document_id] = document
         return document
@@ -278,7 +290,7 @@ class MemoryDocumentRepository(DocumentRepository):
             if hasattr(document, key):
                 setattr(document, key, value)
         
-        document.updated_at = datetime.now(UTC)
+        document.updated_at = datetime.now(UTC).replace(tzinfo=None)
         return document
     
     async def delete(self, document_id: str) -> bool:
@@ -310,8 +322,8 @@ class MemoryFileTreeRepository(FileTreeRepository):
             icon=item_data.get("icon"),
             tags=item_data.get("tags", []),
             word_count=item_data.get("word_count"),
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
+            created_at=datetime.now(UTC).replace(tzinfo=None),
+            updated_at=datetime.now(UTC).replace(tzinfo=None),
         )
         self._items[item_id] = item
         return item
@@ -325,7 +337,7 @@ class MemoryFileTreeRepository(FileTreeRepository):
             if hasattr(item, key):
                 setattr(item, key, value)
         
-        item.updated_at = datetime.now(UTC)
+        item.updated_at = datetime.now(UTC).replace(tzinfo=None)
         return item
     
     async def delete(self, item_id: str) -> bool:
