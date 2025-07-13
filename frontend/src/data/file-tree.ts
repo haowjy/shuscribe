@@ -1,7 +1,14 @@
+export interface Tag {
+  id: string;
+  name: string;
+  color?: string;
+  icon?: string;
+}
+
 export interface BaseFileItem {
   id: string;
   name: string;
-  tags?: string[];
+  tags?: Tag[];
   icon?: string; // Icon name for the file/folder
 }
 

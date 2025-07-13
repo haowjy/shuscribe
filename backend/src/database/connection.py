@@ -40,15 +40,24 @@ def init_database() -> None:
     logger.debug(f"Full database URL (password redacted): {database_url.replace(database_url.split('@')[0].split(':')[-1], '[REDACTED]')}")
     
     try:
-        # Create async engine
+        # Create async engine with configurable timeouts
+        connect_args = {}
+        if database_url.startswith("postgresql"):
+            connect_args = {
+                "command_timeout": settings.DATABASE_COMMAND_TIMEOUT,
+                "server_settings": {
+                    "application_name": "shuscribe_backend",
+                    "jit": "off"  # Disable JIT for better connection stability
+                }
+            }
+        
         engine = create_async_engine(
             database_url,
             echo=settings.DEBUG,  # Log SQL queries in debug mode
             pool_pre_ping=True,  # Verify connections before use
             pool_recycle=3600,   # Recycle connections every hour
-            connect_args={
-                "command_timeout": 10,  # 10 second timeout for connections
-            } if database_url.startswith("postgresql") else {}
+            pool_timeout=settings.DATABASE_POOL_TIMEOUT,  # Timeout for getting connection from pool
+            connect_args=connect_args
         )
         
         # Create session factory
@@ -96,6 +105,12 @@ async def create_tables(drop_existing: bool = False) -> None:
     except SQLAlchemyError as e:
         logger.error(f"SQLAlchemy error during table creation: {e}")
         logger.error(f"Error type: {type(e)}")
+        raise
+    except TimeoutError as e:
+        logger.error(f"Database operation timed out during table creation: {e}")
+        logger.error("This may be due to network issues or Supabase connectivity problems.")
+        logger.error("Consider increasing DATABASE_COMMAND_TIMEOUT in your .env file.")
+        logger.error("For WSL2 users: Check IPv6 connectivity and DNS resolution.")
         raise
     except Exception as e:
         logger.error(f"Unexpected error during table creation: {e}")

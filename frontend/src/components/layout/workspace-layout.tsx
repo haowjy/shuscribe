@@ -7,7 +7,7 @@ import { loadDocument } from "@/lib/api/document-service";
 import { useProjectData, useFileTree, useUpdateDocument } from "@/lib/query/hooks";
 import { EditorDocument } from "@/lib/editor";
 import { findItemById } from "@/lib/api/file-tree-service";
-import { isFile } from "@/data/file-tree";
+import { isFile, Tag } from "@/data/file-tree";
 import { FileExplorer } from "./file-explorer";
 import { EditorPane } from "./editor-pane";
 import { AiPanel } from "./ai-panel";
@@ -64,6 +64,8 @@ export interface EditorTab {
   isTemp: boolean;
   isSaving?: boolean;
   lastSaved?: string;
+  tags?: Tag[]; // File tree item tags
+  fileTreeItemId?: string; // Reference to file tree item for metadata
 }
 
 interface WorkspaceLayoutProps {
@@ -158,6 +160,8 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
         content: result.document.content,
         isDirty: false,
         isTemp: result.document.isTemp || false,
+        tags: treeItem.tags || [],
+        fileTreeItemId: treeItemId,
       };
       
       console.log('🎯 [WorkspaceLayout] Creating new tab:', newTab.title, 'with document ID:', documentId);
@@ -269,6 +273,33 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
     setOpenTabs([]);
     setActiveTabId(null);
   }, []);
+
+  // Close other tabs (keep only the specified tab)
+  const handleCloseOthers = useCallback((keepTabId: string) => {
+    console.log('🎯 [WorkspaceLayout] Closing other tabs, keeping:', keepTabId);
+    setOpenTabs(prev => prev.filter(tab => tab.id === keepTabId));
+    setActiveTabId(keepTabId);
+  }, []);
+
+  // Close tabs to the right of the specified tab
+  const handleCloseToRight = useCallback((fromTabId: string) => {
+    console.log('🎯 [WorkspaceLayout] Closing tabs to the right of:', fromTabId);
+    setOpenTabs(prev => {
+      const fromIndex = prev.findIndex(tab => tab.id === fromTabId);
+      if (fromIndex === -1) return prev;
+      
+      const tabsToKeep = prev.slice(0, fromIndex + 1);
+      const closedTabs = prev.slice(fromIndex + 1);
+      
+      // If active tab was closed, switch to the fromTab
+      const activeTab = prev.find(tab => tab.id === activeTabId);
+      if (activeTab && closedTabs.includes(activeTab)) {
+        setActiveTabId(fromTabId);
+      }
+      
+      return tabsToKeep;
+    });
+  }, [activeTabId]);
 
   // Create new document
   const handleCreateNewDocument = useCallback(() => {
@@ -476,6 +507,8 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
               onTabClose={handleTabClose}
               onTabReorder={handleTabReorder}
               onCloseAllTabs={handleCloseAllTabs}
+              onCloseOthers={handleCloseOthers}
+              onCloseToRight={handleCloseToRight}
               onContentChange={handleContentChange}
               onSave={handleDocumentSave}
               onCreateNew={handleCreateNewDocument}

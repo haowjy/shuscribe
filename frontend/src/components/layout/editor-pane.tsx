@@ -23,7 +23,6 @@ import {
 } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
@@ -33,6 +32,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { RichEditor } from "@/components/editor";
 import { EditorDocument } from "@/lib/editor";
 import { cn } from "@/lib/utils";
+import { Tag } from "@/data/file-tree";
 
 // Import EditorTab type from workspace
 import type { EditorTab } from "./workspace-layout";
@@ -45,6 +45,8 @@ interface EditorPaneProps {
   onTabClose: (tabId: string) => void;
   onTabReorder: (activeId: string, overId: string) => void;
   onCloseAllTabs: () => void;
+  onCloseOthers?: (tabId: string) => void;
+  onCloseToRight?: (tabId: string) => void;
   onContentChange: (tabId: string, content: EditorDocument) => void;
   onSave: (tabId: string) => Promise<boolean>;
   onCreateNew: () => void;
@@ -56,9 +58,13 @@ interface SortableTabProps {
   isActive: boolean;
   onActivate: (tabId: string) => void;
   onClose: (tabId: string) => void;
+  onCloseOthers?: (tabId: string) => void;
+  onCloseAll?: () => void;
+  onCloseToRight?: (tabId: string) => void;
 }
 
-function SortableTab({ tab, isActive, onActivate, onClose }: SortableTabProps) {
+function SortableTab({ tab, isActive, onActivate, onClose, onCloseOthers, onCloseAll, onCloseToRight }: SortableTabProps) {
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const {
     attributes,
     listeners,
@@ -73,53 +79,138 @@ function SortableTab({ tab, isActive, onActivate, onClose }: SortableTabProps) {
     transition,
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenuOpen(true);
+  };
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      data-tab-id={tab.id}
-      className={cn(
-        "group relative flex items-center text-sm border-r cursor-pointer min-w-[120px] max-w-[200px] flex-shrink-0",
-        isActive
-          ? "bg-background text-foreground border-b-2 border-b-primary"
-          : "hover:bg-secondary/50 text-muted-foreground bg-secondary/20",
-        isDragging && "opacity-50 z-[9999]"
-      )}
-    >
-      {/* Drag handle area */}
-      <div 
-        className="flex items-center gap-2 min-w-0 flex-1 pr-6 py-2 pl-2"
-        onClick={() => onActivate(tab.id)}
-        {...attributes}
-        {...listeners}
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        data-tab-id={tab.id}
+        onContextMenu={handleContextMenu}
+        className={cn(
+          "group relative flex items-center text-sm border-r cursor-pointer min-w-[120px] max-w-[200px] flex-shrink-0",
+          isActive
+            ? "bg-background text-foreground border-b-2 border-b-primary"
+            : "hover:bg-secondary/50 text-muted-foreground bg-secondary/20",
+          isDragging && "opacity-50 z-[9999]"
+        )}
       >
-        {tab.isTemp && <FileEdit className="h-2 w-2 flex-shrink-0 text-muted-foreground" />}
-        <span className="truncate">{tab.title}</span>
-      </div>
+          {/* Drag handle area */}
+          <div 
+            className="flex items-center gap-2 min-w-0 flex-1 pr-6 py-2 pl-2"
+            onClick={() => onActivate(tab.id)}
+            {...attributes}
+            {...listeners}
+          >
+            {tab.isTemp && <FileEdit className="h-2 w-2 flex-shrink-0 text-muted-foreground" />}
+            <div className="flex items-center gap-1 min-w-0 flex-1">
+              <span className="truncate">{tab.title}</span>
+              {/* Tags display - left aligned with title */}
+              {tab.tags && tab.tags.length > 0 && (
+                <div className="flex items-center gap-1 ml-1">
+                  {tab.tags.slice(0, 2).map((tag, index) => (
+                    <span
+                      key={tag.id}
+                      className="inline-block w-2 h-2 rounded-full opacity-60"
+                      style={{ backgroundColor: tag.color || '#3b82f6' }}
+                      title={tag.name}
+                    />
+                  ))}
+                  {tab.tags.length > 2 && (
+                    <span className="text-xs text-muted-foreground">+{tab.tags.length - 2}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
-      {/* Close button / Dirty indicator container - shared position */}
-      <div className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 flex items-center justify-center">
-        {/* Close button - shown on hover */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose(tab.id);
-          }}
-          className="relative z-10 h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 transition-opacity duration-200 pointer-events-auto"
-        >
-          <X className="h-3 w-3" />
-        </Button>
+          {/* Close button / Dirty indicator container - shared position */}
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 flex items-center justify-center">
+            {/* Close button - shown on hover */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose(tab.id);
+              }}
+              className="relative z-10 h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 transition-opacity duration-200 pointer-events-auto"
+            >
+              <X className="h-3 w-3" />
+            </Button>
 
-        {/* Status indicator - dirty, saving, or clean */}
-        {tab.isSaving ? (
-          <div className="absolute h-2 w-2 bg-blue-500 rounded-full animate-pulse group-hover:opacity-0 transition-opacity duration-200 pointer-events-none" />
-        ) : tab.isDirty ? (
-          <div className="absolute h-2 w-2 bg-orange-500 rounded-full group-hover:opacity-0 transition-opacity duration-200 pointer-events-none" />
-        ) : null}
-      </div>
-    </div>
+            {/* Status indicator - dirty, saving, or clean */}
+            {tab.isSaving ? (
+              <div className="absolute h-2 w-2 bg-blue-500 rounded-full animate-pulse group-hover:opacity-0 transition-opacity duration-200 pointer-events-none" />
+            ) : tab.isDirty ? (
+              <div className="absolute h-2 w-2 bg-orange-500 rounded-full group-hover:opacity-0 transition-opacity duration-200 pointer-events-none" />
+            ) : null}
+          </div>
+        </div>
+      
+      {/* Separate Context Menu - only shows on right-click */}
+      <DropdownMenu open={contextMenuOpen} onOpenChange={setContextMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <div style={{ position: 'fixed', top: -9999, left: -9999, pointerEvents: 'none' }} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuItem
+            onClick={() => {
+              onClose(tab.id);
+              setContextMenuOpen(false);
+            }}
+          >
+            <X className="h-4 w-4 mr-2" />
+            Close
+          </DropdownMenuItem>
+          
+          {onCloseOthers && (
+            <DropdownMenuItem
+              onClick={() => {
+                onCloseOthers(tab.id);
+                setContextMenuOpen(false);
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Close Others
+            </DropdownMenuItem>
+          )}
+          
+          {onCloseToRight && (
+            <DropdownMenuItem
+              onClick={() => {
+                onCloseToRight(tab.id);
+                setContextMenuOpen(false);
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Close to Right
+            </DropdownMenuItem>
+          )}
+          
+          {onCloseAll && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  onCloseAll();
+                  setContextMenuOpen(false);
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Close All
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
 
@@ -131,6 +222,8 @@ export function EditorPane({
   onTabClose,
   onTabReorder,
   onCloseAllTabs,
+  onCloseOthers,
+  onCloseToRight,
   onContentChange,
   onSave,
   onCreateNew,
@@ -270,6 +363,9 @@ export function EditorPane({
                       isActive={activeTabId === tab.id}
                       onActivate={onTabActivate}
                       onClose={onTabClose}
+                      onCloseOthers={onCloseOthers}
+                      onCloseAll={onCloseAllTabs}
+                      onCloseToRight={onCloseToRight}
                     />
                   ))}
                 </div>
@@ -279,8 +375,8 @@ export function EditorPane({
           </ScrollArea>
         </div>
 
-        {/* All Tabs Dropdown */}
-        {tabs.length > 1 && (
+        {/* All Tabs Dropdown - Always visible when there are tabs */}
+        {tabs.length > 0 && (
           <DropdownMenu 
             open={isDropdownOpen} 
             onOpenChange={setIsDropdownOpen}
@@ -289,7 +385,8 @@ export function EditorPane({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-full rounded-none border-l px-2"
+                className="h-full rounded-none border-l px-2 flex-shrink-0 min-w-[2rem]"
+                title="All tabs"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -363,7 +460,8 @@ export function EditorPane({
           variant="ghost"
           size="sm"
           onClick={onCreateNew}
-          className="h-full rounded-none border-l px-3"
+          className="h-full rounded-none border-l px-3 flex-shrink-0 min-w-[2.5rem]"
+          title="New document"
         >
           <Plus className="h-4 w-4" />
         </Button>

@@ -1,5 +1,7 @@
 // Shared types for project and file system
 
+import { EditorDocument } from "@/lib/editor/editor-types";
+
 export interface FileItem {
   id: string;
   name: string;
@@ -16,7 +18,7 @@ export interface Document {
   projectId: string;
   title: string;
   path: string;
-  content: object; // ProseMirror JSON
+  content: EditorDocument; // ProseMirror JSON
   tags: string[];
   wordCount: number;
   createdAt: string;

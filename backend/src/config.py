@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     # Security
     ENCRYPTION_KEY: str = "change-me-32-character-key-12345678" # Must be 32 bytes for Fernet
     
+    # Database Connection Timeouts (in seconds)
+    DATABASE_COMMAND_TIMEOUT: int = 60      # Timeout for database commands (CREATE TABLE, etc.)
+    DATABASE_POOL_TIMEOUT: int = 30         # Timeout for getting connection from pool
+    DATABASE_CONNECT_TIMEOUT: int = 30      # Timeout for initial connection establishment
+    
     # Logging
     LOG_LEVEL: str = "INFO"
     

@@ -112,9 +112,9 @@ export function TagFilterDropdown({
             <div className="space-y-2">
               <span className="text-xs text-muted-foreground">Active Filters:</span>
               <div className="flex flex-wrap gap-1">
-                {activeFilters.map((filter) => (
+                {activeFilters.map((filter, index) => (
                   <Badge
-                    key={filter}
+                    key={`active-filter-${index}-${filter}`}
                     variant="secondary"
                     className="text-xs px-2 py-1 gap-1"
                   >
@@ -147,9 +147,9 @@ export function TagFilterDropdown({
                     {searchQuery ? 'No tags found' : 'No tags available'}
                   </div>
                 ) : (
-                  filteredTags.map((tag) => (
+                  filteredTags.map((tag, index) => (
                     <label
-                      key={tag.id}
+                      key={tag.id || `tag-${index}-${tag.name}`}
                       className="flex items-center gap-3 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
                     >
                       <Checkbox
