@@ -156,6 +156,50 @@ class FileTreeResponse(BaseModel):
 # Helper Functions
 # ============================================================================
 
+async def recalculate_project_word_count(project: Project, repos) -> int:
+    """
+    Recalculate project word count from all its documents.
+    Returns the actual word count and updates project if different.
+    """
+    try:
+        # Get all documents for this project
+        documents = await repos.document.get_by_project_id(project.id)
+        
+        # Calculate total word count from all documents
+        actual_word_count = sum(doc.word_count for doc in documents)
+        actual_document_count = len(documents)
+        
+        # Check if we need to update the project
+        needs_update = (
+            project.word_count != actual_word_count or 
+            project.document_count != actual_document_count
+        )
+        
+        if needs_update:
+            logger.info(
+                f"Word count sync for project {project.id}: "
+                f"stored={project.word_count} actual={actual_word_count}, "
+                f"stored_docs={project.document_count} actual_docs={actual_document_count}"
+            )
+            
+            # Update project with correct counts
+            await repos.project.update(project.id, {
+                "word_count": actual_word_count,
+                "document_count": actual_document_count,
+            })
+            
+            # Update the project object for immediate return
+            project.word_count = actual_word_count
+            project.document_count = actual_document_count
+        
+        return actual_word_count
+        
+    except Exception as e:
+        logger.error(f"Error recalculating word count for project {project.id}: {e}")
+        # Return stored value if calculation fails
+        return project.word_count
+
+
 def project_to_summary(project: Project) -> ProjectSummary:
     """Convert Project model to ProjectSummary response"""
     # Parse collaborators from JSON
@@ -349,6 +393,9 @@ async def get_project(
                 detail=f"Project with ID {project_id} not found"
             )
         
+        # Lazy sync: recalculate word count from documents
+        await recalculate_project_word_count(project, repos)
+        
         logger.info(f"Retrieved project: {project.title} (ID: {project_id}) for user: {user_id}")
         response_data = project_to_response(project)
         return response_data
@@ -383,6 +430,9 @@ async def get_project_file_tree(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Project with ID {project_id} not found"
             )
+        
+        # Lazy sync: recalculate word count from documents
+        await recalculate_project_word_count(project, repos)
         
         # Get file tree items
         items = await repos.file_tree.get_by_project_id(project_id)
