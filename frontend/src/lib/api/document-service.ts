@@ -56,25 +56,37 @@ export class DocumentService {
    * 3. Cache API result for future use
    */
   async loadDocument(documentId: string): Promise<LoadDocumentResult> {
+    const startTime = performance.now();
+    
     // Step 1: Try cache first
     if (this.options.enableCache) {
+      const cacheStartTime = performance.now();
       const cachedDocument = documentCache.get(documentId);
+      const cacheTime = performance.now() - cacheStartTime;
+      
       if (cachedDocument) {
-        console.log(`Document ${documentId} loaded from cache`);
+        const totalTime = performance.now() - startTime;
+        console.log(`📄 Document ${documentId} loaded from cache in ${cacheTime.toFixed(1)}ms (total: ${totalTime.toFixed(1)}ms)`);
         return {
           document: cachedDocument,
           source: 'cache',
           fromCache: true
         };
+      } else {
+        console.log(`📄 Document ${documentId} cache miss (${cacheTime.toFixed(1)}ms)`);
       }
     }
 
     // Step 2: Try API if cache miss
     if (this.options.enableApiCalls) {
       try {
+        const apiStartTime = performance.now();
         const response = await apiClient.getDocument(documentId);
+        const apiTime = performance.now() - apiStartTime;
         
         if (response.error) {
+          const totalTime = performance.now() - startTime;
+          console.log(`📄 Document ${documentId} API error in ${apiTime.toFixed(1)}ms (total: ${totalTime.toFixed(1)}ms):`, response.error);
           return {
             document: this.createFallbackDocument(documentId),
             source: 'fallback',
@@ -87,8 +99,14 @@ export class DocumentService {
         
         // Step 3: Cache the API result
         if (this.options.enableCache) {
+          const cacheSetStartTime = performance.now();
           documentCache.set(documentId, document);
-          console.log(`Document ${documentId} loaded from API and cached`);
+          const cacheSetTime = performance.now() - cacheSetStartTime;
+          const totalTime = performance.now() - startTime;
+          console.log(`📄 Document ${documentId} loaded from API in ${apiTime.toFixed(1)}ms, cached in ${cacheSetTime.toFixed(1)}ms (total: ${totalTime.toFixed(1)}ms)`);
+        } else {
+          const totalTime = performance.now() - startTime;
+          console.log(`📄 Document ${documentId} loaded from API in ${apiTime.toFixed(1)}ms (total: ${totalTime.toFixed(1)}ms)`);
         }
 
         return {
@@ -97,7 +115,8 @@ export class DocumentService {
           fromCache: false
         };
       } catch (error) {
-        console.warn(`API error loading document ${documentId}:`, error);
+        const totalTime = performance.now() - startTime;
+        console.warn(`📄 Document ${documentId} API error after ${totalTime.toFixed(1)}ms:`, error);
         return {
           document: this.createFallbackDocument(documentId),
           source: 'fallback',
@@ -125,6 +144,8 @@ export class DocumentService {
     title?: string,
     forceLocal = false
   ): Promise<SaveDocumentResult> {
+    const startTime = performance.now();
+    
     const document: Document = {
       id: documentId,
       title: title || `Document ${documentId}`,
@@ -139,12 +160,16 @@ export class DocumentService {
 
     // Always save to cache first (fast and reliable)
     if (this.options.enableCache) {
+      const cacheStartTime = performance.now();
       documentCache.set(documentId, document);
-      console.log(`Document ${documentId} saved to cache`);
+      const cacheTime = performance.now() - cacheStartTime;
+      console.log(`💾 Document ${documentId} saved to cache in ${cacheTime.toFixed(1)}ms`);
     }
 
     // If only local save requested, stop here
     if (forceLocal || !this.options.enableApiCalls) {
+      const totalTime = performance.now() - startTime;
+      console.log(`💾 Document ${documentId} local-only save completed in ${totalTime.toFixed(1)}ms`);
       return {
         success: true,
         document
@@ -167,10 +192,13 @@ export class DocumentService {
         tags: document.tags
       };
 
+      const apiStartTime = performance.now();
       const response = await apiClient.updateDocument(documentId, updates);
+      const apiTime = performance.now() - apiStartTime;
       
       if (response.error) {
-        console.warn(`API save failed for document ${documentId}:`, response.error);
+        const totalTime = performance.now() - startTime;
+        console.warn(`💾 Document ${documentId} API save failed in ${apiTime.toFixed(1)}ms (total: ${totalTime.toFixed(1)}ms):`, response.error);
         return {
           success: true, // Cache save succeeded
           document,
@@ -182,17 +210,24 @@ export class DocumentService {
       
       // Update cache with API response
       if (this.options.enableCache) {
+        const cacheUpdateStartTime = performance.now();
         documentCache.set(documentId, savedDocument);
+        const cacheUpdateTime = performance.now() - cacheUpdateStartTime;
+        const totalTime = performance.now() - startTime;
+        console.log(`💾 Document ${documentId} saved to API in ${apiTime.toFixed(1)}ms, cache updated in ${cacheUpdateTime.toFixed(1)}ms (total: ${totalTime.toFixed(1)}ms)`);
+      } else {
+        const totalTime = performance.now() - startTime;
+        console.log(`💾 Document ${documentId} saved to API in ${apiTime.toFixed(1)}ms (total: ${totalTime.toFixed(1)}ms)`);
       }
 
-      console.log(`Document ${documentId} saved to API and cache updated`);
       return {
         success: true,
         document: savedDocument
       };
 
     } catch (error) {
-      console.warn(`API save error for document ${documentId}:`, error);
+      const totalTime = performance.now() - startTime;
+      console.warn(`💾 Document ${documentId} API save error after ${totalTime.toFixed(1)}ms:`, error);
       return {
         success: true, // Cache save succeeded
         document,
@@ -363,6 +398,21 @@ export const documentService = new DocumentService({
   enableCache: true,
   enableApiCalls: true
 });
+
+/**
+ * Log cache performance metrics to console
+ */
+export const logCacheMetrics = () => {
+  const metrics = documentService.getCacheMetrics();
+  console.group('📊 Document Cache Metrics');
+  console.log(`Cache Hit Rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
+  console.log(`Total Accesses: ${metrics.totalAccesses}`);
+  console.log(`Cache Hits: ${metrics.hits}`);
+  console.log(`Cache Misses: ${metrics.misses}`);
+  console.log(`Total Cache Size: ${(metrics.totalSize / 1024).toFixed(1)} KB`);
+  console.log(`Cached Documents: ${metrics.entryCount}`);
+  console.groupEnd();
+};
 
 /**
  * Convenience functions for common operations

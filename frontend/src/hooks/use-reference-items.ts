@@ -30,21 +30,38 @@ export function useReferenceItems(fileTree: TreeItem[] = []) {
 }
 
 /**
- * Hook to get suggestion items for Tiptap suggestion utility
+ * Hook to get suggestion items for Tiptap suggestion utility with debouncing
  */
 export function useSuggestionItems(fileTree: TreeItem[] = []) {
   const { getFilteredReferences } = useReferenceItems(fileTree);
 
   const getSuggestionItems = useMemo(() => {
+    let lastQuery = '';
+    let lastResults: ReferenceItem[] = [];
+    
     return ({ query }: { query: string }) => {
       // Remove the '@' character from the query
       const cleanQuery = query.replace(/^@/, '');
       
+      // Cache results for same query to reduce processing
+      if (cleanQuery === lastQuery) {
+        return lastResults;
+      }
+      
+      // Short queries should return fewer results for performance
+      const maxResults = cleanQuery.length < 2 ? 5 : 10;
+      
       // Get filtered references
       const references = getFilteredReferences(cleanQuery);
       
-      // Limit to 10 suggestions for performance
-      return references.slice(0, 10);
+      // Limit suggestions for performance
+      const results = references.slice(0, maxResults);
+      
+      // Cache results
+      lastQuery = cleanQuery;
+      lastResults = results;
+      
+      return results;
     };
   }, [getFilteredReferences]);
 

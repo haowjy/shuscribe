@@ -183,12 +183,22 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
     }
   }, [activeTabId, openTabs]);
 
-  // Save document
+  // Save document with optimistic updates
   const handleDocumentSave = useCallback(async (tabId: string) => {
     const tab = openTabs.find(t => t.id === tabId);
     if (!tab) return false;
     
+    console.log('💾 [WorkspaceLayout] Starting optimistic save for tab:', tabId);
+    
+    // Immediate optimistic update - show saving state immediately
+    setOpenTabs(prev => prev.map(t => 
+      t.id === tabId 
+        ? { ...t, isSaving: true, isDirty: false }
+        : t
+    ));
+    
     try {
+      // Background API save
       await updateDocumentMutation.mutateAsync({
         documentId: tabId,
         updates: {
@@ -197,16 +207,25 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
         }
       });
       
-      // Update tab state
+      // Success - update final state
       setOpenTabs(prev => prev.map(t => 
         t.id === tabId 
-          ? { ...t, isDirty: false, lastSaved: new Date().toLocaleTimeString() }
+          ? { ...t, isSaving: false, isDirty: false, lastSaved: new Date().toLocaleTimeString() }
           : t
       ));
       
+      console.log('💾 [WorkspaceLayout] Save completed successfully for tab:', tabId);
       return true;
     } catch (error) {
-      console.error('Save failed:', error);
+      console.error('💾 [WorkspaceLayout] Save failed for tab:', tabId, error);
+      
+      // Error - revert optimistic state
+      setOpenTabs(prev => prev.map(t => 
+        t.id === tabId 
+          ? { ...t, isSaving: false, isDirty: true } // Revert to dirty state
+          : t
+      ));
+      
       return false;
     }
   }, [openTabs, updateDocumentMutation]);
@@ -218,6 +237,36 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
         ? { ...tab, content, isDirty: true }
         : tab
     ));
+  }, []);
+
+  // Tab reordering
+  const handleTabReorder = useCallback((activeId: string, overId: string) => {
+    console.log('🎯 [WorkspaceLayout] Reordering tabs:', activeId, 'to position of', overId);
+    
+    setOpenTabs(prev => {
+      const oldIndex = prev.findIndex(tab => tab.id === activeId);
+      const newIndex = prev.findIndex(tab => tab.id === overId);
+      
+      if (oldIndex === -1 || newIndex === -1) {
+        console.warn('🎯 [WorkspaceLayout] Invalid tab indices for reordering:', { oldIndex, newIndex });
+        return prev;
+      }
+      
+      // Use arrayMove-like logic
+      const result = [...prev];
+      const [reorderedItem] = result.splice(oldIndex, 1);
+      result.splice(newIndex, 0, reorderedItem);
+      
+      console.log('🎯 [WorkspaceLayout] Tabs reordered successfully');
+      return result;
+    });
+  }, []);
+
+  // Close all tabs
+  const handleCloseAllTabs = useCallback(() => {
+    console.log('🎯 [WorkspaceLayout] Closing all tabs');
+    setOpenTabs([]);
+    setActiveTabId(null);
   }, []);
 
   // Create new document
@@ -422,6 +471,8 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
               fileTree={fileTree}
               onTabActivate={setActiveTabId}
               onTabClose={handleTabClose}
+              onTabReorder={handleTabReorder}
+              onCloseAllTabs={handleCloseAllTabs}
               onContentChange={handleContentChange}
               onSave={handleDocumentSave}
               onCreateNew={handleCreateNewDocument}

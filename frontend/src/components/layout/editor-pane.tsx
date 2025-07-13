@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Plus, X, FileEdit, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -43,6 +43,8 @@ interface EditorPaneProps {
   fileTree: any[]; // For @-references
   onTabActivate: (tabId: string) => void;
   onTabClose: (tabId: string) => void;
+  onTabReorder: (activeId: string, overId: string) => void;
+  onCloseAllTabs: () => void;
   onContentChange: (tabId: string, content: EditorDocument) => void;
   onSave: (tabId: string) => Promise<boolean>;
   onCreateNew: () => void;
@@ -95,23 +97,28 @@ function SortableTab({ tab, isActive, onActivate, onClose }: SortableTabProps) {
         <span className="truncate">{tab.title}</span>
       </div>
 
-      {/* Close button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose(tab.id);
-        }}
-        className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20"
-      >
-        <X className="h-3 w-3" />
-      </Button>
+      {/* Close button / Dirty indicator container - shared position */}
+      <div className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 flex items-center justify-center">
+        {/* Close button - shown on hover */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose(tab.id);
+          }}
+          className="relative z-10 h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 transition-opacity duration-200 pointer-events-auto"
+        >
+          <X className="h-3 w-3" />
+        </Button>
 
-      {/* Dirty indicator */}
-      {tab.isDirty && (
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 h-2 w-2 bg-orange-500 rounded-full" />
-      )}
+        {/* Status indicator - dirty, saving, or clean */}
+        {tab.isSaving ? (
+          <div className="absolute h-2 w-2 bg-blue-500 rounded-full animate-pulse group-hover:opacity-0 transition-opacity duration-200 pointer-events-none" />
+        ) : tab.isDirty ? (
+          <div className="absolute h-2 w-2 bg-orange-500 rounded-full group-hover:opacity-0 transition-opacity duration-200 pointer-events-none" />
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -122,6 +129,8 @@ export function EditorPane({
   fileTree,
   onTabActivate,
   onTabClose,
+  onTabReorder,
+  onCloseAllTabs,
   onContentChange,
   onSave,
   onCreateNew,
@@ -148,10 +157,9 @@ export function EditorPane({
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      // Tab reordering logic would go here
-      console.log('Tab reorder:', active.id, 'to position of', over.id);
+      onTabReorder(active.id as string, over.id as string);
     }
-  }, []);
+  }, [onTabReorder]);
 
   // Handle content changes
   const handleContentChange = useCallback((content: EditorDocument) => {
@@ -168,19 +176,67 @@ export function EditorPane({
     return false;
   }, [activeTabId, onSave]);
 
-  // Handle wheel scroll in tab bar
+  // Handle wheel scroll in tab bar with non-passive event listener
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
       if (viewport) {
-        const { scrollWidth, clientWidth } = viewport;
+        const { scrollWidth, clientWidth, scrollLeft } = viewport;
+        
+        // Only handle horizontal scrolling if tabs overflow
         if (scrollWidth > clientWidth) {
-          e.preventDefault();
           const scrollAmount = e.deltaY * 0.5;
-          viewport.scrollBy({ left: scrollAmount, behavior: 'auto' });
+          const newScrollLeft = scrollLeft + scrollAmount;
+          
+          // Check if we can actually scroll in the intended direction
+          const canScrollLeft = newScrollLeft > 0;
+          const canScrollRight = newScrollLeft < scrollWidth - clientWidth;
+          
+          // Prevent default if we can scroll horizontally
+          if ((scrollAmount > 0 && canScrollRight) || (scrollAmount < 0 && canScrollLeft)) {
+            e.preventDefault();
+            e.stopPropagation();
+            viewport.scrollBy({ left: scrollAmount, behavior: 'auto' });
+          }
         }
       }
     }
+  }, []);
+
+  // Add non-passive wheel event listener to handle horizontal scrolling properly
+  useEffect(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+
+    const viewport = scrollArea.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
+    if (!viewport) return;
+
+    const handleWheelNative = (e: WheelEvent) => {
+      const { scrollWidth, clientWidth, scrollLeft } = viewport;
+      
+      // Only handle if tabs overflow
+      if (scrollWidth > clientWidth) {
+        const scrollAmount = e.deltaY * 0.5;
+        const newScrollLeft = scrollLeft + scrollAmount;
+        
+        // Check if we can scroll in the intended direction
+        const canScrollLeft = newScrollLeft > 0;
+        const canScrollRight = newScrollLeft < scrollWidth - clientWidth;
+        
+        if ((scrollAmount > 0 && canScrollRight) || (scrollAmount < 0 && canScrollLeft)) {
+          e.preventDefault();
+          e.stopPropagation();
+          viewport.scrollBy({ left: scrollAmount, behavior: 'auto' });
+        }
+      }
+    };
+
+    // Add non-passive event listener
+    viewport.addEventListener('wheel', handleWheelNative, { passive: false });
+
+    return () => {
+      viewport.removeEventListener('wheel', handleWheelNative);
+    };
   }, []);
 
   return (
@@ -247,27 +303,50 @@ export function EditorPane({
               {tabs.map((tab) => (
                 <DropdownMenuItem
                   key={tab.id}
-                  onClick={() => {
-                    onTabActivate(tab.id);
-                    setIsDropdownOpen(false);
-                  }}
                   className={cn(
-                    "flex items-center gap-2",
+                    "flex items-center gap-2 group",
                     activeTabId === tab.id && "bg-accent"
                   )}
                 >
-                  {tab.isTemp && <FileEdit className="h-3 w-3 text-muted-foreground" />}
-                  <span className="flex-1 truncate">{tab.title}</span>
-                  {tab.isDirty && (
-                    <div className="h-2 w-2 bg-orange-500 rounded-full" />
-                  )}
+                  {/* Main clickable area */}
+                  <div 
+                    className="flex items-center gap-2 flex-1 min-w-0"
+                    onClick={() => {
+                      onTabActivate(tab.id);
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    {tab.isTemp && <FileEdit className="h-3 w-3 text-muted-foreground" />}
+                    <span className="flex-1 truncate">{tab.title}</span>
+                  </div>
+                  
+                  {/* Close button / Dirty indicator */}
+                  <div className="relative h-4 w-4 flex items-center justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTabClose(tab.id);
+                      }}
+                      className="relative z-10 h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 transition-opacity duration-200 pointer-events-auto"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                    
+                    {/* Status indicator - dirty, saving, or clean */}
+                    {tab.isSaving ? (
+                      <div className="absolute h-2 w-2 bg-blue-500 rounded-full animate-pulse group-hover:opacity-0 transition-opacity duration-200 pointer-events-none" />
+                    ) : tab.isDirty ? (
+                      <div className="absolute h-2 w-2 bg-orange-500 rounded-full group-hover:opacity-0 transition-opacity duration-200 pointer-events-none" />
+                    ) : null}
+                  </div>
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  // Close all tabs logic would go here
-                  console.log('Close all tabs');
+                  onCloseAllTabs();
                   setIsDropdownOpen(false);
                 }}
                 className="flex items-center gap-2 text-destructive focus:text-destructive"
@@ -334,7 +413,15 @@ export function EditorPane({
           {activeTab ? `${activeTab.title}${activeTab.isTemp ? ' (unsaved)' : ''}` : 'No document'}
         </span>
         <span>
-          {activeTab?.isDirty ? "Modified" : "Saved"}
+          {activeTab?.isSaving ? (
+            <span className="text-blue-600 font-medium">Saving...</span>
+          ) : activeTab?.isDirty ? (
+            "Modified"
+          ) : activeTab?.lastSaved ? (
+            `Saved ${activeTab.lastSaved}`
+          ) : (
+            "Saved"
+          )}
         </span>
       </div>
     </div>

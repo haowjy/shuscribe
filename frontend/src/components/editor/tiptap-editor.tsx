@@ -36,6 +36,24 @@ import { TreeItem } from '@/types/api';
 // Lowlight instance for syntax highlighting
 const lowlight = createLowlight(common);
 
+// Debounce utility for performance optimization
+function useDebounce<T extends (...args: any[]) => void>(
+  callback: T,
+  delay: number
+): T {
+  const timeoutRef = useRef<NodeJS.Timeout>();
+  
+  return useCallback((...args: Parameters<T>) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  }, [callback, delay]) as T;
+}
+
 // Extension to handle clicking in empty space
 const ClickToFocusExtension = Extension.create({
   name: 'clickToFocus',
@@ -108,7 +126,7 @@ export function TiptapEditor({
   // Storage config
   enableLocalStorage = true,
   enableAutoSave = true,
-  autoSaveInterval = 2000,
+  autoSaveInterval = 5000, // Increased from 2s to 5s for better performance
   enableDrafts = true,
   
   // Event handlers
@@ -131,11 +149,51 @@ export function TiptapEditor({
 }: TiptapEditorProps) {
   
   const lastContentRef = useRef<EditorDocument | null>(null);
+  const lastContentHashRef = useRef<string>('');
+  const lastAutoSaveHashRef = useRef<string>('');
   
-  // Get suggestion items for @ references
+  // Get suggestion items for @ references - stable reference for extensions
+  const stableSuggestionItems = useRef<(props: { query: string }) => any[]>();
   const { getSuggestionItems } = useSuggestionItems(fileTree);
   
-  // Create base extensions
+  // Update stable reference when getSuggestionItems changes
+  useEffect(() => {
+    stableSuggestionItems.current = getSuggestionItems;
+  }, [getSuggestionItems]);
+  
+  // Debounced content change handler for performance
+  const debouncedContentChange = useDebounce((newContent: EditorDocument) => {
+    // Generate a simple hash for faster comparison
+    const contentHash = JSON.stringify(newContent);
+    
+    if (contentHash !== lastContentHashRef.current) {
+      lastContentHashRef.current = contentHash;
+      lastContentRef.current = newContent;
+      
+      // Call update handlers
+      onUpdate?.(newContent);
+      onContentChange?.(newContent);
+      onChange?.(newContent);
+      
+      console.log('📝 [TiptapEditor] Content changed for document:', documentId);
+      
+      // Handle auto-save with improved change detection
+      if (enableAutoSave && documentId && enableDrafts && contentHash !== lastAutoSaveHashRef.current) {
+        lastAutoSaveHashRef.current = contentHash;
+        
+        AutoSaveManager.scheduleAutoSave(
+          documentId,
+          newContent,
+          () => {
+            console.log(`📝 [TiptapEditor] Draft auto-saved for document ${documentId}`);
+          },
+          autoSaveInterval
+        );
+      }
+    }
+  }, 150); // 150ms debounce for performance
+  
+  // Create base extensions with stable dependencies
   const createExtensions = useCallback(() => {
     const baseExtensions = [
       StarterKit.configure({
@@ -157,7 +215,10 @@ export function TiptapEditor({
       }),
       ReferenceExtension.configure({
         suggestion: {
-          items: getSuggestionItems,
+          items: (props: { query: string }) => {
+            // Use stable reference to prevent extension recreation
+            return stableSuggestionItems.current?.(props) || [];
+          },
         },
         onReferenceClick,
       }),
@@ -166,7 +227,7 @@ export function TiptapEditor({
     ];
     
     return baseExtensions;
-  }, [extensions, placeholder, getSuggestionItems, onReferenceClick, fileTree]);
+  }, [extensions, placeholder, onReferenceClick]); // Removed fileTree and getSuggestionItems dependencies
   
   // Initialize editor
   const editor = useEditor({
@@ -182,27 +243,8 @@ export function TiptapEditor({
     onUpdate: ({ editor }) => {
       const newContent = editor.getJSON() as EditorDocument;
       
-      // Avoid infinite loops by comparing content
-      if (JSON.stringify(newContent) !== JSON.stringify(lastContentRef.current)) {
-        lastContentRef.current = newContent;
-        
-        // Call update handlers
-        onUpdate?.(newContent);
-        onContentChange?.(newContent);
-        onChange?.(newContent);
-        
-        // Handle auto-save
-        if (enableAutoSave && documentId && enableDrafts) {
-          AutoSaveManager.scheduleAutoSave(
-            documentId,
-            newContent,
-            () => {
-              console.log(`Draft auto-saved for document ${documentId}`);
-            },
-            autoSaveInterval
-          );
-        }
-      }
+      // Use debounced handler for better performance
+      debouncedContentChange(newContent);
     },
     
     onFocus: () => {
@@ -251,27 +293,50 @@ export function TiptapEditor({
       }
     };
   }, [documentId]);
-  
+
   // Manual save function
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (!editor || !onSave) return false;
+    
+    console.log('📝 [TiptapEditor] Manual save triggered for document:', documentId);
     
     try {
       const content = editor.getJSON() as EditorDocument;
       const success = await onSave(content);
       
       if (success) {
+        console.log('📝 [TiptapEditor] Save successful for document:', documentId);
         onSaveSuccess?.();
         return true;
       } else {
+        console.log('📝 [TiptapEditor] Save failed for document:', documentId);
         onSaveError?.('Save failed');
         return false;
       }
     } catch (error) {
+      console.error('📝 [TiptapEditor] Save error for document:', documentId, error);
       onSaveError?.(error instanceof Error ? error.message : 'Save failed');
       return false;
     }
-  }, [editor, onSave, onSaveSuccess, onSaveError]);
+  }, [editor, onSave, onSaveSuccess, onSaveError, documentId]);
+
+  // Handle keyboard shortcuts (Ctrl+S / Cmd+S)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Ctrl+S (Windows/Linux) or Cmd+S (Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        if (onSave) {
+          handleSave();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleSave, onSave]);
 
   // Create editor instance API
   const editorInstance: EditorInstance = useMemo(() => ({
