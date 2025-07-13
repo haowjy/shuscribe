@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ShuScribe is a **frontend-centric** full-stack application for fiction writers, built with Next.js 15 + React 19 (frontend) and FastAPI (backend).
+ShuScribe is a **frontend-centric** Universe Content Management Platform built with Next.js 15 + React 19 (frontend) and FastAPI (backend), evolving from simple fiction writing tools to comprehensive universe management for creators at all scales.
 
 ### Development Philosophy: Frontend-First
 
@@ -78,8 +78,8 @@ docker-compose down                      # Stop all services
 
 **Authentication Strategy**:
 - **Frontend**: Handles all authentication via Supabase Auth
-- **Backend**: Extracts tokens from Authorization header, trusts frontend validation
-- **No Token Validation**: Backend doesn't validate tokens, just extracts for context
+- **Backend**: Validates Supabase JWT tokens from Authorization header
+- **Token Validation**: Backend validates tokens with Supabase for security
 
 **Data Flow**:
 - **Frontend-First**: UI state drives API requirements
@@ -115,12 +115,20 @@ docker-compose down                      # Stop all services
   - Authentication, error handling, and field naming conventions
   - Insomnia/Postman testing guidance
 
+- **🏗️ Content Architecture**: [`/_docs/core/content-architecture.md`](_docs/core/content-architecture.md)
+  - Multi-content system architecture supporting flexible publishing workflows
+  - Database schema design for universe management
+  - Scalability considerations and API architecture
+
 ### High-Level Documentation
 
 - **📖 Product Overview**: [`/_docs/high-level/1-product-overview.md`](_docs/high-level/1-product-overview.md)
 - **🎯 MVP Specification**: [`/_docs/high-level/2-mvp.md`](_docs/high-level/2-mvp.md)
 - **🎨 Frontend Architecture**: [`/_docs/high-level/3-frontend.md`](_docs/high-level/3-frontend.md)
 - **⚙️ Backend Architecture**: [`/_docs/high-level/4-backend.md`](_docs/high-level/4-backend.md)
+- **🔮 Future Vision**: [`/_docs/high-level/5-future-vision.md`](_docs/high-level/5-future-vision.md)
+- **📚 Publishing Strategy**: [`/_docs/high-level/6-publishing-strategy.md`](_docs/high-level/6-publishing-strategy.md)
+- **📈 Market Strategy**: [`/_docs/high-level/7-market-strategy.md`](_docs/high-level/7-market-strategy.md)
 
 ### API & Integration Documentation
 
@@ -136,7 +144,7 @@ docker-compose down                      # Stop all services
 
 ## Architecture Overview
 
-ShuScribe is a **context-aware fiction writing platform** with a three-panel VS Code-like workspace:
+ShuScribe is a **Universe Content Management Platform** with a three-panel VS Code-like workspace, scaling from indie fiction writers to Hollywood studios:
 
 1. **File Explorer** - Hierarchical project organization (characters, locations, chapters)
 2. **Editor** - Tabbed document editor with @-reference system

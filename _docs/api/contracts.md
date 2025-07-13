@@ -12,64 +12,15 @@ This document defines the REST API contracts from the frontend perspective, desi
 - **Realistic**: Proper pagination, validation, and edge cases
 - **Future-Ready**: Designed for scalability and collaboration features
 
-## Authentication & User Management
+## Authentication
 
-### Authentication
+**Note**: Authentication is handled entirely by Supabase Auth on the frontend. The backend validates Supabase JWT tokens but does not provide auth endpoints since login/signup/logout happen directly between the frontend and Supabase.
 
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-
-Response 200:
-{
-  "user": {
-    "id": "usr_123",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "avatar": "https://...",
-    "created_at": "2025-01-01T00:00:00Z"
-  },
-  "token": "jwt_token_here",
-  "expires_at": "2025-01-02T00:00:00Z"
-}
-
-Response 401:
-{
-  "error": "invalid_credentials",
-  "message": "Invalid email or password"
-}
-```
-
-```http
-POST /api/auth/logout
-Authorization: Bearer {token}
-
-Response 200:
-{
-  "message": "Logged out successfully"
-}
-```
-
-```http
-GET /api/auth/me
-Authorization: Bearer {token}
-
-Response 200:
-{
-  "user": {
-    "id": "usr_123",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "avatar": "https://...",
-    "created_at": "2025-01-01T00:00:00Z"
-  }
-}
-```
+**Authentication Flow**:
+1. Frontend handles login/signup via Supabase Auth
+2. Frontend receives JWT token from Supabase  
+3. Frontend sends token in `Authorization: Bearer <token>` header
+4. Backend validates JWT token with Supabase and extracts user info
 
 ## Project Management
 
@@ -519,6 +470,384 @@ Response 200:
 }
 ```
 
+## Wiki Management
+
+### Generate Wiki from References
+
+```http
+POST /api/projects/{project_id}/wiki/generate
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "generation_mode": "ai",
+  "spoiler_management": {
+    "arc_breakpoints": ["chapter-5", "chapter-12"],
+    "spoiler_levels": [0, 5, 10]
+  },
+  "entity_categories": ["characters", "locations", "concepts"]
+}
+
+Response 201:
+{
+  "wiki_id": "wiki_123",
+  "generation_status": "in_progress",
+  "estimated_completion": "2025-01-01T12:05:00Z",
+  "entities_found": 15,
+  "processing_id": "proc_456"
+}
+```
+
+### Get Wiki Configuration
+
+```http
+GET /api/wikis/{wiki_id}
+Authorization: Bearer {token}
+
+Response 200:
+{
+  "id": "wiki_123",
+  "project_id": "prj_123",
+  "generation_mode": "ai",
+  "auto_update": true,
+  "spoiler_management": {
+    "arc_breakpoints": ["chapter-5", "chapter-12"],
+    "spoiler_levels": [0, 5, 10]
+  },
+  "entity_categories": ["characters", "locations", "concepts"],
+  "is_public": false,
+  "last_generated": "2025-01-01T12:00:00Z",
+  "entries_count": 15
+}
+```
+
+### Get Wiki Entries
+
+```http
+GET /api/wikis/{wiki_id}/entries
+Authorization: Bearer {token}
+Query Parameters:
+  - entity_type: string (optional filter)
+  - spoiler_level: number (max spoiler level)
+  - limit: number (default: 20)
+  - offset: number (default: 0)
+
+Response 200:
+{
+  "entries": [
+    {
+      "id": "entry_123",
+      "entity_name": "Elara Moonwhisper",
+      "entity_type": "character",
+      "slug": "elara-moonwhisper",
+      "content": {
+        "summary": "Powerful fire mage and protagonist...",
+        "description": "<detailed wiki content>",
+        "relationships": [
+          {
+            "target": "Marcus Stormwind",
+            "relationship": "mentor"
+          }
+        ]
+      },
+      "spoiler_level": 0,
+      "appearances": [
+        {
+          "document_id": "doc_125",
+          "document_title": "Chapter 1",
+          "mention_count": 5
+        }
+      ],
+      "ai_generated": true,
+      "human_edited": false,
+      "view_count": 42,
+      "created_at": "2025-01-01T12:00:00Z",
+      "updated_at": "2025-01-01T12:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 15,
+    "limit": 20,
+    "offset": 0,
+    "has_more": false
+  }
+}
+```
+
+### Update Wiki Entry
+
+```http
+PUT /api/wiki-entries/{entry_id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "content": {
+    "summary": "Updated summary...",
+    "description": "<updated content>"
+  },
+  "spoiler_level": 2,
+  "human_edited": true
+}
+
+Response 200:
+{
+  "id": "entry_123",
+  "entity_name": "Elara Moonwhisper",
+  "content": { ... },
+  "spoiler_level": 2,
+  "human_edited": true,
+  "updated_at": "2025-01-01T12:30:00Z"
+}
+```
+
+## Export and Publishing
+
+### Export Content
+
+```http
+POST /api/documents/{document_id}/export
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "format": "pdf",
+  "options": {
+    "include_wiki": true,
+    "spoiler_level": 5,
+    "styling": {
+      "font_family": "serif",
+      "font_size": 12,
+      "page_margins": "normal"
+    }
+  }
+}
+
+Response 202:
+{
+  "export_id": "exp_123",
+  "status": "processing",
+  "estimated_completion": "2025-01-01T12:05:00Z",
+  "format": "pdf",
+  "file_size_estimate": "2.5MB"
+}
+```
+
+### Get Export Status
+
+```http
+GET /api/exports/{export_id}
+Authorization: Bearer {token}
+
+Response 200:
+{
+  "id": "exp_123",
+  "status": "completed",
+  "format": "pdf",
+  "download_url": "https://api.shuscribe.com/downloads/exp_123.pdf",
+  "file_size": "2.7MB",
+  "expires_at": "2025-01-02T12:00:00Z",
+  "created_at": "2025-01-01T12:00:00Z",
+  "completed_at": "2025-01-01T12:04:30Z"
+}
+
+Response 200 (if processing):
+{
+  "id": "exp_123",
+  "status": "processing",
+  "progress": 65,
+  "estimated_completion": "2025-01-01T12:05:00Z"
+}
+```
+
+### Publish Content
+
+```http
+POST /api/documents/{document_id}/publish
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "publication_mode": "story-and-wiki",
+  "visibility": "public",
+  "custom_slug": "my-fantasy-novel",
+  "wiki_config": {
+    "spoiler_level": 5,
+    "allow_comments": true
+  },
+  "seo_config": {
+    "title": "My Fantasy Novel - Complete Story",
+    "description": "An epic fantasy adventure with detailed world-building",
+    "keywords": ["fantasy", "novel", "adventure"]
+  }
+}
+
+Response 201:
+{
+  "publication_id": "pub_123",
+  "public_url": "https://shuscribe.com/stories/my-fantasy-novel",
+  "wiki_url": "https://shuscribe.com/wikis/my-fantasy-novel",
+  "status": "published",
+  "visibility": "public",
+  "published_at": "2025-01-01T12:00:00Z"
+}
+```
+
+### Update Publication Settings
+
+```http
+PUT /api/publications/{publication_id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "visibility": "unlisted",
+  "wiki_config": {
+    "spoiler_level": 8,
+    "allow_comments": false
+  }
+}
+
+Response 200:
+{
+  "id": "pub_123",
+  "visibility": "unlisted",
+  "wiki_config": { ... },
+  "updated_at": "2025-01-01T12:30:00Z"
+}
+```
+
+## Public Content Access
+
+### Get Public Story
+
+```http
+GET /api/public/stories/{slug}
+No Authorization Required
+Query Parameters:
+  - chapter: number (optional, specific chapter)
+  - reader_id: string (optional, for progress tracking)
+
+Response 200:
+{
+  "id": "pub_123",
+  "title": "My Fantasy Novel",
+  "author": {
+    "name": "John Doe",
+    "profile_url": "https://shuscribe.com/authors/john-doe"
+  },
+  "description": "An epic fantasy adventure...",
+  "chapters": [
+    {
+      "number": 1,
+      "title": "The Beginning",
+      "content": { ... },
+      "word_count": 2500,
+      "reading_time_minutes": 10,
+      "published_at": "2025-01-01T12:00:00Z"
+    }
+  ],
+  "wiki_available": true,
+  "wiki_url": "https://shuscribe.com/wikis/my-fantasy-novel",
+  "stats": {
+    "total_views": 1500,
+    "total_chapters": 25,
+    "total_words": 75000,
+    "average_rating": 4.7
+  },
+  "last_updated": "2025-01-01T12:00:00Z"
+}
+```
+
+### Get Public Wiki
+
+```http
+GET /api/public/wikis/{slug}
+No Authorization Required
+Query Parameters:
+  - spoiler_level: number (max spoiler level to show)
+  - entity_type: string (filter by entity type)
+  - reader_progress: number (chapter number for spoiler management)
+
+Response 200:
+{
+  "id": "wiki_123",
+  "title": "My Fantasy Novel - Universe Guide",
+  "story_title": "My Fantasy Novel",
+  "story_url": "https://shuscribe.com/stories/my-fantasy-novel",
+  "entries": [
+    {
+      "entity_name": "Elara Moonwhisper",
+      "entity_type": "character",
+      "slug": "elara-moonwhisper",
+      "summary": "Powerful fire mage and protagonist",
+      "spoiler_level": 0,
+      "view_count": 250
+    }
+  ],
+  "categories": [
+    {
+      "name": "characters",
+      "count": 8,
+      "icon": "Users"
+    },
+    {
+      "name": "locations",
+      "count": 5,
+      "icon": "MapPin"
+    }
+  ],
+  "stats": {
+    "total_entries": 15,
+    "total_views": 3200,
+    "last_updated": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+### Get Wiki Entry Detail
+
+```http
+GET /api/public/wikis/{slug}/entries/{entry_slug}
+No Authorization Required
+Query Parameters:
+  - reader_progress: number (chapter number for spoiler management)
+
+Response 200:
+{
+  "entity_name": "Elara Moonwhisper",
+  "entity_type": "character",
+  "content": {
+    "summary": "Powerful fire mage and protagonist...",
+    "description": "<detailed content>",
+    "relationships": [
+      {
+        "target": "Marcus Stormwind",
+        "target_slug": "marcus-stormwind",
+        "relationship": "mentor"
+      }
+    ]
+  },
+  "spoiler_level": 0,
+  "appearances": [
+    {
+      "chapter_number": 1,
+      "chapter_title": "The Beginning",
+      "mention_count": 5
+    }
+  ],
+  "related_entries": [
+    {
+      "name": "Fire Magic",
+      "slug": "fire-magic",
+      "type": "concept"
+    }
+  ],
+  "view_count": 250,
+  "last_updated": "2025-01-01T12:00:00Z"
+}
+```
+
 ## Error Handling
 
 ### Standard Error Format
@@ -607,4 +936,12 @@ DELETE /api/documents/{document_id}/lock
 GET /api/projects/{project_id}/active-users
 ```
 
-This API design provides a solid foundation for frontend-first development while being realistic about future backend implementation in Python.
+### Publishing Analytics
+
+```http
+GET /api/publications/{publication_id}/analytics
+POST /api/public/stories/{slug}/track-view
+GET /api/authors/{author_id}/dashboard
+```
+
+This API design provides a comprehensive foundation for ShuScribe's evolution from a simple writing tool to a full universe content management platform, supporting everything from basic document management to advanced publishing workflows with AI-generated wikis and interactive reading experiences.

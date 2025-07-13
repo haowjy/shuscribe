@@ -301,16 +301,21 @@ POST /documents/{id}/ai/suggestions
 ✅ **Supabase authentication** and user management  
 ✅ **Mock AI panel** showing future capabilities  
 ✅ **Reference integrity** checking and broken link detection  
+✅ **AI wiki generation** - One-click wiki from @-references  
+✅ **Export capabilities** - Markdown, PDF, EPUB export  
+✅ **Basic publishing** - Simple public story pages with wikis  
 
 ### What's Explicitly NOT in MVP
 ❌ **Real-time collaboration** (Y.js, WebSocket, presence)  
 ❌ **AI chat implementation** (OpenAI/Anthropic integration)  
-❌ **Publishing platform** (public stories, wikis)  
+❌ **Interactive reading** (hover context, AI companion)  
 ❌ **Advanced search** (full-text, semantic search)  
 ❌ **File uploads** (images, attachments)  
 ❌ **Complex permissions** (sharing, team management)  
 ❌ **Performance optimization** (caching, virtualization)  
 ❌ **Mobile app** (desktop web only)  
+❌ **Multi-content types** (blogs, announcements, etc.)  
+❌ **Advanced publishing** (monetization, analytics, community)  
 
 ---
 
@@ -328,14 +333,20 @@ POST /documents/{id}/ai/suggestions
 7. **Reference insertion** - Custom ProseMirror nodes for references
 8. **Tagging system** - Document tags for thematic organization
 
-### Phase 3: Polish & Complete (MVP Ready)
-9. **Reference validation** - Integrity checking, broken link detection
-10. **File operations** - Create, delete, rename with reference updates
-11. **Mock AI panel** - Context display showing current document's story elements
+### Phase 3: Basic Publishing (Market Validation)
+9. **AI wiki generation** - Extract @-references and generate comprehensive wikis
+10. **Export system** - Generate Markdown, PDF, EPUB from ProseMirror content
+11. **Simple publishing** - Public story pages with integrated wiki access
+12. **Reference validation** - Integrity checking, broken link detection
+
+### Phase 4: Polish & Complete (MVP Ready)
+13. **File operations** - Create, delete, rename with reference updates
+14. **Mock AI panel** - Context display showing current document's story elements
+15. **Publishing workflows** - Simple publishing wizard and management
 
 ### Success Definition
-**MVP is complete when:** A user can create a project, add character and chapter documents, use @-references to link them together, and see the story context in the AI panel - providing a compelling preview of the full platform vision.
+**MVP is complete when:** A user can create a project, add character and chapter documents, use @-references to link them together, generate an AI wiki from those references, and publish their story with the wiki - proving the core value proposition of automatic universe creation from natural writing.
 
 ---
 
-This MVP delivers the core value proposition of context-aware writing through @-references while building the foundation for future AI and collaboration features. The focus is on proving the concept and validating user demand for the reference system before building more complex features.
+This MVP delivers the complete core value proposition: context-aware writing through @-references combined with automatic wiki generation and basic publishing capabilities. By including basic publishing, the MVP proves the full concept that sets ShuScribe apart - the ability to create comprehensive story universes automatically from natural writing workflow. The focus remains on validating the @-reference system while demonstrating the platform's unique wiki generation capabilities that will drive the larger universe management vision.

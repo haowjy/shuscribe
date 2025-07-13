@@ -1,405 +1,415 @@
 # ShuScribe: Product Overview
 
-**Defining What We Build and Why**
+**Universe Content Management Platform - From Indie Creators to Hollywood Studios**
 
-*Internal Development Guide - Phased Approach: Writer Tool → Publishing Platform*
-
------
-
-## Product Vision & Phasing Strategy
-
-### Phase 1 (MVP): Writer-Focused Tool
-
-**Target**: Serious fiction writers who need better organization and AI assistance
-**Core Value**: ProseMirror-powered writing interface with context-aware AI assistance through intelligent @-references
-**Revenue**: Direct SaaS subscriptions from writers ($15-50/month)
-
-### Phase 2 (V2+): Publishing Platform
-
-**Target**: Readers discovering stories through interactive wikis, converting to writers
-**Core Value**: Unique auto-generated wikis with chapter backlinking for published stories
-**Revenue**: Publishing platform fees + reader subscriptions + writer tool conversions
-
-**Strategic Rationale**: Build the best writing tool first using proven rich-text infrastructure (ProseMirror), then use publishing as user acquisition channel. Readers discover ShuScribe through amazing wiki experiences, realize they want to write their own stories, convert to paying writer tool users.
+*Internal Development Guide - Phased Approach: Small Creators → Enterprise Universe Management*
 
 -----
 
-## User Personas
+## Product Vision & Evolution Strategy
 
-### Phase 1 (MVP) - Writer-Focused
+### The Big Vision: Universe Operating System
 
-**Primary: The Web Serial Author**
+**ShuScribe is the operating system for fictional universes** - supporting everything from indie novels to billion-dollar franchises with AI-powered content management that understands narrative structure.
 
-- Publishes weekly on Royal Road, Wattpad, AO3
-- Struggles with continuity across 100+ chapters
-- Needs better character/world tracking
+### Phase 1 (MVP): Small Creator Focus
+
+**Target**: Indie fiction writers, content creators, small game developers
+**Core Value**: "Cursor for fiction writing" - AI-powered @-reference system with automatic wiki generation
+**Revenue**: SaaS subscriptions ($19/month), wiki generation fees, export tools
+**Strategy**: Prove product-market fit with underserved small creators who need better organization tools
+
+### Phase 2 (Scale): Creative Teams
+
+**Target**: Writing collectives, indie studios, small publishers (2-50 people)
+**Core Value**: Collaborative universe building with shared reference systems and team workflows
+**Revenue**: Team subscriptions ($49-799/month), advanced publishing features, custom branding
+**Strategy**: Scale proven concept to teams while building enterprise-ready features
+
+### Phase 3 (Enterprise): Studio & Publisher Market
+
+**Target**: Movie studios, game companies, major publishers (Disney/Marvel scale)
+**Core Value**: Franchise continuity management preventing million-dollar continuity errors
+**Revenue**: Enterprise contracts ($25K-100K/month), professional services, custom integrations
+**Strategy**: Leverage team success stories to win enterprise contracts
+
+### Phase 4 (Ecosystem): Platform Dominance
+
+**Target**: Global content creation ecosystem
+**Core Value**: The definitive platform for any interconnected fictional content
+**Revenue**: Platform ecosystem fees, third-party integrations, data services
+**Strategy**: Become essential infrastructure for modern storytelling across all media
+
+-----
+
+## User Personas Across Market Evolution
+
+### Phase 1 (MVP) - Small Creator Focus
+
+**Primary: The Indie Fiction Author**
+
+- Solo novelist or web serial writer (Royal Road, Wattpad, AO3)
+- Struggles with continuity across multiple chapters/books
+- Needs better character/world tracking and AI assistance
 - **Pain**: Spending 30% of time looking up previous story details
+- **Value**: Automatic wiki generation saves hours of manual work
 
-**Secondary: The Indie Novelist**
+**Secondary: The Content Creator**
 
-- Multi-book series with complex worldbuilding
-- Collaborates with editors and beta readers
-- **Pain**: Maintaining consistency across books and collaborators
+- Fiction podcaster, YouTube storyteller, newsletter writer
+- Creates serialized content across multiple platforms
+- **Pain**: Maintaining series consistency and audience engagement
+- **Value**: Cross-platform content management and reader analytics
 
-**Tertiary: The Writing Team**
+**Tertiary: The Indie Game Developer**
 
-- Co-authors or author-editor partnerships
-- **Pain**: Keeping everyone aligned on story details
+- Small studio (1-5 people) creating narrative games
+- Complex lore management for RPGs or visual novels
+- **Pain**: Character and world consistency across game content
+- **Value**: Integrated lore management with team collaboration
 
-### Phase 2 (V2+) - Reader Acquisition Pipeline
+### Phase 2 (Scale) - Creative Teams
 
-**The Engaged Reader**
+**The Writing Collective**
 
-- Discovers ShuScribe through published stories with interactive wikis
-- Loves exploring story worlds through connected wiki experiences
-- **Conversion Path**: Reader → “I want to organize my own story ideas” → Writer Tool User
+- 2-5 co-authors working on shared universe projects
+- Need collaborative tools for maintaining universe consistency
+- **Pain**: Coordinating between multiple creators and storylines
+- **Value**: Real-time collaboration with shared reference systems
 
-**The Aspiring Writer**
+**The Small Publisher**
 
-- Currently just consumes fiction but has story ideas
-- Intimidated by existing writing tools
-- **Hook**: “If I can explore this amazing story world, maybe I can build my own”
+- 10-50 person team managing multiple author relationships
+- Need oversight of series consistency across multiple books
+- **Pain**: Editorial coordination and rights management
+- **Value**: Professional workflows with approval processes
 
------
+**The Indie Studio**
 
-## Core User Journeys
+- Game or media studio with 5-25 person narrative team
+- Complex multi-project universe management needs
+- **Pain**: Maintaining continuity across multiple games/media
+- **Value**: Universe-wide consistency checking and team analytics
 
-### Phase 1 MVP Journeys
+### Phase 3 (Enterprise) - Studio & Publisher Market
 
-#### Journey 1: Context-Aware Writing Session
+**The Entertainment Studio**
 
-1. **Open Project**: Writer opens current chapter, ProseMirror editor loads with context sidebar auto-populated
-2. **@-Reference Writing**: Types `@character/elara` to pull character details into AI context and create navigable reference
-3. **AI Assistance**: AI provides suggestions based on established story context from references in document
-4. **Consistency Checking**: AI flags when new content contradicts existing character details
-5. **Wiki Building**: AI offers to create/update character documents based on new story developments
+- Movie/TV studio managing billion-dollar franchises
+- Hundreds of writers, directors, and continuity experts
+- **Pain**: Million-dollar continuity errors and reshoots
+- **Value**: AI-powered continuity management preventing expensive mistakes
 
-#### Journey 2: Collaborative Story Development
+**The Game Publisher**
 
-1. **Share Project**: Invites editor with appropriate permissions
-2. **Real-time Editing**: Both work simultaneously with ProseMirror’s built-in collaborative editing
-3. **Context Synchronization**: Editor sees same @-referenced context as author through shared reference system
-4. **Collaborative Development**: Team builds comprehensive story bible together using structured documents
-5. **Consistency Maintenance**: AI ensures all collaborators maintain character voice and plot consistency
+- Major game company with multiple franchises and live services
+- Complex lore spanning decades and multiple game titles
+- **Pain**: Narrative inconsistencies across expansions and sequels
+- **Value**: Comprehensive lore management with cross-game validation
 
-### Phase 2 Publishing Platform Journeys
+**The Publishing House**
 
-#### Journey 3: Author Publishing with Auto-Wiki
+- Major publisher coordinating hundreds of authors
+- Managing multi-author shared universes and series
+- **Pain**: Author coordination and consistency across large catalogs
+- **Value**: Scalable author collaboration and universe management
 
-1. **Complete Story Arc**: Author finishes story using Phase 1 ProseMirror-based writing tool
-2. **Publish Decision**: Chooses to publish on ShuScribe for reader discovery
-3. **Auto-Wiki Generation**: Platform extracts @-references to create reader-facing wiki automatically
-4. **Spoiler Management**: System intelligently filters content based on reader progress
-5. **Chapter Backlinking**: Published chapters automatically link to relevant wiki entries
+### Phase 4 (Ecosystem) - Platform Users
 
-#### Journey 4: Reader-to-Writer Conversion
+**The Reader-Creator**
 
-1. **Story Discovery**: Reader finds story on ShuScribe through recommendations
-2. **Wiki Engagement**: Explores interactive character sheets and world details while reading
-3. **Platform Recognition**: Realizes the story organization quality comes from ShuScribe’s reference system
-4. **Writing Interest**: “I want to create a world this detailed and organized”
-5. **Tool Trial**: Signs up for writer tool to organize their own story ideas
+- Discovers content through interactive reading experiences
+- Converts from reader to creator using universe tools
+- **Journey**: Interactive reading → "I want to create this" → Creator tools
+- **Value**: Seamless transition from consumption to creation
 
------
+**The Brand Universe Manager**
 
-## Feature Specifications
-
-## Phase 1 (MVP): Core Writer Tool
-
-### ProseMirror-Powered Editor Interface
-
-**Context-Aware @-Reference System** (Core MVP Feature)
-
-- `@character/name` - Creates navigable reference and pulls character details into AI context
-- `@location/place` - Reference location information with hover previews and AI awareness
-- `@timeline/event` - Include chronological context for consistency checking
-- `@worldbuilding/system` - Reference established world rules and magic systems
-- ProseMirror’s smart autocomplete shows relevant story elements with rich previews
-
-**AI Chat Integration** (Core MVP Feature)
-
-```
-User: "@character/elara what's her relationship with magic?"
-AI: Based on your referenced character document, Elara has innate fire magic but fears losing control after accidentally burning her childhood home. She's been suppressing her abilities for 3 years.
-
-User: "Help me write a scene where she first uses magic again"
-AI: Here are some approaches that would fit her character arc:
-1. Forced by immediate danger to someone she cares about
-2. Gradual rediscovery in a safe, controlled environment
-3. Accidental release during emotional stress
-Which direction feels right for this chapter?
-```
-
-**Multiple AI Writing Modes**
-
-- **Chapter Writing**: Prose craft, voice consistency, pacing assistance
-- **Character Development**: Psychology, motivations, relationship dynamics
-- **World Building**: Logic checking, consistency validation, system coherence
-- **Plot Planning**: Structure analysis, conflict escalation, pacing optimization
-- **Dialogue Polish**: Character voice, subtext refinement, natural flow
-
-**Acceptance Criteria**:
-
-- [ ] @-references autocomplete from existing documents within 200ms using ProseMirror’s efficient lookup
-- [ ] AI chat maintains context awareness of all referenced entities in current document
-- [ ] Reference navigation works seamlessly within ProseMirror editor
-- [ ] Context updates automatically when references change or are added
-
-### Intelligent Reference Management (Core MVP Feature)
-
-**Automatic Reference Resolution**
-
-```
-[User types]: "@elara's mentor, an old man named Marcus who taught her fire magic..."
-
-[System suggests]: I noticed you mentioned Marcus as Elara's mentor. Would you like me to:
-□ Create character document for Marcus
-□ Link existing Marcus character (if found)
-□ Update Elara's character sheet with mentor relationship
-[Create] [Link] [Update All] [Skip]
-```
-
-**Reference Integrity with ProseMirror**
-
-- ProseMirror’s schema ensures reference nodes maintain structural integrity
-- Automatic validation of reference targets during editing
-- Visual indicators for broken or missing references
-- Batch reference updates when documents are renamed or moved
-
-**Acceptance Criteria**:
-
-- [ ] AI accurately identifies new story elements worthy of documentation
-- [ ] Reference suggestions appear within 3 seconds of completing relevant content
-- [ ] Reference integrity maintained through document operations (rename, delete, move)
-- [ ] User can accept/modify/reject suggestions with single interaction
-
-### Real-Time Collaboration (MVP Feature)
-
-**ProseMirror Native Collaboration**
-
-- Built-in operational transforms for conflict-free collaborative editing
-- Shared reference context across all collaborators automatically
-- Live cursor positions and selections with user attribution
-- Real-time reference resolution and AI context sharing
-
-**Collaborative Context Awareness**
-
-- All users see same @-referenced context through ProseMirror’s shared state
-- Shared document structure with collaborative change tracking
-- Comments and suggestions tied to specific document positions
-- Version history with collaborative attribution
-
-**Acceptance Criteria**:
-
-- [ ] Multiple users can edit same document without data loss using ProseMirror’s collaboration
-- [ ] Reference changes sync across all collaborators within 500ms
-- [ ] AI suggestions remain relevant during collaborative editing
-- [ ] Conflict resolution handles reference changes gracefully
+- Corporate content teams managing brand narratives
+- Marketing campaigns with consistent universe storytelling
+- **Pain**: Brand consistency across multiple content types
+- **Value**: Universe-wide brand narrative management
 
 -----
 
-## Phase 2 (V2+): Publishing Platform Features
+## Core User Journeys Across Platform Evolution
 
-### Auto-Generated Reader Wikis (Unique Differentiator)
+### Phase 1 (MVP): Small Creator Journeys
 
-**Reference-Driven Wiki Generation**
+#### Journey 1: Indie Author - Story Creation with AI Wiki
 
-- Automatically extract @-references from ProseMirror documents to build comprehensive wikis
-- Intelligent spoiler detection based on reference positions and chapter progression
-- Progressive content reveals as reader advances through story
-- Customizable spoiler policies per author preference
+1. **Create Universe Project**: Sets up new project for fantasy novel series
+2. **Write with @-References**: Types `@character/elara` while writing, creating automatic references
+3. **AI Wiki Generation**: Completes first story, generates comprehensive wiki from @-references
+4. **Export & Publish**: Exports to multiple formats (PDF, EPUB, Markdown) for self-publishing
+5. **Reader Engagement**: Shares wiki-only version for readers who bought book elsewhere
 
-**Chapter Backlinking System** (Killer Feature)
+#### Journey 2: Content Creator - Multi-Platform Series
 
-```
-[Published Chapter Text in ProseMirror]:
-"Elara stepped into the tavern, her emerald eyes scanning for Marcus."
+1. **Multi-Content Project**: Creates project with blog posts, podcast episodes, and stories
+2. **Cross-Content References**: Uses same @-characters across different content types
+3. **Unified Wiki**: AI generates unified wiki covering all content types
+4. **Platform Publishing**: Publishes stories with interactive reading experience
+5. **Community Building**: Readers engage with content through wiki exploration and discussions
 
-[Automatic Backlinks from @-references]:
-- "Elara" → Character sheet with spoiler-safe details
-- "tavern" → Location guide with atmosphere and history  
-- "Marcus" → Character relationships and background (spoiler-filtered)
-```
+#### Journey 3: Indie Game Developer - Lore Management
 
-**Interactive Reading Experience**
+1. **Game Universe Setup**: Creates project for RPG with complex worldbuilding
+2. **Collaborative Lore Creation**: Team of 3 writers add character backstories and world lore
+3. **Reference Consistency**: @-reference system ensures consistency across all game content
+4. **Export for Development**: Exports structured data for integration with game engine
+5. **Player Community**: Publishes player-facing wiki for community engagement
 
-- Hover previews for character names and locations powered by reference system
-- Expandable lore sections for complex worldbuilding
-- Visual relationship maps between characters based on @-references
-- Timeline integration showing story chronology from referenced events
+### Phase 2 (Scale): Creative Team Journeys
 
-### Publishing Workflow (V2+)
+#### Journey 4: Writing Collective - Shared Universe
 
-**One-Click Publishing from ProseMirror**
+1. **Universe Container**: Creates shared project for collaborative fantasy universe
+2. **Multi-Story Management**: 5 authors each write separate stories in same universe
+3. **Cross-Story References**: Authors reference each other's characters and locations
+4. **AI Consistency Checking**: Platform validates consistency across all stories
+5. **Unified Publishing**: Publishes connected stories with shared interactive wiki
 
-- Direct publishing from ProseMirror editor to reader platform
-- Automatic extraction of @-references for wiki generation
-- Preview how auto-generated wiki appears to readers
-- SEO optimization for story and wiki discoverability
+#### Journey 5: Small Publisher - Editorial Workflow
 
-**Reader Engagement Analytics**
+1. **Publisher Dashboard**: Managing 20 authors across 50+ projects
+2. **Editorial Oversight**: Reviews and approves wiki content and story publications
+3. **Workflow Management**: Tracks manuscripts through editorial process with author collaboration
+4. **Brand Consistency**: Ensures consistent universe standards across all published content
+5. **Reader Analytics**: Monitors engagement across entire publisher catalog
 
-```
-📊 Story Performance Dashboard:
-├── Wiki Interactions: 1,247 this week
-├── Most Referenced: Character/Elara (456 links), Location/Capital (234 links)
-├── Reader Progression: Avg 3.2 wiki clicks per chapter
-└── Conversion Metrics: 12% of engaged readers signup for writer tool
-```
+### Phase 3 (Enterprise): Studio & Publisher Journeys
 
-### Reader-to-Writer Conversion (V2+)
+#### Journey 6: Entertainment Studio - Franchise Management
 
-**Discovery Funnel**
+1. **Franchise Universe**: Creates Marvel-scale universe project
+2. **Multi-Media Content**: Manages movies, TV shows, games, comics in single universe
+3. **Professional Wiki Editing**: 50+ editors maintain comprehensive franchise wiki
+4. **Continuity Validation**: AI prevents million-dollar continuity errors across properties
+5. **Fan Community**: Publishes official wiki for fan engagement and discovery
 
-- Stories ranked by reference density and wiki quality
-- Genre-specific discovery with worldbuilding complexity filters
-- Reader reviews highlighting story organization and depth through reference system
-- “Built with ShuScribe” branding showcasing reference-driven quality
+#### Journey 7: Game Publisher - Live Service Management
 
-**Conversion Touchpoints**
+1. **Multi-Game Universe**: Manages lore across 10+ games in same universe
+2. **Live Content Updates**: Continuously adds new lore content for live service games
+3. **Cross-Game References**: Maintains consistency between main games and mobile spin-offs
+4. **Player-Facing Wiki**: Auto-generates player wiki content with spoiler management
+5. **Community Contribution**: Allows community wiki contributions with moderation workflow
 
-- “Create your own story world” CTAs in wiki interfaces
-- Free trial offers for readers who heavily engage with reference-rich wikis
-- Template galleries showing “stories like this one” organization patterns
-- Success stories from reader-turned-writers using reference system
+### Phase 4 (Ecosystem): Platform-Wide Journeys
 
------
+#### Journey 8: Reader-to-Creator Conversion
 
-## Technical Architecture Updates
+1. **Story Discovery**: Reader finds story through platform recommendations
+2. **Interactive Reading**: Engages with story through wiki exploration and AI companion
+3. **Deep Universe Exploration**: Spends hours exploring character relationships and world details
+4. **Creator Inspiration**: "I want to create a universe this detailed and organized"
+5. **Creator Conversion**: Signs up for creator tools, starts building own universe
 
-### ProseMirror Foundation
+#### Journey 9: Cross-Platform Integration
 
-**Core Benefits**:
-
-- **Faster Development**: Leverage battle-tested rich text infrastructure instead of building custom editor
-- **Better Performance**: ProseMirror’s optimized document model and efficient text operations
-- **Enhanced Collaboration**: Built-in operational transforms for real-time collaborative editing
-- **Modular Architecture**: Plugin system allows focus on AI and reference innovations
-
-**Reference Implementation**:
-
-```typescript
-// Custom ProseMirror schema with reference nodes
-const referenceNode = {
-  attrs: {
-    referenceType: { default: "file" }, // 'file' | 'tag' | 'filter'
-    targetId: { default: null },
-    displayText: { default: "" }
-  },
-  inline: true,
-  group: "inline",
-  atom: true,
-  // ProseMirror handles rendering and interaction
-}
-```
-
-**AI Integration**:
-
-- ProseMirror plugins extract @-references for AI context automatically
-- Real-time document analysis as user types and references
-- AI suggestions rendered as ProseMirror decorations
-- Context-aware assistance based on referenced entities
-
-### Simplified Data Model
-
-**Document Storage**:
-
-```sql
--- Much simpler with ProseMirror JSON storage
-CREATE TABLE documents (
-  id UUID PRIMARY KEY,
-  project_id UUID REFERENCES projects(id),
-  path TEXT NOT NULL,
-  title TEXT NOT NULL,
-  content JSONB NOT NULL, -- ProseMirror document
-  word_count INTEGER DEFAULT 0,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Extracted references for fast queries
-CREATE TABLE document_references (
-  source_document_id UUID REFERENCES documents(id),
-  target_id UUID NOT NULL,
-  target_type TEXT NOT NULL,
-  position_start INTEGER NOT NULL,
-  display_text TEXT NOT NULL
-);
-```
+1. **Third-Party Integration**: Author uses ShuScribe alongside other writing tools
+2. **API Connections**: Syncs character data with game development tools
+3. **Multi-Platform Publishing**: Publishes to multiple platforms while maintaining wiki
+4. **Ecosystem Value**: Benefits from growing network of integrated tools and services
+5. **Platform Loyalty**: Becomes dependent on ShuScribe's unique universe management capabilities
 
 -----
 
-## Updated Success Metrics by Phase
+## Feature Specifications by Phase
 
-### Phase 1 MVP Metrics
+### Phase 1 (MVP): Small Creator Platform
 
-**Core Tool Adoption**:
+**Core Philosophy**: Prove the @-reference concept with basic publishing to validate the full platform vision.
 
-- @-reference usage: >20 per writing session (reduced from 25 due to ProseMirror efficiency)
-- AI chat interactions: >12 per hour of active writing (increased due to better context)
-- Reference documents created: >15 per active project
-- Collaboration sessions: >50% of projects use real-time editing (increased due to ProseMirror native support)
+#### Essential MVP Features
 
-**User Retention**:
+**1. @-Reference Writing System** (Core Differentiator)
+- ProseMirror-powered editor with instant @-reference autocomplete
+- AI-powered context awareness and consistency checking
+- Automatic reference extraction and validation
+- Cross-document reference navigation
 
-- Day 7 retention: >75% (increased due to better UX)
-- Month 1 retention: >55% (increased due to reduced friction)
-- Annual subscription renewal: >85% (increased due to collaborative features)
+**2. AI Wiki Generation** (Killer Feature)
+- One-click wiki generation from @-references
+- Spoiler-safe content organization by story arcs
+- Multiple wiki authoring modes (AI, manual, hybrid)
+- Export capabilities for external use
 
-### Phase 2 Publishing Platform Metrics
+**3. Basic Publishing & Export** (Market Validation)
+- Export to multiple formats (Markdown, PDF, EPUB)
+- Simple public story pages with wiki integration
+- Basic reader analytics and engagement metrics
+- Wiki-only publishing for companion content
 
-**Reader Engagement**:
+**4. Project Management** (Foundation)
+- Multi-content project containers (stories, wikis, blogs)
+- File tree organization with tagging system
+- Collaborative editing for small teams
+- Version control and backup features
 
-- Wiki interactions per chapter read: >3.0 average (increased due to better reference extraction)
-- Time spent on wiki pages: >3.5 minutes average
-- Return visits to story wikis: >65% of readers
+See detailed specifications in:
+- [MVP Technical Spec](2-mvp.md) - Complete MVP implementation details
+- [Content Architecture](../core/content-architecture.md) - Technical content system design
+- [Publishing Strategy](6-publishing-strategy.md) - Publishing workflow details
 
-**Writer Acquisition**:
+#### Phase 2: Creative Team Platform
 
-- Reader-to-writer trial conversion: >10% (increased due to better reference system visibility)
-- Reader-to-paid writer conversion: >4%
-- Publishing platform monthly active authors: >750
+**Enhanced Collaboration**:
+- Real-time collaborative editing with Y.js
+- Role-based permissions and approval workflows  
+- Team analytics and project management tools
+- Advanced publishing with interactive reading
 
-**Platform Growth**:
+**Shared Universe Management**:
+- Multi-story project containers with shared references
+- Cross-story consistency validation
+- Universe-wide character and location tracking
+- Collaborative world building tools
 
-- Stories with auto-generated wikis: >1500 published
-- Reader discovery through wiki browsing: >35% of new readers
-- Cross-pollination: readers of Story A trying Story B: >30%
+**Advanced Publishing**:
+- Interactive reading experiences with live context
+- AI reading companion for enhanced engagement
+- Community features (comments, discussions, polls)
+- Advanced monetization and reader analytics
 
------
+#### Phase 3: Enterprise Universe Management
 
-## Updated Technical Implementation Priorities
+**Professional Workflows**:
+- Custom approval processes and editorial control
+- Advanced security and access management
+- API integrations with existing enterprise tools
+- Custom branding and white-label options
 
-### Phase 1 MVP Requirements (Reduced Complexity)
+**Scalable Universe Management**:
+- Unlimited projects and content units
+- Professional wiki editing with oversight
+- Advanced AI consistency checking across franchises
+- Custom model training for specific universes
 
-**Essential Features**:
+**Enterprise Features**:
+- On-premise deployment options
+- Advanced analytics and reporting
+- Professional services and support
+- Custom integrations and workflows
 
-- ProseMirror editor with custom reference node schema
-- @-reference system with autocomplete using ProseMirror plugins
-- AI context extraction from ProseMirror document references
-- Real-time collaborative editing using ProseMirror’s native capabilities
-- Reference integrity management through ProseMirror transforms
+### MVP Scope Boundaries
 
-**Performance Targets** (Improved with ProseMirror):
+**✅ Included in MVP**:
+- @-reference system with AI wiki generation
+- Basic publishing and export capabilities
+- Simple collaboration for 2-3 person teams
+- Project management and file organization
 
-- @-reference response time: <150ms (improved from 200ms)
-- AI chat response streaming: <400ms first token (improved due to better context extraction)
-- Collaboration sync latency: <200ms (improved with ProseMirror native collaboration)
-- Reference resolution time: <5 seconds (improved with ProseMirror efficiency)
+**❌ Not in MVP** (Future phases):
+- Real-time collaborative editing
+- Interactive reading experiences
+- Advanced team management features
+- Enterprise security and compliance
+- Complex workflow automation
+- Advanced AI features beyond wiki generation
 
-### Phase 2 Platform Requirements
+### Success Metrics by Phase
 
-**Publishing Infrastructure**:
+**Phase 1 MVP**:
+- 10K+ users creating @-references regularly
+- 80%+ of projects use AI wiki generation
+- 15%+ conversion from free to paid plans
+- 70%+ monthly retention rate
 
-- Automated wiki generation from ProseMirror @-references
-- Spoiler detection and filtering system based on reference positions
-- Chapter backlinking with hover previews using reference data
-- SEO-optimized story and wiki pages
-- Reader analytics and engagement tracking
+**Phase 2 Team Platform**:
+- 100K+ total users across all tiers
+- 50+ team customers using collaboration features
+- $10M+ annual recurring revenue
+- Strong enterprise pilot program
 
-**Scalability Targets**:
+**Phase 3 Enterprise**:
+- 1M+ users including enterprise teams
+- 100+ enterprise customers
+- $100M+ annual recurring revenue
+- Market leadership in universe management
 
-- Support 2000+ published stories (increased due to better performance)
-- Handle 15,000+ daily reader wiki interactions
-- Process wiki generation for 150+ new stories per month
-- Maintain <1.5 second page load times (improved performance target)
+---
+
+## Competitive Positioning & Market Opportunity
+
+### Unique Value Proposition
+
+**"The Operating System for Fictional Universes"**
+
+ShuScribe is the only platform that:
+- **Understands narrative structure** through AI-powered @-reference analysis
+- **Scales from indie creators to enterprise** with the same core technology
+- **Automatically generates comprehensive wikis** from natural writing workflow
+- **Manages universes across multiple content types** (stories, games, movies, marketing)
+
+### Market Differentiation
+
+**vs. Existing Solutions:**
+- **Scrivener**: No AI, no collaboration, no publishing integration
+- **World Anvil**: Complex setup, no writing integration, manual wiki creation
+- **Notion/Confluence**: Generic tools, no story-specific intelligence
+- **Google Docs**: No organization, no reference tracking, no AI assistance
+
+**vs. Publishing Platforms:**
+- **Royal Road/Wattpad**: No creation tools, no universe management
+- **Medium/Substack**: No story-specific features, no reference systems
+- **Traditional Publishers**: No technology platform, high barriers to entry
+
+### Total Addressable Market
+
+**$3B-13B addressable market** across content creation industry:
+- **Individual Creators**: 1M+ potential users × $10-100/month = $500M-1B market
+- **Creative Teams**: 100K+ teams × $100-1000/month = $500M-2B market  
+- **Enterprise**: 10K+ organizations × $10K-100K/month = $2B-10B market
+
+---
+
+## Strategic Implementation
+
+### Immediate Focus (Next 12 months)
+
+**Small Creator MVP**:
+- Perfect the @-reference system and AI wiki generation
+- Build export capabilities and basic publishing
+- Achieve product-market fit with indie fiction writers
+- Target: 10K+ users, $1M ARR, 15% conversion rate
+
+### Medium-term Growth (12-36 months)
+
+**Team Platform**:
+- Add collaborative features and shared universe management
+- Develop enterprise pilot program with strategic customers
+- Build partnerships with publishing and game development communities
+- Target: 100K+ users, $10M ARR, enterprise proof points
+
+### Long-term Vision (3-7 years)
+
+**Enterprise Dominance**:
+- Win major studio and publisher contracts
+- Build ecosystem of integrations and third-party tools
+- Establish market leadership in universe content management
+- Target: 1M+ users, $500M+ ARR, IPO readiness
+
+---
+
+## Documentation Navigation
+
+For detailed information on specific aspects of ShuScribe:
+
+**Strategic Documents:**
+- [Future Vision](5-future-vision.md) - Long-term platform strategy and market opportunity
+- [Market Strategy](7-market-strategy.md) - Go-to-market approach and competitive positioning
+- [Publishing Strategy](6-publishing-strategy.md) - Modular publishing system design
+
+**Technical Specifications:**
+- [MVP Specification](2-mvp.md) - Complete MVP implementation details
+- [Frontend Architecture](3-frontend.md) - Frontend technical design
+- [Backend Architecture](4-backend.md) - Backend technical design
+- [Content Architecture](../core/content-architecture.md) - Multi-content system design
+
+**API & Integration:**
+- [API Reference](../core/api-reference.md) - Complete API documentation
+- [API Contracts](../api/contracts.md) - Frontend-backend interface definitions
+
+This product overview provides the strategic foundation for building ShuScribe from a simple writing tool into the definitive platform for universe content management.
