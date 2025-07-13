@@ -15,13 +15,18 @@
 4. **Basic document management** - Create, edit, save, delete documents
 5. **Project data loading** - Load all documents/tags once for fast local search
 6. **Supabase auth** - Login/signup/logout
+7. **AI wiki generation UI** - One-click wiki creation from @-references
+8. **Export functionality** - Generate Markdown, PDF, EPUB files
+9. **Basic publishing interface** - Simple publication wizard and public page management
 
 ### What We're NOT Building Yet
 - Real-time collaboration
 - AI chat functionality (just mock UI)
+- Interactive reading experience (hover context, AI companion)
 - Complex performance optimizations
 - Advanced search/filtering beyond local fuzzy search
-- Complex error handling
+- Multi-content types (blogs, announcements, etc.)
+- Advanced publishing features (monetization, analytics, community)
 
 ---
 
@@ -119,6 +124,82 @@
 - Placeholder chat interface with "Coming Soon" message
 - Maybe some sample suggestions to show concept
 
+### 5. Publishing & Export System
+
+**Purpose:** Validate the core platform concept by enabling wiki generation and basic publishing
+
+#### AI Wiki Generation Interface
+```typescript
+interface WikiGenerationUI {
+  // Wiki generation trigger
+  generateButton: "Generate Wiki from @-references";
+  progressIndicator: WikiGenerationProgress;
+  
+  // Configuration options
+  spoilerManagement: {
+    arcBreakpoints: ArcDefinition[];
+    spoilerLevels: SpoilerLevel[];
+  };
+  
+  // Preview and editing
+  wikiPreview: WikiPreviewComponent;
+  editMode: WikiEditingInterface;
+}
+```
+
+**Components:**
+- **Wiki Generation Wizard**: Step-by-step process for creating wikis from @-references
+- **Arc Management**: Define story arcs for spoiler-safe wiki organization
+- **Wiki Preview**: Show generated wiki content with editing capabilities
+- **Spoiler Controls**: Manage what content is revealed at different story points
+
+#### Export Functionality
+```typescript
+interface ExportUI {
+  // Format selection
+  exportFormats: ('markdown' | 'pdf' | 'epub')[];
+  
+  // Content selection
+  contentSelector: {
+    includeStory: boolean;
+    includeWiki: boolean;
+    specificChapters: number[];
+  };
+  
+  // Export options
+  exportOptions: ExportConfiguration;
+  downloadHandler: ExportDownload;
+}
+```
+
+**Components:**
+- **Export Wizard**: Multi-step export process with format and content selection
+- **Format Options**: PDF styling, EPUB metadata, Markdown formatting options
+- **Preview Generator**: Show export preview before final generation
+- **Download Manager**: Handle large file downloads with progress indicators
+
+#### Basic Publishing Interface
+```typescript
+interface PublishingUI {
+  // Publication settings
+  publicationMode: 'story-only' | 'wiki-only' | 'story-and-wiki';
+  visibility: 'private' | 'unlisted' | 'public';
+  
+  // Simple public page
+  publicPageBuilder: PublicPageBuilder;
+  urlManager: CustomDomainHandler;
+  
+  // Basic analytics
+  analyticsView: BasicAnalytics;
+}
+```
+
+**Components:**
+- **Publishing Wizard**: Simple process to make stories/wikis public
+- **Public Page Editor**: Basic customization of public story pages
+- **URL Management**: Handle public URLs and custom domains
+- **Basic Analytics**: View counts and basic engagement metrics
+
 ---
 
 ## Technical Implementation
@@ -130,16 +211,20 @@ frontend/src/
 ├── app/                     # Next.js app router
 │   ├── (auth)/             # Auth pages
 │   ├── (dashboard)/        # Main app
-│   └── project/[id]/       # Project workspace
+│   ├── project/[id]/       # Project workspace
+│   └── public/             # Public story/wiki pages
 ├── components/
 │   ├── editor/             # ProseMirror components
 │   ├── project/            # File tree, navigation
 │   ├── ai/                 # Mock AI panel
+│   ├── publishing/         # Publishing UI components
+│   ├── wiki/               # Wiki generation and display
 │   └── ui/                 # shadcn/ui components
 ├── lib/
 │   ├── supabase/           # Auth client
 │   ├── api/                # FastAPI client
 │   ├── prosemirror/        # Editor schema/plugins
+│   ├── publishing/         # Export and publishing utilities
 │   └── stores/             # Zustand stores
 └── types/                  # TypeScript types
 ```
@@ -156,11 +241,15 @@ frontend/src/
 - `useProjectStore` - Project data, local index, file tree state
 - `useWorkspaceStore` - Panel sizes, collapse states, UI preferences
 - `useEditorStore` - Open tabs, active document
+- `usePublishingStore` - Wiki generation state, export progress, publishing status
 
 **TanStack Query:**
 - Load project data once per session
 - Document save mutations with optimistic updates
 - Reference validation on save (not for autocomplete)
+- Wiki generation mutations with progress tracking
+- Export operations with file download handling
+- Publishing mutations for making content public
 
 ### ProseMirror Integration
 
@@ -190,18 +279,27 @@ referenceNode = {
 
 ### FastAPI Integration
 
-**Key Endpoints:**
+**Core Endpoints:**
 - `GET /projects/{id}/data` - Load complete project data once
 - `GET /documents/{id}` - Get single document content
 - `POST /documents` - Create document
 - `PUT /documents/{id}` - Save document
 - `POST /projects/{id}/references/validate` - Validate references on demand
 
+**Publishing Endpoints:**
+- `POST /projects/{id}/wiki/generate` - Generate AI wiki from @-references
+- `GET /projects/{id}/wiki` - Get generated wiki content
+- `POST /documents/{id}/export` - Export document to various formats
+- `POST /projects/{id}/publish` - Publish story/wiki publicly
+- `GET /public/stories/{slug}` - Public story page
+- `GET /public/wikis/{slug}` - Public wiki page
+
 **Client Setup:**
 - Simple fetch wrapper with auth headers
 - TanStack Query for project data loading and document mutations
 - Local project index for instant search (no API calls for autocomplete)
-- Basic error handling and optimistic updates
+- Publishing operations with progress tracking and error handling
+- Export file downloads with proper MIME types
 
 ---
 
@@ -230,6 +328,13 @@ referenceNode = {
 - Debounced search to avoid blocking UI
 - Ranking algorithms for relevance
 - Efficient re-indexing on content changes
+
+### 5. Publishing & Export Implementation
+- AI wiki generation progress tracking and error handling
+- Large file export with proper download management
+- Public page generation with SEO optimization
+- Basic analytics tracking without complex infrastructure
+- Export format handling (PDF generation, EPUB creation)
 
 ---
 

@@ -15,13 +15,18 @@
 4. **Auth middleware** - Validate Supabase JWT tokens
 5. **Project management** - Basic project and file tree operations
 6. **Mock AI endpoints** - Placeholder AI chat/context endpoints
+7. **AI wiki generation** - Generate wikis from extracted @-references
+8. **Export services** - Generate Markdown, PDF, EPUB from document content
+9. **Basic publishing API** - Simple public page hosting with wikis
 
 ### What We're NOT Building Yet
 - Real AI chat implementation (just mock responses)
 - Real-time collaboration endpoints
-- Complex search/filtering (frontend handles local search)
+- Interactive reading features (hover context, AI companion)
+- Advanced search/filtering (frontend handles local search)
 - File upload/storage management
 - Advanced caching strategies
+- Complex publishing features (monetization, analytics, community)
 - Performance optimizations
 
 ---
@@ -47,8 +52,13 @@
 ├── projects/               # Project CRUD
 │   └── {project_id}/
 │       ├── data/           # Complete project data (documents + tags)
-│       └── documents/      # Document CRUD operations
-└── ai/                     # Mock AI endpoints (future)
+│       ├── documents/      # Document CRUD operations
+│       ├── wiki/           # Wiki generation and management
+│       └── publish/        # Publishing and export operations
+├── ai/                     # Mock AI endpoints (future)
+└── public/                 # Public story and wiki pages
+    ├── stories/            # Public story pages
+    └── wikis/              # Public wiki pages
 ```
 
 ### Dependency Injection Pattern
@@ -57,7 +67,10 @@ FastAPI App
 ├── Database Service (Injectable)
 ├── Auth Service (Injectable) 
 ├── Reference Service (Injectable)
-└── AI Service (Injectable - Mock)
+├── AI Service (Injectable - Mock)
+├── Wiki Generation Service (Injectable)
+├── Export Service (Injectable)
+└── Publishing Service (Injectable)
 ```
 
 **Why Dependency Injection:**

@@ -33,9 +33,9 @@ Authorization: Bearer <your-supabase-jwt-token>
 ```
 
 ### Authentication Notes
-- The backend **extracts** tokens but does **not validate** them
-- Token validation is handled by the frontend (Supabase Auth)
-- The backend trusts the frontend's authentication state
+- The backend **validates** Supabase JWT tokens from the Authorization header
+- Token validation ensures security and user identification
+- Authentication is handled via Supabase Auth on the frontend
 - Some endpoints like `/health/ping` do not require authentication
 
 ## Response Format
