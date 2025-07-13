@@ -11,9 +11,10 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.database.models import Project, Document, FileTreeItem
+from src.database.models import Project, Document, FileTreeItem, Tag
 from src.database.connection import get_session_context
 from src.database.interfaces import ProjectRepository, DocumentRepository, FileTreeRepository
+from src.database.interfaces.tag_repository import TagRepository
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class DatabaseProjectRepository(ProjectRepository):
                 description=project_data.get("description", ""),
                 word_count=project_data.get("word_count", 0),
                 document_count=project_data.get("document_count", 0),
-                tags=project_data.get("tags", []),
+                tag_ids=project_data.get("tag_ids", []),
                 collaborators=project_data.get("collaborators", []),
                 settings=project_data.get("settings", {}),
             )
@@ -104,7 +105,7 @@ class DatabaseDocumentRepository(DocumentRepository):
                 title=document_data["title"],
                 path=document_data["path"],
                 content=document_data.get("content", {"type": "doc", "content": []}),
-                tags=document_data.get("tags", []),
+                tag_ids=document_data.get("tag_ids", []),
                 word_count=document_data.get("word_count", 0),
                 version=document_data.get("version", "1.0.0"),
                 is_locked=document_data.get("is_locked", False),
@@ -194,7 +195,7 @@ class DatabaseFileTreeRepository(FileTreeRepository):
                 parent_id=item_data.get("parent_id"),
                 document_id=item_data.get("document_id"),
                 icon=item_data.get("icon"),
-                tags=item_data.get("tags", []),
+                tag_ids=item_data.get("tag_ids", []),
                 word_count=item_data.get("word_count"),
             )
             session.add(item)
@@ -251,7 +252,7 @@ class MemoryProjectRepository(ProjectRepository):
             description=project_data.get("description", ""),
             word_count=project_data.get("word_count", 0),
             document_count=project_data.get("document_count", 0),
-            tags=project_data.get("tags", []),
+            tag_ids=project_data.get("tag_ids", []),
             collaborators=project_data.get("collaborators", []),
             settings=project_data.get("settings", {}),
             created_at=datetime.now(UTC).replace(tzinfo=None),
@@ -304,7 +305,7 @@ class MemoryDocumentRepository(DocumentRepository):
             title=document_data["title"],
             path=document_data["path"],
             content=document_data.get("content", {"type": "doc", "content": []}),
-            tags=document_data.get("tags", []),
+            tag_ids=document_data.get("tag_ids", []),
             word_count=document_data.get("word_count", 0),
             version=document_data.get("version", "1.0.0"),
             is_locked=document_data.get("is_locked", False),
@@ -382,7 +383,7 @@ class MemoryFileTreeRepository(FileTreeRepository):
             parent_id=item_data.get("parent_id"),
             document_id=item_data.get("document_id"),
             icon=item_data.get("icon"),
-            tags=item_data.get("tags", []),
+            tag_ids=item_data.get("tag_ids", []),
             word_count=item_data.get("word_count"),
             created_at=datetime.now(UTC).replace(tzinfo=None),
             updated_at=datetime.now(UTC).replace(tzinfo=None),
@@ -410,3 +411,321 @@ class MemoryFileTreeRepository(FileTreeRepository):
             del self._items[item_id]
             return True
         return False
+
+
+class DatabaseTagRepository(TagRepository):
+    """Database-backed tag repository using SQLAlchemy"""
+    
+    async def get_by_id(self, tag_id: str) -> Optional[Tag]:
+        async with get_session_context() as session:
+            result = await session.execute(
+                select(Tag).where(Tag.id == tag_id)
+            )
+            return result.scalar_one_or_none()
+    
+    async def get_global_tags(self, include_archived: bool = False) -> List[Tag]:
+        async with get_session_context() as session:
+            query = select(Tag).where(Tag.is_global == True)
+            if not include_archived:
+                query = query.where(Tag.is_archived == False)
+            result = await session.execute(query.order_by(Tag.name))
+            return list(result.scalars().all())
+    
+    async def get_user_tags(self, user_id: str, include_archived: bool = False) -> List[Tag]:
+        async with get_session_context() as session:
+            query = select(Tag).where(Tag.user_id == user_id)
+            if not include_archived:
+                query = query.where(Tag.is_archived == False)
+            result = await session.execute(query.order_by(Tag.name))
+            return list(result.scalars().all())
+    
+    async def get_by_name(self, name: str, user_id: Optional[str] = None) -> Optional[Tag]:
+        async with get_session_context() as session:
+            if user_id is None:
+                # Search global tags
+                result = await session.execute(
+                    select(Tag).where(Tag.name == name, Tag.is_global == True)
+                )
+            else:
+                # Search user's private tags
+                result = await session.execute(
+                    select(Tag).where(Tag.name == name, Tag.user_id == user_id)
+                )
+            return result.scalar_one_or_none()
+    
+    async def create(self, tag_data: Dict[str, Any]) -> Tag:
+        async with get_session_context() as session:
+            tag = Tag(
+                id=tag_data.get("id", str(uuid.uuid4())),
+                name=tag_data["name"],
+                icon=tag_data.get("icon"),
+                color=tag_data.get("color"),
+                description=tag_data.get("description"),
+                category=tag_data.get("category"),
+                is_global=tag_data.get("is_global", False),
+                user_id=tag_data.get("user_id"),
+                usage_count=tag_data.get("usage_count", 0),
+                is_system=tag_data.get("is_system", False),
+                is_archived=tag_data.get("is_archived", False),
+            )
+            session.add(tag)
+            await session.flush()
+            await session.refresh(tag)
+            return tag
+    
+    async def update(self, tag_id: str, updates: Dict[str, Any]) -> Optional[Tag]:
+        async with get_session_context() as session:
+            # Update using SQL for better performance
+            updates["updated_at"] = datetime.now(UTC).replace(tzinfo=None)
+            result = await session.execute(
+                update(Tag)
+                .where(Tag.id == tag_id)
+                .values(**updates)
+                .returning(Tag)
+            )
+            updated_tag = result.scalar_one_or_none()
+            if updated_tag:
+                await session.refresh(updated_tag)
+            return updated_tag
+    
+    async def delete(self, tag_id: str) -> bool:
+        async with get_session_context() as session:
+            result = await session.execute(
+                delete(Tag).where(Tag.id == tag_id)
+            )
+            return result.rowcount > 0
+    
+    async def archive(self, tag_id: str) -> Optional[Tag]:
+        return await self.update(tag_id, {"is_archived": True})
+    
+    async def unarchive(self, tag_id: str) -> Optional[Tag]:
+        return await self.update(tag_id, {"is_archived": False})
+    
+    async def increment_usage(self, tag_id: str) -> Optional[Tag]:
+        async with get_session_context() as session:
+            result = await session.execute(
+                update(Tag)
+                .where(Tag.id == tag_id)
+                .values(
+                    usage_count=Tag.usage_count + 1,
+                    updated_at=datetime.now(UTC).replace(tzinfo=None)
+                )
+                .returning(Tag)
+            )
+            updated_tag = result.scalar_one_or_none()
+            if updated_tag:
+                await session.refresh(updated_tag)
+            return updated_tag
+    
+    async def decrement_usage(self, tag_id: str) -> Optional[Tag]:
+        async with get_session_context() as session:
+            result = await session.execute(
+                update(Tag)
+                .where(Tag.id == tag_id)
+                .values(
+                    usage_count=Tag.usage_count - 1,
+                    updated_at=datetime.now(UTC).replace(tzinfo=None)
+                )
+                .returning(Tag)
+            )
+            updated_tag = result.scalar_one_or_none()
+            if updated_tag:
+                await session.refresh(updated_tag)
+            return updated_tag
+    
+    async def get_by_category(self, category: str, user_id: Optional[str] = None) -> List[Tag]:
+        async with get_session_context() as session:
+            if user_id is None:
+                # Get global tags by category
+                result = await session.execute(
+                    select(Tag)
+                    .where(Tag.is_global == True, Tag.category == category, Tag.is_archived == False)
+                    .order_by(Tag.name)
+                )
+            else:
+                # Get global and user's private tags by category
+                result = await session.execute(
+                    select(Tag)
+                    .where(
+                        Tag.category == category, 
+                        Tag.is_archived == False,
+                        (Tag.is_global == True) | (Tag.user_id == user_id)
+                    )
+                    .order_by(Tag.name)
+                )
+            return list(result.scalars().all())
+    
+    async def get_system_tags(self) -> List[Tag]:
+        async with get_session_context() as session:
+            result = await session.execute(
+                select(Tag)
+                .where(Tag.is_system == True, Tag.is_global == True, Tag.is_archived == False)
+                .order_by(Tag.name)
+            )
+            return list(result.scalars().all())
+    
+    async def search_tags(self, query: str, user_id: Optional[str] = None, limit: int = 20) -> List[Tag]:
+        async with get_session_context() as session:
+            if user_id is None:
+                # Search only global tags
+                result = await session.execute(
+                    select(Tag)
+                    .where(
+                        Tag.is_global == True,
+                        Tag.name.ilike(f"%{query}%"),
+                        Tag.is_archived == False
+                    )
+                    .order_by(Tag.usage_count.desc(), Tag.name)
+                    .limit(limit)
+                )
+            else:
+                # Search global and user's private tags
+                result = await session.execute(
+                    select(Tag)
+                    .where(
+                        Tag.name.ilike(f"%{query}%"),
+                        Tag.is_archived == False,
+                        (Tag.is_global == True) | (Tag.user_id == user_id)
+                    )
+                    .order_by(Tag.usage_count.desc(), Tag.name)
+                    .limit(limit)
+                )
+            return list(result.scalars().all())
+
+
+class MemoryTagRepository(TagRepository):
+    """In-memory tag repository for testing"""
+    
+    def __init__(self):
+        self._tags: Dict[str, Tag] = {}
+    
+    async def get_by_id(self, tag_id: str) -> Optional[Tag]:
+        return self._tags.get(tag_id)
+    
+    async def get_global_tags(self, include_archived: bool = False) -> List[Tag]:
+        tags = [tag for tag in self._tags.values() if tag.is_global]
+        if not include_archived:
+            tags = [tag for tag in tags if not tag.is_archived]
+        return sorted(tags, key=lambda t: t.name)
+    
+    async def get_user_tags(self, user_id: str, include_archived: bool = False) -> List[Tag]:
+        tags = [tag for tag in self._tags.values() if tag.user_id == user_id]
+        if not include_archived:
+            tags = [tag for tag in tags if not tag.is_archived]
+        return sorted(tags, key=lambda t: t.name)
+    
+    async def get_by_name(self, name: str, user_id: Optional[str] = None) -> Optional[Tag]:
+        for tag in self._tags.values():
+            if user_id is None:
+                # Search global tags
+                if tag.name == name and tag.is_global:
+                    return tag
+            else:
+                # Search user's private tags
+                if tag.name == name and tag.user_id == user_id:
+                    return tag
+        return None
+    
+    async def create(self, tag_data: Dict[str, Any]) -> Tag:
+        tag_id = tag_data.get("id", str(uuid.uuid4()))
+        tag = Tag(
+            id=tag_id,
+            name=tag_data["name"],
+            icon=tag_data.get("icon"),
+            color=tag_data.get("color"),
+            description=tag_data.get("description"),
+            category=tag_data.get("category"),
+            is_global=tag_data.get("is_global", False),
+            user_id=tag_data.get("user_id"),
+            usage_count=tag_data.get("usage_count", 0),
+            is_system=tag_data.get("is_system", False),
+            is_archived=tag_data.get("is_archived", False),
+            created_at=datetime.now(UTC).replace(tzinfo=None),
+            updated_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+        self._tags[tag_id] = tag
+        return tag
+    
+    async def update(self, tag_id: str, updates: Dict[str, Any]) -> Optional[Tag]:
+        if tag_id not in self._tags:
+            return None
+        
+        tag = self._tags[tag_id]
+        for key, value in updates.items():
+            if hasattr(tag, key):
+                setattr(tag, key, value)
+        
+        tag.updated_at = datetime.now(UTC).replace(tzinfo=None)
+        return tag
+    
+    async def delete(self, tag_id: str) -> bool:
+        if tag_id in self._tags:
+            del self._tags[tag_id]
+            return True
+        return False
+    
+    async def archive(self, tag_id: str) -> Optional[Tag]:
+        return await self.update(tag_id, {"is_archived": True})
+    
+    async def unarchive(self, tag_id: str) -> Optional[Tag]:
+        return await self.update(tag_id, {"is_archived": False})
+    
+    async def increment_usage(self, tag_id: str) -> Optional[Tag]:
+        if tag_id in self._tags:
+            tag = self._tags[tag_id]
+            tag.usage_count += 1
+            tag.updated_at = datetime.now(UTC).replace(tzinfo=None)
+            return tag
+        return None
+    
+    async def decrement_usage(self, tag_id: str) -> Optional[Tag]:
+        if tag_id in self._tags:
+            tag = self._tags[tag_id]
+            tag.usage_count = max(0, tag.usage_count - 1)
+            tag.updated_at = datetime.now(UTC).replace(tzinfo=None)
+            return tag
+        return None
+    
+    async def get_by_category(self, category: str, user_id: Optional[str] = None) -> List[Tag]:
+        if user_id is None:
+            # Get global tags by category
+            tags = [
+                tag for tag in self._tags.values()
+                if tag.is_global and tag.category == category and not tag.is_archived
+            ]
+        else:
+            # Get global and user's private tags by category
+            tags = [
+                tag for tag in self._tags.values()
+                if tag.category == category and not tag.is_archived
+                and (tag.is_global or tag.user_id == user_id)
+            ]
+        return sorted(tags, key=lambda t: t.name)
+    
+    async def get_system_tags(self) -> List[Tag]:
+        tags = [
+            tag for tag in self._tags.values()
+            if tag.is_system and tag.is_global and not tag.is_archived
+        ]
+        return sorted(tags, key=lambda t: t.name)
+    
+    async def search_tags(self, query: str, user_id: Optional[str] = None, limit: int = 20) -> List[Tag]:
+        if user_id is None:
+            # Search only global tags
+            tags = [
+                tag for tag in self._tags.values()
+                if tag.is_global
+                and query.lower() in tag.name.lower()
+                and not tag.is_archived
+            ]
+        else:
+            # Search global and user's private tags
+            tags = [
+                tag for tag in self._tags.values()
+                if query.lower() in tag.name.lower()
+                and not tag.is_archived
+                and (tag.is_global or tag.user_id == user_id)
+            ]
+        # Sort by usage count desc, then name
+        tags.sort(key=lambda t: (-t.usage_count, t.name))
+        return tags[:limit]

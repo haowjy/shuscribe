@@ -118,7 +118,7 @@ def document_to_response(document: Document) -> DocumentResponse:
         title=document.title,
         path=document.path,
         content=document_content,
-        tags=document.tags or [],
+        tags=document.tag_ids or [],
         word_count=document.word_count,
         created_at=document.created_at.isoformat() if hasattr(document.created_at, 'isoformat') else str(document.created_at),
         updated_at=document.updated_at.isoformat() if hasattr(document.updated_at, 'isoformat') else str(document.updated_at),
@@ -233,7 +233,7 @@ async def create_document(
             "title": request.title,
             "path": request.path,
             "content": request.content.model_dump(),
-            "tags": request.tags,
+            "tag_ids": request.tags,
             "word_count": word_count,
             "version": "1.0.0",
             "is_locked": False,
@@ -296,7 +296,7 @@ async def update_document(
             new_word_count = calculate_word_count(request.content)
             updates["word_count"] = new_word_count
         if request.tags is not None:
-            updates["tags"] = request.tags
+            updates["tag_ids"] = request.tags
         if request.version is not None:
             updates["version"] = request.version
             

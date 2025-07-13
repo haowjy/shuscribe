@@ -10,6 +10,7 @@ from src.database.interfaces.project_repository import ProjectRepository
 from src.database.interfaces.document_repository import DocumentRepository
 from src.database.interfaces.file_tree_repository import FileTreeRepository
 from src.database.interfaces.user_repository import IUserRepository
+from src.database.interfaces.tag_repository import TagRepository
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,13 @@ class RepositoryContainer:
         document: DocumentRepository,
         file_tree: FileTreeRepository,
         user: IUserRepository,
+        tag: TagRepository,
     ):
         self.project = project
         self.document = document
         self.file_tree = file_tree
         self.user = user
+        self.tag = tag
 
 
 def create_repositories(backend: str = "database") -> RepositoryContainer:
@@ -45,7 +48,8 @@ def create_repositories(backend: str = "database") -> RepositoryContainer:
         from src.database.repositories import (
             MemoryProjectRepository,
             MemoryDocumentRepository, 
-            MemoryFileTreeRepository
+            MemoryFileTreeRepository,
+            MemoryTagRepository
         )
         from src.database.memory import MemoryUserRepository
         return RepositoryContainer(
@@ -53,13 +57,15 @@ def create_repositories(backend: str = "database") -> RepositoryContainer:
             document=MemoryDocumentRepository(),
             file_tree=MemoryFileTreeRepository(),
             user=MemoryUserRepository(),
+            tag=MemoryTagRepository(),
         )
     elif backend == "database":
         logger.info("Creating database repositories")
         from src.database.repositories import (
             DatabaseProjectRepository,
             DatabaseDocumentRepository,
-            DatabaseFileTreeRepository
+            DatabaseFileTreeRepository,
+            DatabaseTagRepository
         )
         from src.database.memory import MemoryUserRepository  # TODO: Replace with DatabaseUserRepository
         return RepositoryContainer(
@@ -67,6 +73,7 @@ def create_repositories(backend: str = "database") -> RepositoryContainer:
             document=DatabaseDocumentRepository(),
             file_tree=DatabaseFileTreeRepository(),
             user=MemoryUserRepository(),  # TODO: Replace with DatabaseUserRepository
+            tag=DatabaseTagRepository(),
         )
     else:
         raise ValueError(f"Unknown backend: {backend}")

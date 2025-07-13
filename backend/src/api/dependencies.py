@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 from fastapi import Header, HTTPException, status, Depends
 
 from src.services.auth.supabase_auth import get_supabase_auth_service
+from src.database.factory import get_repositories as get_repo_container, RepositoryContainer
 
 
 async def get_auth_token(authorization: Optional[str] = Header(None)) -> Optional[str]:
@@ -172,3 +173,29 @@ async def get_optional_user_id(user_context: Dict[str, Any] = Depends(get_option
         str | None: The user's ID if authenticated, None otherwise
     """
     return user_context.get('user_id')
+
+
+def get_repositories() -> RepositoryContainer:
+    """
+    Dependency to get repository container
+    
+    Returns:
+        RepositoryContainer: Container with all repositories
+    """
+    return get_repo_container()
+
+
+def get_auth_context(user_context: Dict[str, Any] = Depends(get_optional_user_context)) -> Dict[str, Any]:
+    """
+    Dependency to get authentication context for API endpoints
+    
+    Returns the user context which can be used for logging and authorization.
+    Does not require authentication - endpoints should check 'authenticated' field.
+    
+    Args:
+        user_context: User context from get_optional_user_context
+        
+    Returns:
+        Dict: User context with authentication information
+    """
+    return user_context

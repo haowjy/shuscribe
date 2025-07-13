@@ -107,6 +107,7 @@ async def main():
         else:
             logger.info("Seeding completed successfully!")
             print("\nSeeding Results:")
+            print(f"  Tags created: {results.get('tags_created', 0)}")
             print(f"  Projects created: {results.get('projects_created', 0)}")
             print(f"  Documents created: {results.get('documents_created', 0)}")
             print(f"  File tree items created: {results.get('file_tree_items_created', 0)}")

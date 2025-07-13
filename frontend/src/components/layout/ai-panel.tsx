@@ -62,8 +62,8 @@ export function AiPanel() {
       </Card>
 
       {/* Chat Interface */}
-      <div className="flex-1 flex flex-col">
-        <CardContent className="flex-1 overflow-auto">
+      <div className="flex-1 flex flex-col h-0">
+        <CardContent className="flex-1 overflow-auto p-3">
           <div className="space-y-3">
             <Card>
               <CardContent className="p-3">

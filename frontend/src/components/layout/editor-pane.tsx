@@ -370,7 +370,7 @@ export function EditorPane({
       </div>
 
       {/* Editor Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden h-0">
         {activeTab ? (
           <RichEditor
             key={activeTab.id}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -12,7 +12,11 @@ import {
   Edit,
   Trash2,
   Copy,
-  FileText
+  FileText,
+  Settings,
+  Tag,
+  Search,
+  Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +33,10 @@ import { TreeItem } from "@/types/api";
 import { useSelectedFile, useFileTree } from "@/lib/query/hooks";
 import { isFile, isFolder } from "@/data/file-tree";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { TagFilterDropdown } from "@/components/metadata/TagFilterDropdown";
+import { DraggableMetadataPanel } from "@/components/metadata/DraggableMetadataPanel";
+import { DndContext } from '@dnd-kit/core';
 
 // No conversion needed - API already returns FileItem format
 
@@ -132,7 +140,7 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
               <MoreHorizontal className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
             {isFolder(item) ? (
               <>
                 <DropdownMenuItem onClick={(e) => handleAction("new-file", e)}>
@@ -154,6 +162,15 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
                 <DropdownMenuSeparator />
               </>
             )}
+            <DropdownMenuItem onClick={(e) => handleAction("edit-metadata", e)}>
+              <Settings className="mr-2 h-4 w-4" />
+              Edit Metadata...
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => handleAction("quick-tag-edit", e)}>
+              <Tag className="mr-2 h-4 w-4" />
+              Quick Tag Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={(e) => handleAction("rename", e)}>
               <Edit className="mr-2 h-4 w-4" />
               Rename
@@ -200,6 +217,72 @@ export function FileExplorer({ projectId, onFileClick }: FileExplorerProps) {
   // Use file tree and simple selection state
   const { data: fileTree = [], isLoading, error } = useFileTree(projectId);
   const { selectedFileId, setSelectedFile } = useSelectedFile(projectId);
+  
+  // Metadata panel state
+  const [metadataPanelOpen, setMetadataPanelOpen] = useState(false);
+  const [selectedItemForMetadata, setSelectedItemForMetadata] = useState<TreeItem | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
+  
+  // Extract all tags for filtering
+  const allTags = React.useMemo(() => {
+    const tagCounts: Record<string, number> = {};
+    
+    const countTags = (items: TreeItem[]) => {
+      items.forEach(item => {
+        if (item.tags) {
+          item.tags.forEach(tag => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          });
+        }
+        if (isFolder(item) && item.children) {
+          countTags(item.children);
+        }
+      });
+    };
+    
+    countTags(fileTree);
+    
+    return Object.entries(tagCounts).map(([name, count]) => ({
+      name,
+      count,
+      color: undefined // TODO: Add color support
+    }));
+  }, [fileTree]);
+  
+  // Filter file tree based on search and tags
+  const filteredFileTree = React.useMemo(() => {
+    if (!searchQuery && activeTagFilters.length === 0) return fileTree;
+    
+    const filterItems = (items: TreeItem[]): TreeItem[] => {
+      return items.reduce<TreeItem[]>((acc, item) => {
+        const matchesSearch = !searchQuery || 
+          item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesTags = activeTagFilters.length === 0 ||
+          (item.tags && activeTagFilters.some(filter => item.tags!.includes(filter)));
+        
+        let filteredChildren: TreeItem[] = [];
+        if (isFolder(item) && item.children) {
+          filteredChildren = filterItems(item.children);
+        }
+        
+        // Include item if it matches or has matching children
+        if ((matchesSearch && matchesTags) || filteredChildren.length > 0) {
+          acc.push({
+            ...item,
+            children: isFolder(item) ? filteredChildren : undefined
+          });
+        }
+        
+        return acc;
+      }, []);
+    };
+    
+    return filterItems(fileTree);
+  }, [fileTree, searchQuery, activeTagFilters]);
 
   const handleFileSelect = (file: TreeItem) => {
     console.log('📁 [FileExplorer] handleFileSelect called:', {
@@ -222,12 +305,19 @@ export function FileExplorer({ projectId, onFileClick }: FileExplorerProps) {
   };
 
   const handleFileAction = (action: string, file: TreeItem) => {
-    // TODO: Implement file operations
     console.log(`Action: ${action} on file:`, file);
     
     switch (action) {
       case "open":
         handleFileSelect(file);
+        break;
+      case "edit-metadata":
+        setSelectedItemForMetadata(file);
+        setMetadataPanelOpen(true);
+        break;
+      case "quick-tag-edit":
+        setSelectedItemForMetadata(file);
+        setMetadataPanelOpen(true);
         break;
       case "new-file":
         // TODO: Show create file dialog
@@ -247,6 +337,13 @@ export function FileExplorer({ projectId, onFileClick }: FileExplorerProps) {
       default:
         break;
     }
+  };
+  
+  const handleMetadataSave = async (metadata: any) => {
+    console.log('Saving metadata:', metadata);
+    // TODO: Implement actual metadata save API call
+    // For now, just close the panel
+    setMetadataPanelOpen(false);
   };
 
   // Show loading state
@@ -275,86 +372,97 @@ export function FileExplorer({ projectId, onFileClick }: FileExplorerProps) {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header with actions */}
-      <div className="flex items-center justify-between p-2 border-b">
-        <span className="text-sm font-medium text-muted-foreground">
-          Project Files
-        </span>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleFileAction("new-file", { id: "root", name: "root", type: "folder" })}
-            className="p-1 h-auto"
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
-      
-      {/* File Tree */}
-      <ScrollArea className="h-[calc(100vh-200px)] p-1">
-        <div className="space-y-1">
-          {fileTree.map((item) => (
-            <FileTreeItem
-              key={item.id}
-              item={item}
-              depth={0}
-              selectedFileId={selectedFileId}
-              onFileSelect={handleFileSelect}
-              onFileAction={handleFileAction}
+    <DndContext>
+      <div className="h-full flex flex-col">
+        {/* Header with search and filters */}
+        <div className="space-y-2 p-2 border-b">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">
+              Project Files
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleFileAction("new-file", { id: "root", name: "root", type: "folder" })}
+                className="p-1 h-auto"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Search and Filter Bar */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+              <Input
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-7 pl-7 text-sm"
+              />
+            </div>
+            <TagFilterDropdown
+              allTags={allTags}
+              activeFilters={activeTagFilters}
+              onFiltersChange={setActiveTagFilters}
             />
-          ))}
+          </div>
+          
+          {/* Active filters display */}
+          {(searchQuery || activeTagFilters.length > 0) && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Filtered:</span>
+              {searchQuery && (
+                <Badge variant="outline" className="text-xs">
+                  "{searchQuery}"
+                </Badge>
+              )}
+              {activeTagFilters.map(filter => (
+                <Badge key={filter} variant="secondary" className="text-xs">
+                  {filter}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
-        <ScrollBar orientation="vertical" />
-      </ScrollArea>
-      
-      {/* File Info */}
-      {(() => {
-        if (!selectedFileId) return null;
         
-        // Find the selected file in the tree
-        const findFileInTree = (items: TreeItem[], id: string): TreeItem | null => {
-          for (const item of items) {
-            if (item.id === id) return item;
-            if (item.children) {
-              const found = findFileInTree(item.children, id);
-              if (found) return found;
-            }
-          }
-          return null;
-        };
-        
-        const selectedFile = findFileInTree(fileTree, selectedFileId);
-        if (!selectedFile) return null;
-        
-        return (
-          <Card className="m-2 mt-0">
-            <CardContent className="p-2">
-              <div className="text-xs space-y-1">
-                <div className="font-medium">{selectedFile.name}</div>
-                <div className="text-muted-foreground">
-                  {isFile(selectedFile) ? "Document" : "Folder"}
-                </div>
-                {selectedFile.tags && selectedFile.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedFile.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="outline"
-                        className="text-xs px-1 py-0 h-auto"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+        {/* File Tree */}
+        <ScrollArea className="flex-1 p-1">
+          <div className="space-y-1">
+            {filteredFileTree.map((item) => (
+              <FileTreeItem
+                key={item.id}
+                item={item}
+                depth={0}
+                selectedFileId={selectedFileId}
+                onFileSelect={handleFileSelect}
+                onFileAction={handleFileAction}
+              />
+            ))}
+            {filteredFileTree.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-xs text-muted-foreground">
+                  {searchQuery || activeTagFilters.length > 0 
+                    ? 'No files match your filters' 
+                    : 'No files in this project'
+                  }
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        );
-      })()}
-    </div>
+            )}
+          </div>
+          <ScrollBar orientation="vertical" />
+        </ScrollArea>
+        
+        {/* Draggable Metadata Panel */}
+        <DraggableMetadataPanel
+          item={selectedItemForMetadata}
+          isOpen={metadataPanelOpen}
+          onClose={() => setMetadataPanelOpen(false)}
+          onSave={handleMetadataSave}
+        />
+      </div>
+    </DndContext>
   );
 }

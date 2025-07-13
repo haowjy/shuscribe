@@ -33,7 +33,7 @@ class Project(Base):
     document_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     
     # JSON fields for flexibility
-    tags: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    tag_ids: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     collaborators: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
     settings: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     
@@ -64,7 +64,7 @@ class Document(Base):
     content: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     
     # Metadata
-    tags: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    tag_ids: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     version: Mapped[str] = mapped_column(String(50), nullable=False, default="1.0.0")
     
@@ -105,7 +105,7 @@ class FileTreeItem(Base):
     
     # Display info
     icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    tags: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    tag_ids: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     word_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Timestamps
@@ -133,3 +133,43 @@ class FileTreeItem(Base):
     parent: Mapped[Optional["FileTreeItem"]] = relationship("FileTreeItem", remote_side=[id], back_populates="children")
     children: Mapped[List["FileTreeItem"]] = relationship("FileTreeItem", back_populates="parent")
     document: Mapped[Optional["Document"]] = relationship("Document", back_populates="file_tree_item")
+
+
+class Tag(Base):
+    """Tag model for multi-level tags with global/private scoping"""
+    __tablename__ = f"{settings.table_prefix}tags"
+    
+    # Primary key
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    # Tag properties
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)  # hex color code
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    
+    # Scope and ownership
+    is_global: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    user_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # null for global tags
+    
+    # Metadata
+    usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), onupdate=lambda: datetime.now(UTC).replace(tzinfo=None))
+    
+    # Constraints
+    __table_args__ = (
+        # Performance indexes for global/private tag lookups
+        Index(f"ix_{settings.table_prefix}tags_global", "is_global"),
+        Index(f"ix_{settings.table_prefix}tags_user", "user_id"),
+        Index(f"ix_{settings.table_prefix}tags_global_name", "is_global", "name"),
+        Index(f"ix_{settings.table_prefix}tags_user_name", "user_id", "name"),
+        Index(f"ix_{settings.table_prefix}tags_category", "category"),
+        Index(f"ix_{settings.table_prefix}tags_system", "is_system"),
+        Index(f"ix_{settings.table_prefix}tags_archived", "is_archived"),
+    )

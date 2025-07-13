@@ -385,7 +385,7 @@ export function TiptapEditor({
       
       {/* Editor Content */}
       <div 
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-hidden h-0"
         onClick={(e) => {
           // If clicking in empty space below content, focus at end of document
           if (editor && e.target === e.currentTarget) {
@@ -393,14 +393,15 @@ export function TiptapEditor({
           }
         }}
       >
-        <EditorContent 
-          editor={editor}
-          className={cn(
-            "w-full h-full min-h-[200px]",
-            "prose prose-base max-w-[70ch] mx-auto focus:outline-none",
-            "text-foreground text-base leading-relaxed",
-            "[&_.ProseMirror]:outline-none [&_.ProseMirror]:p-4 [&_.ProseMirror]:min-h-[calc(100vh-200px)]",
-            "[&_.ProseMirror]:cursor-text", // Make entire editor area show text cursor
+        <div className="h-full overflow-auto">
+          <EditorContent 
+            editor={editor}
+            className={cn(
+              "w-full min-h-full min-h-[200px]",
+              "prose prose-base max-w-[70ch] mx-auto focus:outline-none",
+              "text-foreground text-base leading-relaxed",
+              "[&_.ProseMirror]:outline-none [&_.ProseMirror]:p-4 [&_.ProseMirror]:min-h-[calc(100vh-200px)]",
+              "[&_.ProseMirror]:cursor-text", // Make entire editor area show text cursor
             "[&_.ProseMirror_h1]:text-2xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:mb-4 [&_.ProseMirror_h1]:mt-6",
             "[&_.ProseMirror_h2]:text-xl [&_.ProseMirror_h2]:font-semibold [&_.ProseMirror_h2]:mb-3 [&_.ProseMirror_h2]:mt-5",
             "[&_.ProseMirror_h3]:text-lg [&_.ProseMirror_h3]:font-medium [&_.ProseMirror_h3]:mb-2 [&_.ProseMirror_h3]:mt-4",
@@ -413,8 +414,9 @@ export function TiptapEditor({
             "[&_.ProseMirror_code]:bg-muted [&_.ProseMirror_code]:px-1 [&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:text-sm",
             "[&_.ProseMirror_pre]:bg-muted [&_.ProseMirror_pre]:p-4 [&_.ProseMirror_pre]:rounded [&_.ProseMirror_pre]:overflow-x-auto",
             "[&_.ProseMirror_pre_code]:bg-transparent [&_.ProseMirror_pre_code]:p-0"
-          )}
-        />
+            )}
+          />
+        </div>
       </div>
       
       {/* Status bar */}

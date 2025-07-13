@@ -80,7 +80,7 @@ class MockDataFactory:
             "description": fake.random_element(config["descriptions"]),
             "word_count": word_count,
             "document_count": document_count,
-            "tags": fake.random_elements(config["tags"], length=fake.random_int(min=2, max=4), unique=True),
+            "tag_names": fake.random_elements(config["tags"], length=fake.random_int(min=2, max=4), unique=True),
             "collaborators": [
                 {
                     "user_id": f"user_{fake.uuid4()[:8]}",
@@ -131,7 +131,7 @@ class MockDataFactory:
             }
             
             word_count = sum(len(p["content"][0]["text"].split()) for p in paragraphs)
-            tags = ["chapter", "story", "draft"]
+            tag_ids = []  # Will be populated with actual tag IDs from project
             
         elif document_type == "character":
             character_name = fake.name()
@@ -187,7 +187,7 @@ class MockDataFactory:
             }
             
             word_count = len((personality + backstory).split())
-            tags = ["character", "profile", fake.random_element(["protagonist", "antagonist", "supporting"])]
+            tag_ids = []  # Will be populated with actual tag IDs from project
             
         elif document_type == "location":
             location_name = f"{fake.city()} {fake.random_element(['Castle', 'Forest', 'Temple', 'Academy', 'Market'])}"
@@ -232,7 +232,7 @@ class MockDataFactory:
             }
             
             word_count = len(description.split()) + fake.random_int(min=20, max=60)
-            tags = ["location", "worldbuilding", fake.random_element(["city", "wilderness", "building", "landmark"])]
+            tag_ids = []  # Will be populated with actual tag IDs from project
             
         else:  # notes or general document
             title = fake.catch_phrase()
@@ -256,7 +256,7 @@ class MockDataFactory:
             }
             
             word_count = len(note_content.split())
-            tags = ["notes", "planning", fake.random_element(["ideas", "research", "worldbuilding"])]
+            tag_ids = []  # Will be populated with actual tag IDs from project
         
         return {
             "id": document_id,
@@ -264,7 +264,7 @@ class MockDataFactory:
             "title": title,
             "path": path,
             "content": content,
-            "tags": tags,
+            "tag_ids": tag_ids,
             "word_count": word_count,
             "version": "1.0.0",
             "is_locked": False,
@@ -295,7 +295,7 @@ class MockDataFactory:
             base_item.update({
                 "document_id": document_id,
                 "icon": MockDataFactory._get_file_icon(name),
-                "tags": MockDataFactory._get_file_tags(path),
+                "tag_ids": [],  # Will be populated with actual tag IDs from project
                 "word_count": fake.random_int(min=50, max=2000) if document_id else None
             })
         else:
@@ -303,7 +303,7 @@ class MockDataFactory:
             base_item.update({
                 "document_id": None,
                 "icon": "folder",
-                "tags": MockDataFactory._get_folder_tags(name),
+                "tag_ids": [],  # Will be populated with actual tag IDs from project
                 "word_count": None
             })
         
@@ -327,34 +327,85 @@ class MockDataFactory:
     def _get_file_tags(filepath: str) -> List[str]:
         """Get appropriate tags based on file path"""
         path_lower = filepath.lower()
-        tags = []
+        tag_ids = []
         
-        if "/characters/" in path_lower:
-            tags.extend(["character", "profile"])
-        elif "/chapters/" in path_lower:
-            tags.extend(["chapter", "story"])
-        elif "/locations/" in path_lower:
-            tags.extend(["location", "worldbuilding"])
-        elif "/notes/" in path_lower:
-            tags.extend(["notes", "planning"])
-        
-        return tags
+        # This method is deprecated - tags are now handled differently
+        # keeping for backwards compatibility but returning empty list
+        return tag_ids
     
     @staticmethod
     def _get_folder_tags(folder_name: str) -> List[str]:
-        """Get appropriate tags for folders"""
-        name_lower = folder_name.lower()
+        """Get appropriate tags for folders - deprecated, returns empty list"""
+        # This method is deprecated - tags are now handled differently
+        return []
+    
+    @staticmethod
+    def generate_global_tags() -> List[Dict[str, Any]]:
+        """Generate global system tags available to all users"""
+        global_tags = [
+            # System status tags (global)
+            {"name": "draft", "icon": "edit", "color": "#94a3b8", "is_system": True, "category": "status"},
+            {"name": "published", "icon": "check-circle", "color": "#10b981", "is_system": True, "category": "status"},
+            {"name": "archived", "icon": "archive", "color": "#6b7280", "is_system": True, "category": "status"},
+            {"name": "review", "icon": "eye", "color": "#f59e0b", "is_system": True, "category": "status"},
+            
+            # Content type tags (global)
+            {"name": "character", "icon": "user", "color": "#3b82f6", "category": "content"},
+            {"name": "location", "icon": "map-pin", "color": "#8b5cf6", "category": "content"},
+            {"name": "chapter", "icon": "file-text", "color": "#f59e0b", "category": "content"},
+            {"name": "notes", "icon": "sticky-note", "color": "#84cc16", "category": "content"},
+            {"name": "research", "icon": "book-open", "color": "#06b6d4", "category": "content"},
+            
+            # Genre tags (global)
+            {"name": "fantasy", "icon": "sparkles", "color": "#a855f7", "category": "genre"},
+            {"name": "sci-fi", "icon": "rocket", "color": "#7c3aed", "category": "genre"},
+            {"name": "mystery", "icon": "search", "color": "#d97706", "category": "genre"},
+            {"name": "romance", "icon": "heart", "color": "#ec4899", "category": "genre"},
+            {"name": "thriller", "icon": "zap", "color": "#ef4444", "category": "genre"},
+            
+            # Priority tags (global)
+            {"name": "high-priority", "icon": "alert-circle", "color": "#ef4444", "category": "priority"},
+            {"name": "medium-priority", "icon": "circle", "color": "#f59e0b", "category": "priority"},
+            {"name": "low-priority", "icon": "minus-circle", "color": "#9ca3af", "category": "priority"},
+        ]
         
-        if "character" in name_lower:
-            return ["character"]
-        elif "chapter" in name_lower:
-            return ["story"]
-        elif "location" in name_lower:
-            return ["worldbuilding"]
-        elif "note" in name_lower:
-            return ["planning"]
-        else:
-            return ["organization"]
+        # Add default values for global tags
+        for tag in global_tags:
+            tag.update({
+                "id": str(uuid.uuid4()),
+                "description": f"Global {tag['name']} tag",
+                "usage_count": 0,
+                "is_global": True,
+                "user_id": None,  # Global tags have no owner
+                "is_system": tag.get("is_system", False),
+                "is_archived": False,
+            })
+        
+        return global_tags
+    
+    @staticmethod
+    def generate_sample_private_tags(user_id: str) -> List[Dict[str, Any]]:
+        """Generate sample private tags for a user"""
+        private_tags = [
+            {"name": "favorite", "icon": "star", "color": "#fbbf24", "category": "personal"},
+            {"name": "needs-work", "icon": "edit-3", "color": "#ef4444", "category": "personal"},
+            {"name": "inspiration", "icon": "lightbulb", "color": "#10b981", "category": "personal"},
+            {"name": "plot-hole", "icon": "alert-triangle", "color": "#f59e0b", "category": "issues"},
+        ]
+        
+        # Add default values for private tags
+        for tag in private_tags:
+            tag.update({
+                "id": str(uuid.uuid4()),
+                "description": f"Personal {tag['name']} tag",
+                "usage_count": 0,
+                "is_global": False,
+                "user_id": user_id,
+                "is_system": False,
+                "is_archived": False,
+            })
+        
+        return private_tags
 
 
 class ProjectTemplates:

@@ -10,6 +10,7 @@ import { findItemById } from "@/lib/api/file-tree-service";
 import { isFile } from "@/data/file-tree";
 import { FileExplorer } from "./file-explorer";
 import { EditorPane } from "./editor-pane";
+import { AiPanel } from "./ai-panel";
 
 // Panel size constants
 const PANEL_CONFIG = {
@@ -420,7 +421,7 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup
           direction="horizontal"
           onLayout={handlePanelResize}
@@ -437,8 +438,8 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
             onCollapse={() => setIsFileExplorerCollapsed(true)}
             onExpand={() => setIsFileExplorerCollapsed(false)}
           >
-            <div className="h-full border-r bg-background">
-              <div className="flex items-center justify-between p-2 border-b">
+            <div className="h-full border-r bg-background flex flex-col">
+              <div className="flex items-center justify-between p-2 border-b flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Files className="h-4 w-4" />
                   {!isFileExplorerCollapsed && <span className="text-sm font-medium">Files</span>}
@@ -453,10 +454,12 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
                 </Button>
               </div>
               {!isFileExplorerCollapsed && (
-                <FileExplorer 
-                  projectId={projectId}
-                  onFileClick={handleFileOpen}
-                />
+                <div className="flex-1 overflow-hidden">
+                  <FileExplorer 
+                    projectId={projectId}
+                    onFileClick={handleFileOpen}
+                  />
+                </div>
               )}
             </div>
           </ResizablePanel>
@@ -492,8 +495,8 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
             onCollapse={() => setIsAiPanelCollapsed(true)}
             onExpand={() => setIsAiPanelCollapsed(false)}
           >
-            <div className="h-full border-l bg-background">
-              <div className="flex items-center justify-between p-2 border-b">
+            <div className="h-full border-l bg-background flex flex-col">
+              <div className="flex items-center justify-between p-2 border-b flex-shrink-0">
                 <div className="flex items-center gap-2">
                   {!isAiPanelCollapsed && <span className="text-sm font-medium">AI Assistant</span>}
                   <Bot className="h-4 w-4" />
@@ -508,9 +511,8 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
                 </Button>
               </div>
               {!isAiPanelCollapsed && (
-                <div className="p-2">
-                  {/* AI Panel content will go here */}
-                  <div className="text-sm text-muted-foreground">AI Panel will go here</div>
+                <div className="flex-1 overflow-hidden">
+                  <AiPanel />
                 </div>
               )}
             </div>

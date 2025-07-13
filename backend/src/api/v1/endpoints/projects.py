@@ -220,7 +220,7 @@ def project_to_summary(project: Project) -> ProjectSummary:
         document_count=project.document_count,
         created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
         updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
-        tags=project.tags,
+        tags=project.tag_ids,
         collaborators=collaborators,
     )
 
@@ -253,7 +253,7 @@ def project_to_response(project: Project) -> ProjectDetails:
         document_count=project.document_count,
         created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
         updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
-        tags=project.tags,
+        tags=project.tag_ids,
         collaborators=collaborators,
         settings=settings,
     )
@@ -270,7 +270,7 @@ def file_tree_item_to_response(item: FileTreeItem, children: List["FileTreeItemR
         children=children if children else None,
         document_id=item.document_id,
         icon=item.icon,
-        tags=item.tags,
+        tags=item.tag_ids,
         word_count=item.word_count,
         created_at=item.created_at.isoformat() if hasattr(item.created_at, 'isoformat') else str(item.created_at),
         updated_at=item.updated_at.isoformat() if hasattr(item.updated_at, 'isoformat') else str(item.updated_at),
@@ -492,7 +492,7 @@ async def create_project(
         project_data = {
             "title": request.title,
             "description": request.description,
-            "tags": request.tags,
+            "tag_ids": request.tags,
             "collaborators": [],  # Start with empty collaborators
             "settings": request.settings.model_dump() if request.settings else {},
             "word_count": 0,
@@ -542,7 +542,7 @@ async def update_project(
         if request.description is not None:
             updates["description"] = request.description
         if request.tags is not None:
-            updates["tags"] = request.tags
+            updates["tag_ids"] = request.tags
         if request.settings is not None:
             updates["settings"] = request.settings.model_dump()
         

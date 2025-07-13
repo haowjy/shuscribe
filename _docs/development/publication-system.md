@@ -40,7 +40,7 @@ class FileTreeItem(Base):
     # ============================================================================
     # USER METADATA (Flexible, unvalidated)
     # ============================================================================
-    tags: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    tag_ids: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)  # References to ProjectTag.id
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)  # hex color
@@ -131,6 +131,39 @@ class FileTreeItem(Base):
 ### Supporting Tables
 
 ```python
+class ProjectTag(Base):
+    """Project-wide tag management with rich metadata"""
+    __tablename__ = f"{settings.table_prefix}project_tags"
+    
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey(...), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    
+    # Rich tag metadata
+    icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # emoji or icon name
+    color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)  # hex color
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # character, location, plot, etc.
+    
+    # Usage analytics
+    usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_used: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    
+    # Settings
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # system vs user tags
+    is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), onupdate=lambda: datetime.now(UTC).replace(tzinfo=None))
+    
+    # Constraints
+    __table_args__ = (
+        Index(f"ix_{settings.table_prefix}project_tags_project_name", "project_id", "name", unique=True),
+        Index(f"ix_{settings.table_prefix}project_tags_usage", "project_id", "usage_count"),
+        Index(f"ix_{settings.table_prefix}project_tags_category", "project_id", "category"),
+    )
+
 class Wiki(Base):
     """Wiki collection management"""
     __tablename__ = f"{settings.table_prefix}wikis"
@@ -198,6 +231,39 @@ class WikiMembershipRequest(BaseSchema):
     wiki_id: str
     action: str  # add, remove
 
+# Tag management schemas
+class ProjectTagResponse(BaseModel):
+    """Project tag with rich metadata"""
+    id: str
+    name: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    usage_count: int = 0
+    last_used: Optional[datetime] = None
+    is_system: bool = False
+    is_archived: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+class CreateTagRequest(BaseSchema):
+    """Request to create a new project tag"""
+    name: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+
+class UpdateTagRequest(BaseSchema):
+    """Request to update an existing tag"""
+    name: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    is_archived: Optional[bool] = None
+
 # Enhanced metadata responses
 class FileTreeItemMetadata(BaseModel):
     """System metadata for file tree items"""
@@ -225,7 +291,8 @@ class EnhancedFileTreeItem(BaseModel):
     id: str
     name: str
     type: str
-    tags: List[str] = Field(default_factory=list)
+    tag_ids: List[str] = Field(default_factory=list)  # References to ProjectTag IDs
+    tags: List[ProjectTagResponse] = Field(default_factory=list)  # Populated tag objects
     description: Optional[str] = None
     color: Optional[str] = None
     
@@ -240,6 +307,18 @@ class EnhancedFileTreeItem(BaseModel):
 ### API Endpoints
 
 ```python
+# Tag management endpoints
+GET /api/v1/projects/{project_id}/tags
+POST /api/v1/projects/{project_id}/tags
+GET /api/v1/projects/{project_id}/tags/{tag_id}
+PUT /api/v1/projects/{project_id}/tags/{tag_id}
+DELETE /api/v1/projects/{project_id}/tags/{tag_id}
+
+# File tree tag assignment
+PUT /api/v1/projects/{project_id}/files/{file_id}/tags
+POST /api/v1/projects/{project_id}/files/{file_id}/tags/{tag_id}
+DELETE /api/v1/projects/{project_id}/files/{file_id}/tags/{tag_id}
+
 # Publication workflow endpoints
 POST /api/v1/projects/{project_id}/files/{file_id}/publish
 POST /api/v1/projects/{project_id}/files/{file_id}/unpublish
@@ -260,6 +339,7 @@ GET /api/v1/projects/{project_id}/publication-stats
 GET /api/v1/projects/{project_id}/files/{file_id}/publication-history
 GET /api/v1/projects/{project_id}/files/published
 GET /api/v1/projects/{project_id}/files/pending-review
+GET /api/v1/projects/{project_id}/tags/analytics
 ```
 
 ## Frontend Integration
@@ -412,11 +492,32 @@ ORDER BY published_at DESC;
 SELECT * FROM file_tree_items 
 WHERE project_id = ? AND is_wiki_page = true;
 
--- Combined user tag and system status queries
-SELECT * FROM file_tree_items 
-WHERE project_id = ? 
-AND publication_status = 'published'
-AND tags @> '["character"]'::jsonb;
+-- Tag-based queries using the new ProjectTag table
+SELECT f.* FROM file_tree_items f
+JOIN project_tags t ON t.project_id = f.project_id
+WHERE f.project_id = ? 
+AND f.tag_ids @> ARRAY[t.id]::text[]
+AND t.name = 'character';
+
+-- File tree with populated tags (efficient join)
+SELECT f.*, 
+       array_agg(t.name) as tag_names,
+       array_agg(to_jsonb(t)) as tag_objects
+FROM file_tree_items f
+LEFT JOIN project_tags t ON t.id = ANY(f.tag_ids::text[])
+WHERE f.project_id = ?
+GROUP BY f.id;
+
+-- Most used tags in project
+SELECT * FROM project_tags 
+WHERE project_id = ? AND NOT is_archived
+ORDER BY usage_count DESC, name ASC;
+
+-- Combined system status and tag filtering
+SELECT f.* FROM file_tree_items f
+WHERE f.project_id = ? 
+AND f.publication_status = 'published'
+AND f.tag_ids && ARRAY[?, ?, ?]::text[];  -- ANY of these tag IDs
 ```
 
 **Caching Strategy:**
