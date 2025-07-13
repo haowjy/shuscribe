@@ -3,7 +3,8 @@
  * Uses MSW API endpoints for file tree operations
  */
 
-import { FileTreeItem, FileTreeResponse } from '@/types/api';
+import { TreeItem, FileTreeResponse } from '@/types/api';
+import { validateTreeItem, isFile, isFolder } from '@/data/file-tree';
 import { fileTreeCache } from '@/lib/storage/cache-manager';
 
 export interface FileTreeServiceOptions {
@@ -13,7 +14,7 @@ export interface FileTreeServiceOptions {
 }
 
 export interface LoadFileTreeResult {
-  fileTree: FileTreeItem[];
+  fileTree: TreeItem[];
   source: 'cache' | 'api' | 'fallback';
   fromCache: boolean;
   error?: string;
@@ -32,6 +33,43 @@ export class FileTreeService {
       cacheTTL: 5 * 60 * 1000, // 5 minutes default TTL
       ...options
     };
+  }
+
+  /**
+   * Validate and clean file tree data from API
+   */
+  private validateFileTreeData(data: any[]): TreeItem[] {
+    if (!Array.isArray(data)) {
+      console.warn('File tree data is not an array:', data);
+      return [];
+    }
+
+    const validItems: TreeItem[] = [];
+    
+    const validateRecursive = (items: any[]): TreeItem[] => {
+      const result: TreeItem[] = [];
+      
+      for (const item of items) {
+        if (validateTreeItem(item)) {
+          // Recursively validate children for folders
+          if (isFolder(item) && item.children) {
+            const validatedItem = {
+              ...item,
+              children: validateRecursive(item.children)
+            };
+            result.push(validatedItem);
+          } else {
+            result.push(item);
+          }
+        } else {
+          console.warn('Invalid file tree item:', item);
+        }
+      }
+      
+      return result;
+    };
+
+    return validateRecursive(data);
   }
 
   /**
@@ -74,12 +112,25 @@ export class FileTreeService {
         }
 
         const data: FileTreeResponse = await response.json();
-        // Validate API response structure and provide fallback
-        // Backend uses alias "fileTree" for the field
-        const fileTree = Array.isArray(data.fileTree) ? data.fileTree : [];
         
-        if (!Array.isArray(data.fileTree)) {
+        // Extract file tree data - try both field names
+        const rawFileTree = data.fileTree || data.file_tree || [];
+        
+        if (!Array.isArray(rawFileTree)) {
           console.warn(`API returned invalid fileTree structure for project ${projectId}:`, data);
+          return {
+            fileTree: [],
+            source: 'fallback',
+            fromCache: false,
+            error: 'Invalid API response structure'
+          };
+        }
+        
+        // Validate and clean the file tree data
+        const fileTree = this.validateFileTreeData(rawFileTree);
+        
+        if (fileTree.length !== rawFileTree.length) {
+          console.warn(`Some file tree items were invalid and filtered out. Original: ${rawFileTree.length}, Valid: ${fileTree.length}`);
         }
         
         // Cache the result
@@ -143,7 +194,7 @@ export class FileTreeService {
   /**
    * Get file tree from cache only
    */
-  getFileTreeFromCache(projectId: string): FileTreeItem[] | null {
+  getFileTreeFromCache(projectId: string): TreeItem[] | null {
     const cacheKey = `project_${projectId}_tree`;
     return this.getCachedFileTree(cacheKey);
   }
@@ -182,16 +233,16 @@ export class FileTreeService {
   }
 
   /**
-   * Find file by ID in file tree
+   * Find item by ID in file tree
    */
-  findFileById(fileTree: FileTreeItem[], fileId: string): FileTreeItem | null {
+  findItemById(fileTree: TreeItem[], itemId: string): TreeItem | null {
     for (const item of fileTree) {
-      if (item.id === fileId) {
+      if (item.id === itemId) {
         return item;
       }
       
-      if (item.children) {
-        const found = this.findFileById(item.children, fileId);
+      if (isFolder(item) && item.children) {
+        const found = this.findItemById(item.children, itemId);
         if (found) return found;
       }
     }
@@ -202,16 +253,16 @@ export class FileTreeService {
   /**
    * Get all files from file tree (flattened)
    */
-  getAllFiles(fileTree: FileTreeItem[]): FileTreeItem[] {
-    const files: FileTreeItem[] = [];
+  getAllFiles(fileTree: TreeItem[]): TreeItem[] {
+    const files: TreeItem[] = [];
     
-    const traverse = (items: FileTreeItem[]) => {
+    const traverse = (items: TreeItem[]) => {
       for (const item of items) {
-        if (item.type === 'file') {
+        if (isFile(item)) {
           files.push(item);
         }
         
-        if (item.children) {
+        if (isFolder(item) && item.children) {
           traverse(item.children);
         }
       }
@@ -224,16 +275,16 @@ export class FileTreeService {
   /**
    * Get all folders from file tree (flattened)
    */
-  getAllFolders(fileTree: FileTreeItem[]): FileTreeItem[] {
-    const folders: FileTreeItem[] = [];
+  getAllFolders(fileTree: TreeItem[]): TreeItem[] {
+    const folders: TreeItem[] = [];
     
-    const traverse = (items: FileTreeItem[]) => {
+    const traverse = (items: TreeItem[]) => {
       for (const item of items) {
-        if (item.type === 'folder') {
+        if (isFolder(item)) {
           folders.push(item);
         }
         
-        if (item.children) {
+        if (isFolder(item) && item.children) {
           traverse(item.children);
         }
       }
@@ -244,10 +295,10 @@ export class FileTreeService {
   }
 
   /**
-   * Get file path from root
+   * Get item path from root
    */
-  getFilePath(fileTree: FileTreeItem[], fileId: string): string | null {
-    const findPath = (items: FileTreeItem[], targetId: string, currentPath = ''): string | null => {
+  getItemPath(fileTree: TreeItem[], itemId: string): string | null {
+    const findPath = (items: TreeItem[], targetId: string, currentPath = ''): string | null => {
       for (const item of items) {
         const path = currentPath ? `${currentPath}/${item.name}` : item.name;
         
@@ -255,7 +306,7 @@ export class FileTreeService {
           return path;
         }
         
-        if (item.children) {
+        if (isFolder(item) && item.children) {
           const found = findPath(item.children, targetId, path);
           if (found) return found;
         }
@@ -264,13 +315,13 @@ export class FileTreeService {
       return null;
     };
     
-    return findPath(fileTree, fileId);
+    return findPath(fileTree, itemId);
   }
 
   /**
    * Get cached file tree with null check
    */
-  private getCachedFileTree(cacheKey: string): FileTreeItem[] | null {
+  private getCachedFileTree(cacheKey: string): TreeItem[] | null {
     if (!this.options.enableCache) return null;
     return fileTreeCache.get(cacheKey);
   }
@@ -278,7 +329,7 @@ export class FileTreeService {
   /**
    * Cache file tree with timestamp
    */
-  private cacheFileTree(cacheKey: string, fileTree: FileTreeItem[]): void {
+  private cacheFileTree(cacheKey: string, fileTree: TreeItem[]): void {
     if (!this.options.enableCache) return;
     
     fileTreeCache.set(cacheKey, fileTree);
@@ -321,6 +372,7 @@ export const fileTreeService = new FileTreeService({
  */
 export const loadFileTree = (projectId: string) => fileTreeService.loadFileTree(projectId);
 export const refreshFileTree = (projectId: string) => fileTreeService.refreshFileTree(projectId);
-export const findFileById = (fileTree: FileTreeItem[], fileId: string) => fileTreeService.findFileById(fileTree, fileId);
-export const getAllFiles = (fileTree: FileTreeItem[]) => fileTreeService.getAllFiles(fileTree);
-export const getFilePath = (fileTree: FileTreeItem[], fileId: string) => fileTreeService.getFilePath(fileTree, fileId);
+export const findItemById = (fileTree: TreeItem[], itemId: string) => fileTreeService.findItemById(fileTree, itemId);
+export const getAllFiles = (fileTree: TreeItem[]) => fileTreeService.getAllFiles(fileTree);
+export const getAllFolders = (fileTree: TreeItem[]) => fileTreeService.getAllFolders(fileTree);
+export const getItemPath = (fileTree: TreeItem[], itemId: string) => fileTreeService.getItemPath(fileTree, itemId);

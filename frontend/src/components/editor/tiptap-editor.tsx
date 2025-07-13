@@ -31,7 +31,7 @@ import {
 } from '@/lib/editor/storage-utils';
 import { EditorToolbar } from './editor-toolbar';
 import { cn } from '@/lib/utils';
-import { FileTreeItem } from '@/types/api';
+import { TreeItem } from '@/types/api';
 
 // Lowlight instance for syntax highlighting
 const lowlight = createLowlight(common);
@@ -87,7 +87,7 @@ interface TiptapEditorProps extends BaseEditorProps {
   isSaving?: boolean;
   lastSaved?: string;
   onReferenceClick?: (referenceId: string, referenceLabel: string) => void;
-  fileTree?: FileTreeItem[]; // File tree for @ references
+  fileTree?: TreeItem[]; // File tree for @ references
 }
 
 export function TiptapEditor({

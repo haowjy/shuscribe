@@ -1,76 +1,79 @@
-export interface FileItem {
+export interface BaseFileItem {
   id: string;
   name: string;
-  type: "file" | "folder";
-  children?: FileItem[];
   tags?: string[];
   icon?: string; // Icon name for the file/folder
 }
 
-export const mockFileTree: FileItem[] = [
-  {
-    id: "1",
-    name: "characters",
-    type: "folder",
-    children: [
-      {
-        id: "2",
-        name: "protagonists",
-        type: "folder",
-        children: [
-          { id: "3", name: "elara.md", type: "file", tags: ["fire-magic", "trauma"], icon: "User" },
-          { id: "4", name: "marcus.md", type: "file", tags: ["earth-magic", "mentor"], icon: "User" },
-        ],
-      },
-      {
-        id: "5",
-        name: "antagonists",
-        type: "folder",
-        children: [
-          { id: "6", name: "shadow-lord.md", type: "file", tags: ["dark-magic", "villain"], icon: "Skull" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "7",
-    name: "locations",
-    type: "folder",
-    children: [
-      { id: "8", name: "capital-city.md", type: "file", tags: ["urban", "politics"], icon: "Building" },
-      { id: "9", name: "ancient-temple.md", type: "file", tags: ["mystical", "ruins"], icon: "Landmark" },
-    ],
-  },
-  {
-    id: "10",
-    name: "timeline",
-    type: "folder",
-    children: [
-      { id: "11", name: "main-story.md", type: "file", icon: "Clock" },
-      { id: "12", name: "backstory.md", type: "file", icon: "History" },
-    ],
-  },
-  {
-    id: "13",
-    name: "chapters",
-    type: "folder",
-    children: [
-      { id: "14", name: "chapter-01.md", type: "file", icon: "BookOpen" },
-      { id: "15", name: "chapter-02.md", type: "file", icon: "BookOpen" },
-      { id: "16", name: "chapter-03.md", type: "file", icon: "BookOpen" },
-    ],
-  },
-];
+export interface FileItem extends BaseFileItem {
+  type: "file";
+  document_id: string; // Files must have a document reference
+  children?: never; // Files cannot have children
+}
 
-export function findFileById(id: string, items: FileItem[] = mockFileTree): FileItem | undefined {
+export interface FolderItem extends BaseFileItem {
+  type: "folder";
+  children?: TreeItem[];
+  document_id?: never; // Folders cannot have document references
+}
+
+export type TreeItem = FileItem | FolderItem;
+
+// Type guards
+export function isFile(item: TreeItem | undefined): item is FileItem {
+  return item?.type === "file";
+}
+
+export function isFolder(item: TreeItem | undefined): item is FolderItem {
+  return item?.type === "folder";
+}
+
+// Validation functions
+export function validateFileItem(item: any): item is FileItem {
+  return (
+    item &&
+    typeof item === "object" &&
+    item.type === "file" &&
+    typeof item.document_id === "string" &&
+    !item.children
+  );
+}
+
+export function validateFolderItem(item: any): item is FolderItem {
+  return (
+    item &&
+    typeof item === "object" &&
+    item.type === "folder" &&
+    !item.document_id &&
+    (!item.children || Array.isArray(item.children))
+  );
+}
+
+export function validateTreeItem(item: any): item is TreeItem {
+  return validateFileItem(item) || validateFolderItem(item);
+}
+
+export function findItemById(id: string, items: TreeItem[]): TreeItem | undefined {
   for (const item of items) {
     if (item.id === id) {
       return item;
     }
-    if (item.children) {
-      const found = findFileById(id, item.children);
+    if (isFolder(item) && item.children) {
+      const found = findItemById(id, item.children);
       if (found) return found;
     }
   }
   return undefined;
+}
+
+// Helper function to find only files
+export function findFileById(id: string, items: TreeItem[]): FileItem | undefined {
+  const item = findItemById(id, items);
+  return isFile(item) ? item : undefined;
+}
+
+// Helper function to find only folders
+export function findFolderById(id: string, items: TreeItem[]): FolderItem | undefined {
+  const item = findItemById(id, items);
+  return isFolder(item) ? item : undefined;
 }

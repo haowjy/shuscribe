@@ -6,7 +6,7 @@ from datetime import datetime, UTC
 from typing import Optional, Any, Dict, List
 import uuid
 
-from sqlalchemy import String, Text, Integer, Boolean, DateTime, JSON, ForeignKey
+from sqlalchemy import String, Text, Integer, Boolean, DateTime, JSON, ForeignKey, CheckConstraint, Index
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from src.config import settings
@@ -111,6 +111,22 @@ class FileTreeItem(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None))
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), onupdate=lambda: datetime.now(UTC).replace(tzinfo=None))
+    
+    # Constraints for type-document_id consistency
+    __table_args__ = (
+        CheckConstraint(
+            "(type = 'file' AND document_id IS NOT NULL) OR (type = 'folder' AND document_id IS NULL)",
+            name=f"ck_{settings.table_prefix}file_tree_items_type_document_consistency"
+        ),
+        CheckConstraint(
+            "type IN ('file', 'folder')",
+            name=f"ck_{settings.table_prefix}file_tree_items_valid_type"
+        ),
+        # Indexes for performance
+        Index(f"ix_{settings.table_prefix}file_tree_items_project_type", "project_id", "type"),
+        Index(f"ix_{settings.table_prefix}file_tree_items_parent", "parent_id"),
+        Index(f"ix_{settings.table_prefix}file_tree_items_document", "document_id"),
+    )
     
     # Relationships
     project: Mapped["Project"] = relationship("Project", back_populates="file_tree_items")

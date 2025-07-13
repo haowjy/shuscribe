@@ -5,9 +5,14 @@ import {
   Document, 
   CreateDocumentRequest, 
   UpdateDocumentRequest,
-  ProjectListParams
+  ProjectListParams,
+  TreeItem,
+  CreateFileRequest,
+  CreateFolderRequest,
+  UpdateFileTreeItemRequest
 } from '@/types/api';
 import { loadFileTree } from '@/lib/api/file-tree-service';
+import { validateTreeItem, isFile, isFolder } from '@/data/file-tree';
 
 // Query keys
 export const queryKeys = {
@@ -165,15 +170,15 @@ export function useDeleteDocument() {
 
 // File Tree hook
 export function useFileTree(projectId: string) {
-  return useQuery({
+  return useQuery<TreeItem[]>({
     queryKey: queryKeys.fileTree(projectId),
-    queryFn: async () => {
+    queryFn: async (): Promise<TreeItem[]> => {
       const result = await loadFileTree(projectId);
       if (result.error) {
         throw new Error(result.error);
       }
-      // Ensure we always return an array, never undefined
-      return result.fileTree || [];
+      // Service now validates data, so we can trust it's properly typed
+      return result.fileTree;
     },
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000, // 5 minutes - file tree doesn't change often
@@ -272,4 +277,131 @@ export function useActiveFile(projectId: string) {
     state,
     updateState,
   };
+}
+
+// ============================================================================
+// File Tree CRUD Operations
+// ============================================================================
+
+/**
+ * Create a new folder in the file tree
+ */
+export function useCreateFolder() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (request: CreateFolderRequest & { project_id: string }) => {
+      // Validate folder data before sending
+      if (!request.name || request.name.trim() === '') {
+        throw new Error('Folder name is required');
+      }
+      
+      if (request.document_id) {
+        throw new Error('Folders cannot have a document_id');
+      }
+
+      const response = await apiClient.createFolder(request);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: (newFolder, variables) => {
+      // Invalidate file tree cache to trigger reload
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileTree(variables.project_id),
+      });
+    },
+  });
+}
+
+/**
+ * Create a new file in the file tree
+ */
+export function useCreateFile() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (request: CreateFileRequest & { project_id: string }) => {
+      // Validate file data before sending
+      if (!request.name || request.name.trim() === '') {
+        throw new Error('File name is required');
+      }
+      
+      if (!request.document_id) {
+        throw new Error('Files must have a document_id');
+      }
+
+      const response = await apiClient.createFile(request);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: (newFile, variables) => {
+      // Invalidate file tree cache to trigger reload
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileTree(variables.project_id),
+      });
+    },
+  });
+}
+
+/**
+ * Update a file tree item
+ */
+export function useUpdateFileTreeItem() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { 
+      itemId: string; 
+      projectId: string; 
+      updates: UpdateFileTreeItemRequest 
+    }) => {
+      const { itemId, updates } = params;
+      
+      // Basic validation
+      if (updates.name !== undefined && (!updates.name || updates.name.trim() === '')) {
+        throw new Error('Name cannot be empty');
+      }
+
+      const response = await apiClient.updateFileTreeItem(itemId, updates);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: (updatedItem, variables) => {
+      // Invalidate file tree cache to trigger reload
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileTree(variables.projectId),
+      });
+    },
+  });
+}
+
+/**
+ * Delete a file tree item
+ */
+export function useDeleteFileTreeItem() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { itemId: string; projectId: string }) => {
+      const { itemId } = params;
+      
+      const response = await apiClient.deleteFileTreeItem(itemId);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: (deletedItem, variables) => {
+      // Invalidate file tree cache to trigger reload
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileTree(variables.projectId),
+      });
+    },
+  });
 }

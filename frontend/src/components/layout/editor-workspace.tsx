@@ -33,7 +33,8 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { RichEditor } from "@/components/editor";
 // Removed unused import: useProjectDataWithStorage
-import { findFileById } from "@/lib/api/file-tree-service";
+import { findItemById } from "@/lib/api/file-tree-service";
+import { isFile, isFolder } from "@/data/file-tree";
 import { loadDocument } from "@/lib/api/document-service";
 import { useActiveFile, useFileTree } from "@/lib/query/hooks";
 import { 
@@ -351,30 +352,41 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
       return;
     }
     
-    // Find file in file tree with detailed logging
-    const fileItem = findFileById(fileTree, fileId);
-    if (!fileItem) {
-      console.error(`❌ File not found in file tree: ${fileId}`);
-      console.log(`📋 Available files in tree:`, fileTree.flatMap(item => 
-        item.type === 'file' ? [{ id: item.id, name: item.name }] : 
-        item.children?.filter(child => child.type === 'file').map(child => ({ id: child.id, name: child.name })) || []
-      ));
+    // Find item in file tree (supports both files and folders for @-references)
+    const treeItem = findItemById(fileTree, fileId);
+    if (!treeItem) {
+      console.error(`❌ Item not found in file tree: ${fileId}`);
+      console.log(`📋 Available items in tree:`, fileTree.flatMap(item => {
+        const items = [{ id: item.id, name: item.name, type: item.type }];
+        if (isFolder(item) && item.children) {
+          items.push(...item.children.map(child => ({ id: child.id, name: child.name, type: child.type })));
+        }
+        return items;
+      }));
       
       // For @ references, show user-friendly error
       if (source === 'reference') {
-        console.warn(`🔗 Reference points to non-existent file: ${fileId}`);
+        console.warn(`🔗 Reference points to non-existent item: ${fileId}`);
         // TODO: Show user notification toast
       }
       return;
     }
     
-    // Runtime validation: Ensure file IDs match between file tree and reference system
-    console.log(`✅ File found in tree: ${fileItem.name} (ID: ${fileItem.id}, Type: ${fileItem.type})`);
+    // Runtime validation: Log what was found in tree
+    console.log(`✅ Item found in tree: ${treeItem.name} (ID: ${treeItem.id}, Type: ${treeItem.type})`);
     
-    // Only handle file types, not folders
-    if (fileItem.type === 'folder') {
-      console.log(`📁 Folder clicked: ${fileItem.name} (future: filter file explorer)`);
+    // Handle different item types
+    if (isFolder(treeItem)) {
+      console.log(`📁 Folder reference clicked: ${treeItem.name}`);
+      console.log(`🔮 Future: This will filter file explorer to show folder contents`);
       // TODO: Implement folder filtering in file explorer
+      // TODO: For @-references to folders, create file explorer filter
+      return;
+    }
+    
+    // Ensure we have a file (should be guaranteed by isFile check, but be explicit)
+    if (!isFile(treeItem)) {
+      console.error(`❌ Unknown item type for ${fileId}`);
       return;
     }
     

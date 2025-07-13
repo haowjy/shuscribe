@@ -1,4 +1,5 @@
-import { FileTreeItem } from '@/types/api';
+import { TreeItem } from '@/types/api';
+import { isFile, isFolder } from '@/data/file-tree';
 
 export interface ReferenceItem {
   id: string;
@@ -10,10 +11,10 @@ export interface ReferenceItem {
 }
 
 /**
- * Transform FileTreeItem tree into flat list of referenceable items
+ * Transform TreeItem tree into flat list of referenceable items
  */
 export function transformFileTreeToReferences(
-  fileTree: FileTreeItem[],
+  fileTree: TreeItem[],
   parentPath: string = ''
 ): ReferenceItem[] {
   const references: ReferenceItem[] = [];
@@ -31,8 +32,8 @@ export function transformFileTreeToReferences(
       icon: item.icon,
     });
 
-    // Recursively process children
-    if (item.children) {
+    // Recursively process children (only folders can have children)
+    if (isFolder(item) && item.children) {
       references.push(...transformFileTreeToReferences(item.children, currentPath));
     }
   }

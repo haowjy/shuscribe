@@ -19,6 +19,20 @@
 - [ ] **Reference Validation** - Detect and highlight broken references
 - [ ] **Reference Integrity** - Update references when files are renamed/moved
 
+#### Tag Reference System Architecture (CRITICAL DESIGN DECISIONS)
+- [ ] **Reference Type System** - Design discriminated union for file/folder/tag references
+- [ ] **Multi-Target Resolution** - Handle tags that match multiple files/folders
+- [ ] **Reference Handler Separation** - Separate handlers for file/folder/tag clicks
+- [ ] **Disambiguation UI** - Interface for when tag matches multiple items
+- [ ] **Tag View Implementation** - Virtual view showing all items with specific tag
+
+**⚠️ Tag Reference Complications Identified:**
+- Current `@elara` (file) vs `@characters` (folder) vs `@fire-magic` (tag) all use same syntax
+- Tag references can match multiple items (many files with "fire-magic" tag)
+- Editor `handleOpenFile(id)` assumes 1:1 ID-to-item mapping, breaks with tags
+- Need architectural changes: `ReferenceType = file | folder | tag`
+- Current `findItemById` decision supports file/folder, sets foundation for tags
+
 ### Backend API Integration (CRITICAL)
 - [ ] **FastAPI Client Setup** - Create API client with authentication headers
 - [ ] **Project Data Loading** - `GET /projects/{id}/data` endpoint integration

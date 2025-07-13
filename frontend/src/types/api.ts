@@ -115,28 +115,13 @@ export interface ProjectListResponse extends PaginatedResponse<ProjectSummary> {
 // File Tree Types
 // ============================================================================
 
-export interface FileTreeItem {
-  id: string;
-  name: string;
-  type: 'file' | 'folder';
-  path: string;
-  parent_id?: string;
-  children?: FileTreeItem[];
-  
-  // File-specific properties
-  document_id?: string;
-  icon?: string;
-  tags?: string[];
-  word_count?: number;
-  
-  // Timestamps
-  created_at: string;
-  updated_at: string;
-}
+// Import enhanced file tree types
+export type { TreeItem, FileItem, FolderItem } from '@/data/file-tree';
 
+// API response structure for file tree
 export interface FileTreeResponse {
-  fileTree: FileTreeItem[];  // Backend uses alias "fileTree" for file_tree field
-  file_tree?: FileTreeItem[]; // Keep compatibility with snake_case
+  fileTree: TreeItem[];  // Backend uses alias "fileTree" for file_tree field
+  file_tree?: TreeItem[]; // Keep compatibility with snake_case
   metadata: {
     total_files: number;
     total_folders: number;
@@ -144,10 +129,33 @@ export interface FileTreeResponse {
   };
 }
 
+// File tree item creation requests
 export interface CreateFolderRequest {
   name: string;
   parent_id?: string;
   path: string;
+  type: 'folder';
+  icon?: string;
+  tags?: string[];
+}
+
+export interface CreateFileRequest {
+  name: string;
+  parent_id?: string;
+  path: string;
+  type: 'file';
+  document_id: string; // Files must have a document
+  icon?: string;
+  tags?: string[];
+}
+
+export interface UpdateFileTreeItemRequest {
+  name?: string;
+  parent_id?: string;
+  path?: string;
+  icon?: string;
+  tags?: string[];
+  // Note: type and document_id changes require validation
 }
 
 export interface MoveItemRequest {

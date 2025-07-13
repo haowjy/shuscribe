@@ -141,6 +141,35 @@ class DatabaseDocumentRepository(DocumentRepository):
 class DatabaseFileTreeRepository(FileTreeRepository):
     """Database-backed file tree repository using SQLAlchemy"""
     
+    async def _validate_file_tree_constraints(self, session: AsyncSession, item_data: Dict[str, Any], item_id: str = None) -> None:
+        """Validate file tree business rules"""
+        item_type = item_data.get("type")
+        document_id = item_data.get("document_id")
+        parent_id = item_data.get("parent_id")
+        
+        # Validate type-document_id consistency
+        if item_type == "file" and not document_id:
+            raise ValueError("Files must have a document_id")
+        if item_type == "folder" and document_id:
+            raise ValueError("Folders cannot have a document_id")
+        
+        # Validate that parent is not a file (files cannot have children)
+        if parent_id:
+            parent_result = await session.execute(
+                select(FileTreeItem.type).where(FileTreeItem.id == parent_id)
+            )
+            parent_type = parent_result.scalar_one_or_none()
+            if parent_type == "file":
+                raise ValueError("Files cannot have children")
+        
+        # For updates, validate that if changing to file type, item has no children
+        if item_id and item_type == "file":
+            children_result = await session.execute(
+                select(FileTreeItem.id).where(FileTreeItem.parent_id == item_id).limit(1)
+            )
+            if children_result.scalar_one_or_none():
+                raise ValueError("Cannot change item to file type when it has children")
+    
     async def get_by_project_id(self, project_id: str) -> List[FileTreeItem]:
         async with get_session_context() as session:
             result = await session.execute(
@@ -153,6 +182,9 @@ class DatabaseFileTreeRepository(FileTreeRepository):
     
     async def create(self, item_data: Dict[str, Any]) -> FileTreeItem:
         async with get_session_context() as session:
+            # Validate constraints before creating
+            await self._validate_file_tree_constraints(session, item_data)
+            
             item = FileTreeItem(
                 id=item_data.get("id", str(uuid.uuid4())),
                 project_id=item_data["project_id"],
@@ -172,6 +204,9 @@ class DatabaseFileTreeRepository(FileTreeRepository):
     
     async def update(self, item_id: str, updates: Dict[str, Any]) -> Optional[FileTreeItem]:
         async with get_session_context() as session:
+            # Validate constraints before updating
+            await self._validate_file_tree_constraints(session, updates, item_id)
+            
             updates["updated_at"] = datetime.now(UTC).replace(tzinfo=None)
             
             result = await session.execute(
@@ -306,10 +341,37 @@ class MemoryFileTreeRepository(FileTreeRepository):
     def __init__(self):
         self._items: Dict[str, FileTreeItem] = {}
     
+    def _validate_file_tree_constraints(self, item_data: Dict[str, Any], item_id: str = None) -> None:
+        """Validate file tree business rules for memory repository"""
+        item_type = item_data.get("type")
+        document_id = item_data.get("document_id")
+        parent_id = item_data.get("parent_id")
+        
+        # Validate type-document_id consistency
+        if item_type == "file" and not document_id:
+            raise ValueError("Files must have a document_id")
+        if item_type == "folder" and document_id:
+            raise ValueError("Folders cannot have a document_id")
+        
+        # Validate that parent is not a file (files cannot have children)
+        if parent_id and parent_id in self._items:
+            parent = self._items[parent_id]
+            if parent.type == "file":
+                raise ValueError("Files cannot have children")
+        
+        # For updates, validate that if changing to file type, item has no children
+        if item_id and item_type == "file":
+            has_children = any(item.parent_id == item_id for item in self._items.values())
+            if has_children:
+                raise ValueError("Cannot change item to file type when it has children")
+    
     async def get_by_project_id(self, project_id: str) -> List[FileTreeItem]:
         return [item for item in self._items.values() if item.project_id == project_id]
     
     async def create(self, item_data: Dict[str, Any]) -> FileTreeItem:
+        # Validate constraints before creating
+        self._validate_file_tree_constraints(item_data)
+        
         item_id = item_data.get("id", str(uuid.uuid4()))
         item = FileTreeItem(
             id=item_id,
@@ -332,6 +394,9 @@ class MemoryFileTreeRepository(FileTreeRepository):
         item = self._items.get(item_id)
         if not item:
             return None
+        
+        # Validate constraints before updating
+        self._validate_file_tree_constraints(updates, item_id)
         
         for key, value in updates.items():
             if hasattr(item, key):

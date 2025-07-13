@@ -25,18 +25,19 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { FileTreeItem } from "@/types/api";
+import { TreeItem } from "@/types/api";
 import { useActiveFile, useFileTree } from "@/lib/query/hooks";
+import { isFile, isFolder } from "@/data/file-tree";
 import { cn } from "@/lib/utils";
 
 // No conversion needed - API already returns FileItem format
 
 interface FileTreeItemProps {
-  item: FileTreeItem;
+  item: TreeItem;
   depth: number;
   selectedFileId?: string;
-  onFileSelect?: (file: FileTreeItem) => void;
-  onFileAction?: (action: string, file: FileTreeItem) => void;
+  onFileSelect?: (file: TreeItem) => void;
+  onFileAction?: (action: string, file: TreeItem) => void;
 }
 
 function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction }: FileTreeItemProps) {
@@ -44,9 +45,9 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
   const isSelected = selectedFileId === item.id;
 
   const handleClick = () => {
-    if (item.type === "folder") {
+    if (isFolder(item)) {
       setIsExpanded(!isExpanded);
-    } else {
+    } else if (isFile(item)) {
       onFileSelect?.(item);
     }
   };
@@ -69,7 +70,7 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
           style={{ paddingLeft: `${depth * 12 + 4}px` }}
           onClick={handleClick}
         >
-        {item.type === "folder" ? (
+        {isFolder(item) ? (
           <>
             {isExpanded ? (
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
@@ -122,7 +123,7 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            {item.type === "folder" ? (
+            {isFolder(item) ? (
               <>
                 <DropdownMenuItem onClick={(e) => handleAction("new-file", e)}>
                   <FileText className="mr-2 h-4 w-4" />
@@ -162,7 +163,7 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {item.type === "folder" && isExpanded && item.children && (
+      {isFolder(item) && isExpanded && item.children && (
         <div>
           {item.children.map((child) => (
             <FileTreeItem
@@ -189,8 +190,8 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
   const { data: fileTree = [], isLoading, error } = useFileTree(projectId);
   const { selectedFileId, openFile, setSelectedFile } = useActiveFile(projectId);
 
-  const handleFileSelect = (file: FileTreeItem) => {
-    if (file.type === "file") {
+  const handleFileSelect = (file: TreeItem) => {
+    if (isFile(file)) {
       // For files, open them (this will also update selectedFileId)
       openFile(file.id);
     } else {
@@ -199,7 +200,7 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
     }
   };
 
-  const handleFileAction = (action: string, file: FileTreeItem) => {
+  const handleFileAction = (action: string, file: TreeItem) => {
     // TODO: Implement file operations
     console.log(`Action: ${action} on file:`, file);
     
@@ -293,7 +294,7 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
         if (!selectedFileId) return null;
         
         // Find the selected file in the tree
-        const findFileInTree = (items: FileTreeItem[], id: string): FileTreeItem | null => {
+        const findFileInTree = (items: TreeItem[], id: string): TreeItem | null => {
           for (const item of items) {
             if (item.id === id) return item;
             if (item.children) {
@@ -313,7 +314,7 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
               <div className="text-xs space-y-1">
                 <div className="font-medium">{selectedFile.name}</div>
                 <div className="text-muted-foreground">
-                  {selectedFile.type === "file" ? "Document" : "Folder"}
+                  {isFile(selectedFile) ? "Document" : "Folder"}
                 </div>
                 {selectedFile.tags && selectedFile.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
