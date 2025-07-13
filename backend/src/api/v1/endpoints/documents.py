@@ -170,11 +170,11 @@ def calculate_word_count(content: DocumentContent) -> int:
 # API Endpoints
 # ============================================================================
 
-@router.get("/{document_id}", response_model=ApiResponse[DocumentResponse])
+@router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: str,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[DocumentResponse]:
+) -> DocumentResponse:
     """
     Get document by ID
     
@@ -191,7 +191,7 @@ async def get_document(
             )
         
         logger.info(f"Retrieved document: {document.title} (ID: {document_id})")
-        return ApiResponse.success(document_to_response(document))
+        return document_to_response(document)
         
     except HTTPException:
         raise
@@ -203,11 +203,11 @@ async def get_document(
         )
 
 
-@router.post("", response_model=ApiResponse[DocumentResponse])
+@router.post("", response_model=DocumentResponse)
 async def create_document(
     request: CreateDocumentRequest,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[DocumentResponse]:
+) -> DocumentResponse:
     """
     Create a new document
     
@@ -250,7 +250,7 @@ async def create_document(
         })
         
         logger.info(f"Created document: {document.title} (ID: {document.id})")
-        return ApiResponse.success(document_to_response(document), status=201)
+        return document_to_response(document)
         
     except HTTPException:
         raise
@@ -262,12 +262,12 @@ async def create_document(
         )
 
 
-@router.put("/{document_id}", response_model=ApiResponse[DocumentResponse])
+@router.put("/{document_id}", response_model=DocumentResponse)
 async def update_document(
     document_id: str, 
     request: UpdateDocumentRequest,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[DocumentResponse]:
+) -> DocumentResponse:
     """
     Update an existing document
     
@@ -318,7 +318,7 @@ async def update_document(
                 })
         
         logger.info(f"Updated document: {updated_document.title} (ID: {document_id})")
-        return ApiResponse.success(document_to_response(updated_document))
+        return document_to_response(updated_document)
         
     except HTTPException:
         raise
@@ -330,11 +330,11 @@ async def update_document(
         )
 
 
-@router.delete("/{document_id}", response_model=ApiResponse[DeleteResponse])
+@router.delete("/{document_id}", response_model=DeleteResponse)
 async def delete_document(
     document_id: str,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[DeleteResponse]:
+) -> DeleteResponse:
     """
     Delete a document
     
@@ -365,7 +365,7 @@ async def delete_document(
             
             logger.info(f"Deleted document: {document.title} (ID: {document_id})")
         
-        return ApiResponse.success(DeleteResponse(success=success))
+        return DeleteResponse(success=success)
         
     except HTTPException:
         raise

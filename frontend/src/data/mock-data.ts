@@ -13,6 +13,9 @@ export function formatDate(dateString: string): string {
   });
 }
 
-export function formatNumber(num: number): string {
+export function formatNumber(num: number | undefined | null): string {
+  if (num == null || num === undefined) {
+    return '0';
+  }
   return num.toLocaleString();
 }

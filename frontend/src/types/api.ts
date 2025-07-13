@@ -135,7 +135,8 @@ export interface FileTreeItem {
 }
 
 export interface FileTreeResponse {
-  file_tree: FileTreeItem[];
+  fileTree: FileTreeItem[];  // Backend uses alias "fileTree" for file_tree field
+  file_tree?: FileTreeItem[]; // Keep compatibility with snake_case
   metadata: {
     total_files: number;
     total_folders: number;

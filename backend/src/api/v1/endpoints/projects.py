@@ -268,14 +268,14 @@ def build_file_tree_hierarchy(items: List[FileTreeItem]) -> List[FileTreeItemRes
 # ============================================================================
 
 
-@router.get("/", response_model=ApiResponse[ProjectListResponse])
+@router.get("/", response_model=ProjectListResponse)
 async def list_projects(
     limit: int = Query(default=20, ge=1, le=100, description="Number of projects to return"),
     offset: int = Query(default=0, ge=0, description="Number of projects to skip"),
     sort: str = Query(default="updated_at", regex="^(title|created_at|updated_at)$", description="Field to sort by"),
     order: str = Query(default="desc", regex="^(asc|desc)$", description="Sort order"),
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[ProjectListResponse]:
+) -> ProjectListResponse:
     """
     List all projects with pagination
     
@@ -319,7 +319,7 @@ async def list_projects(
         )
         
         logger.info(f"Listed {len(project_summaries)} projects (total: {total}) for user: {user_id}")
-        return ApiResponse.success(response_data)
+        return response_data
         
     except Exception as e:
         logger.error(f"Error listing projects: {e}")
@@ -329,11 +329,11 @@ async def list_projects(
         )
 
 
-@router.get("/{project_id}", response_model=ApiResponse[ProjectDetails])
+@router.get("/{project_id}", response_model=ProjectDetails)
 async def get_project(
     project_id: str,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[ProjectDetails]:
+) -> ProjectDetails:
     """
     Get project details by ID
     
@@ -351,7 +351,7 @@ async def get_project(
         
         logger.info(f"Retrieved project: {project.title} (ID: {project_id}) for user: {user_id}")
         response_data = project_to_response(project)
-        return ApiResponse.success(response_data)
+        return response_data
         
     except HTTPException:
         raise
@@ -363,11 +363,11 @@ async def get_project(
         )
 
 
-@router.get("/{project_id}/file-tree", response_model=ApiResponse[FileTreeResponse])
+@router.get("/{project_id}/file-tree", response_model=FileTreeResponse)
 async def get_project_file_tree(
     project_id: str,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[FileTreeResponse]:
+) -> FileTreeResponse:
     """
     Get file tree for a project
     
@@ -411,7 +411,7 @@ async def get_project_file_tree(
             fileTree=file_tree,
             metadata=metadata,
         )
-        return ApiResponse.success(response_data)
+        return response_data
         
     except HTTPException:
         raise
@@ -425,11 +425,11 @@ async def get_project_file_tree(
 
 
 
-@router.post("/", response_model=ApiResponse[ProjectDetails], status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ProjectDetails, status_code=status.HTTP_201_CREATED)
 async def create_project(
     request: CreateProjectRequest,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[ProjectDetails]:
+) -> ProjectDetails:
     """
     Create a new project
     
@@ -453,7 +453,7 @@ async def create_project(
         
         logger.info(f"Created project: {project.title} (ID: {project.id}) for user: {user_id}")
         response_data = project_to_response(project)
-        return ApiResponse.success(response_data)
+        return response_data
         
     except Exception as e:
         logger.error(f"Error creating project: {e}")
@@ -463,12 +463,12 @@ async def create_project(
         )
 
 
-@router.put("/{project_id}", response_model=ApiResponse[ProjectDetails])
+@router.put("/{project_id}", response_model=ProjectDetails)
 async def update_project(
     project_id: str,
     request: UpdateProjectRequest,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[ProjectDetails]:
+) -> ProjectDetails:
     """
     Update an existing project
     
@@ -501,7 +501,7 @@ async def update_project(
         
         logger.info(f"Updated project: {project_id} for user: {user_id}")
         response_data = project_to_response(updated_project)
-        return ApiResponse.success(response_data)
+        return response_data
         
     except HTTPException:
         raise
@@ -513,11 +513,11 @@ async def update_project(
         )
 
 
-@router.delete("/{project_id}", response_model=ApiResponse[Dict[str, str]])
+@router.delete("/{project_id}", response_model=Dict[str, str])
 async def delete_project(
     project_id: str,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[Dict[str, str]]:
+) -> Dict[str, str]:
     """
     Delete a project
     
@@ -540,7 +540,7 @@ async def delete_project(
         if success:
             logger.info(f"Deleted project: {project_id} for user: {user_id}")
             response_data = {"message": f"Project {project_id} deleted successfully"}
-            return ApiResponse.success(response_data)
+            return response_data
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

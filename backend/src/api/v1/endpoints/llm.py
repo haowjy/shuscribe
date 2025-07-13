@@ -115,9 +115,8 @@ async def _stream_chat_completion(
                 metadata=chunk.metadata or {}
             )
             
-            # Convert to API response format
-            api_response = ApiResponse.success(chunk_response)
-            yield f"data: {api_response.model_dump_json()}\n\n"
+            # Send chunk data directly
+            yield f"data: {chunk_response.model_dump_json()}\n\n"
         
         # Send final chunk
         final_chunk = ChatCompletionStreamChunk(
@@ -128,8 +127,7 @@ async def _stream_chat_completion(
             usage=None,
             metadata={"stream_complete": True}
         )
-        final_api_response = ApiResponse.success(final_chunk)
-        yield f"data: {final_api_response.model_dump_json()}\n\n"
+        yield f"data: {final_chunk.model_dump_json()}\n\n"
         
     except Exception as e:
         logger.error(f"Error in streaming chat completion: {e}")
@@ -145,7 +143,7 @@ async def _stream_chat_completion(
 # Chat Completion Endpoints
 # ============================================================================
 
-@router.post("/chat", response_model=ApiResponse[ChatCompletionResponse])
+@router.post("/chat", response_model=ChatCompletionResponse)
 async def chat_completion(
     request: ChatCompletionRequest,
     user_id: str = Depends(get_current_user_id)
@@ -197,7 +195,7 @@ async def chat_completion(
             metadata=response.metadata or {}
         )
         
-        return ApiResponse.success(chat_response)
+        return chat_response
         
     except HTTPException:
         raise
@@ -213,11 +211,11 @@ async def chat_completion(
 # API Key Management Endpoints
 # ============================================================================
 
-@router.post("/validate-key", response_model=ApiResponse[APIKeyValidationResponse])
+@router.post("/validate-key", response_model=APIKeyValidationResponse)
 async def validate_api_key(
     request: ValidateAPIKeyRequest,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[APIKeyValidationResponse]:
+) -> APIKeyValidationResponse:
     """
     Validate an API key without storing it
     
@@ -263,7 +261,7 @@ async def validate_api_key(
                 errorDetails=str(validation_error)
             )
         
-        return ApiResponse.success(validation_response)
+        return validation_response
         
     except Exception as e:
         logger.error(f"Error validating API key: {e}")
@@ -273,11 +271,11 @@ async def validate_api_key(
         )
 
 
-@router.post("/store-key", response_model=ApiResponse[StoredAPIKeyResponse])
+@router.post("/store-key", response_model=StoredAPIKeyResponse)
 async def store_api_key(
     request: StoreAPIKeyRequest,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[StoredAPIKeyResponse]:
+) -> StoredAPIKeyResponse:
     """
     Store an encrypted API key for the user
     
@@ -318,7 +316,7 @@ async def store_api_key(
             updatedAt=stored_key.updated_at
         )
         
-        return ApiResponse.success(key_response)
+        return key_response
         
     except Exception as e:
         logger.error(f"Error storing API key: {e}")
@@ -328,11 +326,11 @@ async def store_api_key(
         )
 
 
-@router.delete("/keys/{provider}", response_model=ApiResponse[DeleteAPIKeyResponse])
+@router.delete("/keys/{provider}", response_model=DeleteAPIKeyResponse)
 async def delete_api_key(
     provider: PROVIDER_ID,
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[DeleteAPIKeyResponse]:
+) -> DeleteAPIKeyResponse:
     """Delete a stored API key for the user"""
     try:
         repos = get_repositories()
@@ -345,7 +343,7 @@ async def delete_api_key(
             message="API key deleted successfully" if deleted else "API key not found"
         )
         
-        return ApiResponse.success(delete_response)
+        return delete_response
         
     except Exception as e:
         logger.error(f"Error deleting API key: {e}")
@@ -355,10 +353,10 @@ async def delete_api_key(
         )
 
 
-@router.get("/keys", response_model=ApiResponse[ListUserAPIKeysResponse])
+@router.get("/keys", response_model=ListUserAPIKeysResponse)
 async def list_user_api_keys(
     user_id: str = Depends(get_current_user_id)
-) -> ApiResponse[ListUserAPIKeysResponse]:
+) -> ListUserAPIKeysResponse:
     """List all stored API keys for the user (without decrypting them)"""
     try:
         repos = get_repositories()
@@ -383,7 +381,7 @@ async def list_user_api_keys(
             totalKeys=len(key_responses)
         )
         
-        return ApiResponse.success(list_response)
+        return list_response
         
     except Exception as e:
         logger.error(f"Error listing API keys: {e}")
@@ -397,11 +395,11 @@ async def list_user_api_keys(
 # Provider and Model Discovery Endpoints
 # ============================================================================
 
-@router.get("/providers", response_model=ApiResponse[ListProvidersResponse])
+@router.get("/providers", response_model=ListProvidersResponse)
 async def list_providers(
     include_models: bool = True,
     user_context: Dict[str, Any] = Depends(require_auth)
-) -> ApiResponse[ListProvidersResponse]:
+) -> ListProvidersResponse:
     """
     List all available LLM providers and their models
     
@@ -423,7 +421,7 @@ async def list_providers(
             totalModels=total_models
         )
         
-        return ApiResponse.success(list_response)
+        return list_response
         
     except Exception as e:
         logger.error(f"Error listing providers: {e}")
@@ -433,12 +431,12 @@ async def list_providers(
         )
 
 
-@router.get("/models", response_model=ApiResponse[ListModelsResponse])
+@router.get("/models", response_model=ListModelsResponse)
 async def list_models(
     provider: Optional[PROVIDER_ID] = None,
     include_capabilities: bool = True,
     user_context: Dict[str, Any] = Depends(require_auth)
-) -> ApiResponse[ListModelsResponse]:
+) -> ListModelsResponse:
     """
     List available models, optionally filtered by provider
     
@@ -463,7 +461,7 @@ async def list_models(
             providerFilter=provider
         )
         
-        return ApiResponse.success(list_response)
+        return list_response
         
     except Exception as e:
         logger.error(f"Error listing models: {e}")

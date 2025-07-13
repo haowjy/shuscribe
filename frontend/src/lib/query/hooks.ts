@@ -172,7 +172,8 @@ export function useFileTree(projectId: string) {
       if (result.error) {
         throw new Error(result.error);
       }
-      return result.fileTree;
+      // Ensure we always return an array, never undefined
+      return result.fileTree || [];
     },
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000, // 5 minutes - file tree doesn't change often

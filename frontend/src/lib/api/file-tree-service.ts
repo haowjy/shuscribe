@@ -74,7 +74,13 @@ export class FileTreeService {
         }
 
         const data: FileTreeResponse = await response.json();
-        const fileTree = data.file_tree;
+        // Validate API response structure and provide fallback
+        // Backend uses alias "fileTree" for the field
+        const fileTree = Array.isArray(data.fileTree) ? data.fileTree : [];
+        
+        if (!Array.isArray(data.fileTree)) {
+          console.warn(`API returned invalid fileTree structure for project ${projectId}:`, data);
+        }
         
         // Cache the result
         if (this.options.enableCache) {
