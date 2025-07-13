@@ -64,7 +64,6 @@ interface UniverseProject {
   contentUnits: ContentUnit[];
   sharedReferences: SharedReference[];
   tags: Tag[]; // Many-to-many relationship with tags
-  
   // Team management
   collaborators: ProjectCollaborator[];
   permissions: ProjectPermissions;
@@ -493,6 +492,8 @@ CREATE TABLE content_units (
   content_type VARCHAR(50) NOT NULL,
   content_format VARCHAR(50) NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
+  tags TEXT[],
+>>>>>>> dfe2a4e (update documents with a newly enhanced vision for the business)
   publishing_config JSONB NOT NULL DEFAULT '{}',
   access_control JSONB NOT NULL DEFAULT '{}',
   status VARCHAR(50) NOT NULL DEFAULT 'draft',
