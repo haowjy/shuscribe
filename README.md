@@ -261,7 +261,7 @@ docker run -d \
 ## 🌐 Service URLs
 
 When running locally:
--   **Frontend**: `http://localhost:3000`
+-   **Frontend**: `http://localhost:3001`
 -   **Backend API**: `http://localhost:8000`
 -   **Backend API Docs (Swagger UI)**: `http://localhost:8000/docs`
 -   **Self-hosted Portkey Gateway Console**: `http://localhost:8787/public/`

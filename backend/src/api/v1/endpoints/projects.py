@@ -150,6 +150,8 @@ class FileTreeResponse(BaseModel):
     metadata: FileTreeMetadata
 
 
+
+
 # ============================================================================
 # Helper Functions
 # ============================================================================
@@ -259,9 +261,12 @@ def build_file_tree_hierarchy(items: List[FileTreeItem]) -> List[FileTreeItemRes
     return build_children(None)
 
 
+
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
+
 
 @router.get("/", response_model=ApiResponse[ProjectListResponse])
 async def list_projects(
@@ -416,6 +421,8 @@ async def get_project_file_tree(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
         )
+
+
 
 
 @router.post("/", response_model=ApiResponse[ProjectDetails], status_code=status.HTTP_201_CREATED)

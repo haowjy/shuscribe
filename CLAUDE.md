@@ -114,6 +114,10 @@ docker-compose down                      # Stop all services
   - Complete API documentation with request/response examples
   - Authentication, error handling, and field naming conventions
   - Insomnia/Postman testing guidance
+- **🗺️ Frontend Routes**: [`/_docs/core/frontend-routes.md`](_docs/core/frontend-routes.md)
+  - Complete routing documentation and navigation patterns
+  - Route guards, parameters, and frontend-backend mapping
+  - Entry point behavior and dashboard-first user flow
 
 ### High-Level Documentation
 

@@ -56,7 +56,7 @@ Now, **edit the `.env` file** in this `backend/` directory. It should look like 
 **Important Notes for `.env`:**
 -   **`SECRET_KEY`**: Generate a strong, unique key for authentication.
 -   **`ENCRYPTION_KEY`**: Set this to your unique 32-byte key generated from prerequisites.
--   **`ALLOWED_ORIGINS`**: Crucially, define this as a JSON array string, wrapped in single quotes, e.g., `'["http://localhost:3000", "http://127.0.0.1:3000"]'`
+-   **`ALLOWED_ORIGINS`**: Crucially, define this as a JSON array string, wrapped in single quotes, e.g., `'["http://localhost:3001", "http://127.0.0.1:3001"]'`
 -   **`DATABASE_URL`**: Ensure it starts with `postgresql+asyncpg://` to use the correct asynchronous driver.
 -   **`PORTKEY_BASE_URL`**: This should point to your running self-hosted Portkey Gateway (e.g., `http://localhost:8787/v1`).
 -   There is **no `PORTKEY_API_KEY`** needed for a self-hosted gateway.

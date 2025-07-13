@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FileItem } from '@/types/project';
+import { FileTreeItem } from '@/types/api';
 import { 
   ReferenceItem, 
   transformFileTreeToReferences, 
@@ -10,7 +10,7 @@ import {
 /**
  * Hook to get referenceable items from provided file tree
  */
-export function useReferenceItems(fileTree: FileItem[] = []) {
+export function useReferenceItems(fileTree: FileTreeItem[] = []) {
   const allReferences = useMemo(() => {
     if (fileTree.length === 0) return [];
     return transformFileTreeToReferences(fileTree);
@@ -32,7 +32,7 @@ export function useReferenceItems(fileTree: FileItem[] = []) {
 /**
  * Hook to get suggestion items for Tiptap suggestion utility
  */
-export function useSuggestionItems(fileTree: FileItem[] = []) {
+export function useSuggestionItems(fileTree: FileTreeItem[] = []) {
   const { getFilteredReferences } = useReferenceItems(fileTree);
 
   const getSuggestionItems = useMemo(() => {

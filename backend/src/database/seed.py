@@ -7,7 +7,7 @@ from datetime import datetime, UTC
 from typing import Dict, Any, List
 from faker import Faker
 
-fake = Faker()
+fake = Faker('en_US')
 
 
 class MockDataFactory:

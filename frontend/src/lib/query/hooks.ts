@@ -5,13 +5,14 @@ import {
   Document, 
   CreateDocumentRequest, 
   UpdateDocumentRequest,
-  ProjectDetails 
+  ProjectListParams
 } from '@/types/api';
 import { loadFileTree } from '@/lib/api/file-tree-service';
 
 // Query keys
 export const queryKeys = {
   projects: ['projects'] as const,
+  projectsList: (params?: ProjectListParams) => ['projects', 'list', params] as const,
   project: (id: string) => ['projects', id] as const,
   projectData: (id: string) => ['projects', id, 'data'] as const,
   documents: ['documents'] as const,
@@ -21,6 +22,20 @@ export const queryKeys = {
 };
 
 // Project hooks
+export function useProjects(params: ProjectListParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.projectsList(params),
+    queryFn: async () => {
+      const response = await apiClient.listProjects(params);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes - project list doesn't change often
+  });
+}
+
 export function useProjectData(projectId: string) {
   return useQuery({
     queryKey: queryKeys.projectData(projectId),

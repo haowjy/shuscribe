@@ -66,8 +66,13 @@ def init_database() -> None:
         raise
 
 
-async def create_tables() -> None:
-    """Create all tables (no migrations approach)"""
+async def create_tables(drop_existing: bool = False) -> None:
+    """
+    Create all tables (no migrations approach)
+    
+    Args:
+        drop_existing: If True, drop existing tables first. Use with caution!
+    """
     if not engine:
         raise RuntimeError("Database not initialized. Call init_database() first.")
     
@@ -77,15 +82,17 @@ async def create_tables() -> None:
     try:
         logger.info("Attempting to connect to database for table creation...")
         async with engine.begin() as conn:
-            logger.info("Connected successfully, dropping existing tables...")
-            # Drop all tables first (for development)
-            await conn.run_sync(Base.metadata.drop_all)
-            logger.info("Existing tables dropped, creating new tables...")
-            # Create all tables
+            if drop_existing:
+                logger.warning("Dropping existing tables (drop_existing=True)...")
+                await conn.run_sync(Base.metadata.drop_all)
+                logger.info("Existing tables dropped")
+            
+            logger.info("Creating tables if they don't exist...")
+            # Create all tables (this is idempotent - won't recreate existing tables)
             await conn.run_sync(Base.metadata.create_all)
-            logger.info("New tables created successfully")
+            logger.info("Tables created/verified successfully")
         
-        logger.info("Database tables created successfully")
+        logger.info("Database tables initialization completed")
     except SQLAlchemyError as e:
         logger.error(f"SQLAlchemy error during table creation: {e}")
         logger.error(f"Error type: {type(e)}")

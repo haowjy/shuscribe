@@ -47,12 +47,12 @@ class Settings(BaseSettings):
     TABLE_PREFIX: str = ""  # Empty for production, "test_" for development/testing
     
     # Database Seeding (Development Only)
-    ENABLE_DATABASE_SEEDING: bool = True  # Enable/disable seeding on startup
+    ENABLE_DATABASE_SEEDING: bool = False  # Enable/disable seeding on startup
     SEED_DATA_SIZE: str = "medium"        # "small", "medium", or "large"
     CLEAR_BEFORE_SEED: bool = True        # Clear existing test data before seeding
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3001"]
     
     # Self-hosted Portkey Gateway Configuration
     PORTKEY_BASE_URL: str = "http://localhost:8787/v1"  # Default for local Docker setup
@@ -85,9 +85,10 @@ class Settings(BaseSettings):
     
     @property
     def table_prefix(self) -> str:
-        """Get table prefix based on environment"""
+        """Get table prefix based on environment and configuration"""
         if self.ENVIRONMENT.lower() in ["development", "testing"]:
-            return self.TABLE_PREFIX or "test_"
+            # Respect configured TABLE_PREFIX, but default to "test_" if empty
+            return self.TABLE_PREFIX if self.TABLE_PREFIX else "test_"
         return ""
     
     model_config = SettingsConfigDict(

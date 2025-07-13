@@ -47,6 +47,9 @@ class DatabaseSeeder:
         }
         
         try:
+            # Validate seeding preconditions before clearing data
+            await self._validate_seeding_preconditions()
+            
             # Clear existing data if requested
             if clear_first:
                 await self._clear_test_data()
@@ -93,6 +96,40 @@ class DatabaseSeeder:
             results["errors"].append(error_msg)
         
         return results
+    
+    async def _validate_seeding_preconditions(self) -> None:
+        """
+        Validate that seeding can succeed before clearing any data
+        
+        Raises:
+            Exception: If seeding preconditions are not met
+        """
+        try:
+            # Check that repositories are accessible
+            test_projects = await self.repositories.project.list_all()
+            logger.debug(f"Repository validation successful (found {len(test_projects)} existing projects)")
+            
+            # Check that mock data factory can generate data
+            test_project_data = self.factory.generate_project(genre="fantasy")
+            if not test_project_data or not test_project_data.get('title'):
+                raise Exception("Mock data factory is not working properly")
+            
+            # Check that required mock data templates exist
+            from src.database.seed import ProjectTemplates
+            required_templates = [
+                ProjectTemplates.FANTASY_NOVEL,
+                ProjectTemplates.SCIFI_THRILLER,
+                ProjectTemplates.MYSTERY_NOVEL
+            ]
+            for template in required_templates:
+                if not template or not template.get('genre'):
+                    raise Exception(f"Invalid project template: {template}")
+            
+            logger.debug("All seeding preconditions validated successfully")
+            
+        except Exception as e:
+            logger.error(f"Seeding precondition validation failed: {e}")
+            raise Exception(f"Cannot proceed with seeding: {e}")
     
     async def _clear_test_data(self) -> None:
         """Clear all test data from tables with the configured prefix"""
@@ -218,9 +255,12 @@ class DatabaseSeeder:
             return []
 
 
-async def seed_development_database() -> Dict[str, Any]:
+async def seed_development_database(force: bool = False) -> Dict[str, Any]:
     """
     Main function to seed development database
+    
+    Args:
+        force: If True, seed even if database is not empty
     
     Returns:
         Seeding results and statistics
@@ -231,12 +271,30 @@ async def seed_development_database() -> Dict[str, Any]:
     logger.info("Initializing database seeding for development environment")
     
     try:
+        # Check if database is empty (unless forced)
+        if not force:
+            is_empty = await is_database_empty()
+            if not is_empty:
+                logger.info("Database is not empty - skipping automatic seeding. Use force=True to seed anyway.")
+                return {
+                    "skipped": True, 
+                    "reason": "Database is not empty",
+                    "projects_created": 0,
+                    "documents_created": 0,
+                    "file_tree_items_created": 0,
+                    "errors": []
+                }
+        
         repositories = get_repositories()
         seeder = DatabaseSeeder(repositories)
         
         # Get seeding configuration from settings
         data_size = getattr(settings, 'SEED_DATA_SIZE', 'medium')
         clear_first = getattr(settings, 'CLEAR_BEFORE_SEED', True)
+        
+        # If forcing and not clearing, don't clear to avoid data loss
+        if force and not clear_first:
+            logger.info("Forced seeding without clearing existing data")
         
         results = await seeder.seed_database(
             clear_first=clear_first,
@@ -251,20 +309,49 @@ async def seed_development_database() -> Dict[str, Any]:
         return {"error": error_msg}
 
 
+async def is_database_empty() -> bool:
+    """
+    Check if the database is empty (no projects exist)
+    
+    Returns:
+        True if database is empty, False otherwise
+    """
+    try:
+        repositories = get_repositories()
+        all_projects = await repositories.project.list_all()
+        return len(all_projects) == 0
+    except Exception as e:
+        logger.warning(f"Could not check if database is empty: {e}")
+        # If we can't check, assume it's not empty to be safe
+        return False
+
+
 def should_seed_database() -> bool:
     """
-    Determine if database should be seeded based on configuration
+    Determine if database should be seeded based on configuration and database state
+    
+    Auto-seeds in development if database is empty, unless explicitly disabled.
+    Never seeds in production for safety.
     
     Returns:
         True if seeding should occur, False otherwise
     """
-    # Only seed in development environment
+    # Never seed in production for safety
     if settings.ENVIRONMENT.lower() not in ["development", "testing"]:
+        logger.info("Skipping seeding: not in development/testing environment")
         return False
     
     # Check if seeding is explicitly disabled
     if hasattr(settings, 'ENABLE_DATABASE_SEEDING'):
-        return getattr(settings, 'ENABLE_DATABASE_SEEDING', True)
+        explicit_setting = getattr(settings, 'ENABLE_DATABASE_SEEDING', None)
+        if explicit_setting is False:
+            logger.info("Seeding explicitly disabled via ENABLE_DATABASE_SEEDING=false")
+            return False
+        elif explicit_setting is True:
+            logger.info("Seeding explicitly enabled via ENABLE_DATABASE_SEEDING=true")
+            return True
     
-    # Default to True for development
+    # Default behavior in development: seed if database appears empty
+    # Note: This will be checked again in seed_development_database() with async context
+    logger.info("Development environment detected - will check if database is empty")
     return True

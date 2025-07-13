@@ -1,11 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ProjectData, Document, CreateDocumentRequest, UpdateDocumentRequest } from '@/types/project';
-import { getMockProjectData } from '@/lib/api/mock-project-data';
 import { 
   DocumentStorage, 
-  DraftManager, 
-  EditorStateManager,
+  DraftManager,
   DocumentState 
 } from '@/lib/editor/storage-utils';
 import { 
@@ -139,30 +137,54 @@ export function useProjectDataWithStorage(projectId: string) {
     queryFn: async () => {
       console.log('Loading project data with storage for project:', projectId);
       
-      // Always start with mock project data as baseline to ensure file tree documents exist
-      const mockProjectData = getMockProjectData(projectId);
-      console.log('Mock project data loaded with', mockProjectData.documents.length, 'documents');
+      // Try to get real project data from backend first
+      let backendProjectData = null;
+      try {
+        const response = await apiClient.getProjectData(projectId);
+        if (!response.error) {
+          backendProjectData = response.data;
+          console.log('Real project data loaded from backend:', backendProjectData?.title);
+        } else {
+          console.warn('Backend project data failed:', response.error);
+        }
+      } catch (error) {
+        console.warn('Failed to load project data from backend:', error);
+      }
+      
+      // If no backend data available, create minimal project structure
+      const projectData = backendProjectData || {
+        id: projectId,
+        title: `Project ${projectId}`,
+        description: 'Project description',
+        documents: [],
+        fileTree: [],
+        tags: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       
       // Get all local documents
       const allLocalDocs = DocumentStorage.getAllDocuments();
       const hasAnyLocalData = Object.keys(allLocalDocs).length > 0;
       console.log('Local documents found:', Object.keys(allLocalDocs).length);
       
-      // Create a map of documents starting with mock data
+      // Create a map of documents starting with backend data
       const documentsMap = new Map<string, Document>();
       
-      // Add all mock documents to the map first
-      mockProjectData.documents.forEach(doc => {
-        documentsMap.set(doc.id, doc);
-      });
+      // Add backend documents to the map first (if any)
+      if (projectData.documents) {
+        projectData.documents.forEach(doc => {
+          documentsMap.set(doc.id, doc);
+        });
+      }
       
-      // If we have local data, overlay it on top of mock data
+      // If we have local data, overlay it on top of backend data
       if (hasAnyLocalData) {
         const projectDocs = Object.values(allLocalDocs).filter(
           doc => doc.id.startsWith(projectId) || doc.projectId === projectId
         );
         
-        // Overlay local documents (they take precedence over mock data for same IDs)
+        // Overlay local documents (they take precedence over backend data for same IDs)
         projectDocs.forEach(localDoc => {
           documentsMap.set(localDoc.id, {
             id: localDoc.id,
@@ -197,7 +219,7 @@ export function useProjectDataWithStorage(projectId: string) {
       console.log('Final project data contains', finalDocuments.length, 'documents with IDs:', finalDocuments.map(d => d.id));
       
       return {
-        ...mockProjectData,
+        ...projectData,
         documents: finalDocuments,
       };
     },

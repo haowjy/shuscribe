@@ -59,13 +59,19 @@ async def require_auth(authorization: Optional[str] = Header(None)) -> Dict[str,
     Raises:
         HTTPException: If token is missing, invalid, expired, or has invalid signature
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"require_auth called with authorization header: {authorization is not None}")
+    
     if not authorization:
+        logger.warning("No authorization header provided")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization header required"
         )
     
     if not authorization.startswith("Bearer "):
+        logger.warning(f"Invalid authorization header format: {authorization[:20]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authorization header format"
@@ -74,16 +80,21 @@ async def require_auth(authorization: Optional[str] = Header(None)) -> Dict[str,
     token = authorization[7:]  # Remove "Bearer " prefix
     
     if not token:
+        logger.warning("Empty token after Bearer prefix")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token required"
         )
     
     # Validate token locally using JWT validation and get user context
-    auth_service = get_supabase_auth_service()
-    user_context = await auth_service.validate_token(token)
-    
-    return user_context
+    try:
+        auth_service = get_supabase_auth_service()
+        user_context = await auth_service.validate_token(token)
+        logger.info(f"Successfully authenticated user: {user_context.get('user_id')}")
+        return user_context
+    except Exception as e:
+        logger.error(f"Auth service error: {e}")
+        raise
 
 
 async def get_optional_user_context(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:

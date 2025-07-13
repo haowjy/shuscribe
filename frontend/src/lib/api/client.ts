@@ -6,6 +6,8 @@ import {
   UpdateDocumentRequest,
   FileTreeResponse,
   ProjectDetails,
+  ProjectListResponse,
+  ProjectListParams,
   ApiErrorResponse
 } from '@/types/api';
 
@@ -80,6 +82,20 @@ class ApiClient {
   }
 
   // Project endpoints
+  async listProjects(params: ProjectListParams = {}): Promise<ApiResponse<ProjectListResponse>> {
+    const searchParams = new URLSearchParams();
+    
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+    if (params.offset) searchParams.set('offset', params.offset.toString());
+    if (params.sort) searchParams.set('sort', params.sort);
+    if (params.order) searchParams.set('order', params.order);
+    
+    const queryString = searchParams.toString();
+    const endpoint = queryString ? `/projects?${queryString}` : '/projects';
+    
+    return this.request<ProjectListResponse>(endpoint);
+  }
+
   async getProjectData(projectId: string): Promise<ApiResponse<ProjectDetails>> {
     return this.request<ProjectDetails>(`/projects/${projectId}`);
   }

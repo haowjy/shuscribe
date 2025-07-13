@@ -57,8 +57,8 @@ def setup_application_logging(log_level: Optional[str] = None) -> None:
     app_logger.setLevel(getattr(logging, level.upper()))
     
     # Silence noisy third-party loggers
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("faker.factory").setLevel(logging.WARNING)
     
     if settings.DEBUG:
         app_logger.info("Debug logging enabled")

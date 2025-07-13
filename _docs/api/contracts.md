@@ -588,7 +588,7 @@ Accept: application/json; version=1
 ### Real-time Features (WebSocket)
 
 ```
-ws://localhost:3000/api/ws/projects/{project_id}
+ws://localhost:3001/api/ws/projects/{project_id}
 
 Events:
 - document_updated

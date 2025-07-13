@@ -1,4 +1,4 @@
-import { FileItem } from './file-tree';
+import { FileTreeItem } from '@/types/api';
 
 export interface ReferenceItem {
   id: string;
@@ -10,10 +10,10 @@ export interface ReferenceItem {
 }
 
 /**
- * Transform FileItem tree into flat list of referenceable items
+ * Transform FileTreeItem tree into flat list of referenceable items
  */
 export function transformFileTreeToReferences(
-  fileTree: FileItem[],
+  fileTree: FileTreeItem[],
   parentPath: string = ''
 ): ReferenceItem[] {
   const references: ReferenceItem[] = [];

@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from src.api.v1.router import api_router
 from src.config import settings
 from src.core.exceptions import ShuScribeException
-from src.core.logging import configure_console_logging
+from src.core.logging import configure_console_logging, setup_application_logging
 from src.schemas.base import ApiResponse
 
 
@@ -21,6 +21,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
     configure_console_logging(log_level="DEBUG")
+    setup_application_logging()
+    
+    # Disable hpack debug messages
+    logging.getLogger("hpack.hpack").setLevel(logging.WARNING)
+    
     logging.info("ShuScribe backend starting up...")
     
     # Initialize database connection and repositories
@@ -92,6 +97,16 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
     )
     
+    # Request logging middleware
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Request: {request.method} {request.url} headers: {dict(request.headers)}")
+        response = await call_next(request)
+        logger.info(f"Response: {response.status_code}")
+        return response
+
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,

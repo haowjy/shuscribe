@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { mockProjects, formatDate, formatNumber } from "@/data/mock-data";
+import { useProjects } from "@/lib/query/hooks";
+import { formatDate, formatNumber } from "@/data/mock-data";
 import { 
   Plus, 
   FileText, 
@@ -14,23 +14,100 @@ import {
   Users, 
   Settings,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  Loader2
 } from "lucide-react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [projects] = useState<Project[]>(mockProjects);
+  const { data: projectsResponse, isLoading, error } = useProjects({
+    sort: 'updated_at',
+    order: 'desc'
+  });
+
+  const projects = projectsResponse?.data || [];
 
   const handleCreateProject = () => {
     router.push("/dashboard/new");
   };
 
   const handleOpenProject = (projectId: string) => {
-    // For now, redirect to main workspace
-    // In the future, this will load the specific project
     router.push(`/?project=${projectId}`);
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-4">
+                <h1 className="text-xl font-semibold">ShuScribe</h1>
+                <Badge variant="secondary">Dashboard</Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Welcome back, {user?.email?.split('@')[0]}
+                </span>
+                <Button variant="ghost" size="sm">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">Loading your projects...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-4">
+                <h1 className="text-xl font-semibold">ShuScribe</h1>
+                <Badge variant="secondary">Dashboard</Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Welcome back, {user?.email?.split('@')[0]}
+                </span>
+                <Button variant="ghost" size="sm">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              Failed to load projects
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              {error.message || 'Unable to connect to the server. Please try again.'}
+            </p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,9 +162,9 @@ export default function DashboardPage() {
                       <CardTitle className="text-lg line-clamp-1">
                         {project.title}
                       </CardTitle>
-                      {project.genre && (
+                      {project.tags && project.tags.length > 0 && (
                         <Badge variant="outline" className="mt-2 text-xs">
-                          {project.genre}
+                          {project.tags[0]}
                         </Badge>
                       )}
                     </div>
@@ -111,7 +188,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span>{project.collaborators} collaborator{project.collaborators !== 1 ? 's' : ''}</span>
+                      <span>{project.collaborators.length} collaborator{project.collaborators.length !== 1 ? 's' : ''}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
