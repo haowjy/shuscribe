@@ -18,8 +18,8 @@ class PaginatedResponse(BaseSchema, Generic[T]):
         "total": 0,
         "limit": 20,
         "offset": 0,
-        "hasMore": False,
-        "nextOffset": None
+        "has_more": False,
+        "next_offset": None
     })
     
     @classmethod
@@ -34,8 +34,8 @@ class PaginatedResponse(BaseSchema, Generic[T]):
                 "total": total,
                 "limit": limit,
                 "offset": offset,
-                "hasMore": has_more,
-                "nextOffset": next_offset
+                "has_more": has_more,
+                "next_offset": next_offset
             }
         )
 
@@ -56,7 +56,7 @@ class ErrorResponse(BaseSchema):
     error: str
     message: str
     details: Optional[Dict[str, Any]] = None
-    request_id: Optional[str] = Field(default=None, alias="requestId")
+    request_id: Optional[str] = None
 
 
 class ValidationErrorResponse(BaseSchema):
@@ -66,7 +66,7 @@ class ValidationErrorResponse(BaseSchema):
     success: bool = False
     error: str = "validation_error"
     message: str
-    field_errors: Dict[str, List[str]] = Field(default_factory=dict, alias="fieldErrors")
+    field_errors: Dict[str, List[str]] = Field(default_factory=dict)
 
 
 class TagResponse(BaseSchema):
@@ -86,7 +86,7 @@ class ReferenceSearchResponse(BaseSchema):
     total: int
     query: str
     limit: int
-    has_more: bool = Field(alias="hasMore")
+    has_more: bool
 
 
 class HealthCheckResponse(BaseSchema):
@@ -103,7 +103,7 @@ class MetricsResponse(BaseSchema):
     """Metrics response"""
     model_config = {"populate_by_name": True}
     
-    total_requests: int = Field(alias="totalRequests")
-    average_response_time: float = Field(alias="averageResponseTime")
-    error_rate: float = Field(alias="errorRate")
+    total_requests: int
+    average_response_time: float
+    error_rate: float
     uptime: str

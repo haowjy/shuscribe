@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useProjects } from "@/lib/query/hooks";
-import { formatDate, formatNumber } from "@/data/mock-data";
+import { formatDate, formatNumber } from "@/lib/utils/format";
 import { 
   Plus, 
   FileText, 
@@ -36,6 +36,7 @@ export default function DashboardPage() {
   });
 
   const projects = projectsResponse?.data || [];
+  console.log(projects);
 
   const handleCreateProject = () => {
     router.push("/dashboard/new");

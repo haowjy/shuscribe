@@ -4,6 +4,7 @@ LLM API endpoints for chat completions, provider management, and API key handlin
 import logging
 from typing import Dict, Any, AsyncIterator, Optional, cast
 from uuid import UUID
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
@@ -11,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from src.api.dependencies import require_auth, get_current_user_id
 from src.core.constants import PROVIDER_ID
 from src.database.factory import get_repositories
-from src.schemas.llm.models import ChunkType, LLMResponse
+from src.schemas.llm.models import ChunkType, LLMResponse, LLMMessage
 from src.services.llm.llm_service import LLMService
 from src.core.encryption import encrypt_api_key, decrypt_api_key
 from src.schemas.base import ApiResponse
@@ -48,19 +49,19 @@ router = APIRouter()
 def _convert_model_to_response(model) -> ModelCapabilityResponse:
     """Convert a HostedModelInstance to ModelCapabilityResponse"""
     return ModelCapabilityResponse(
-        modelName=model.model_name,
+        model_name=model.model_name,
         provider=model.provider_id,
-        displayName=model.model_name,  # Could be enhanced with better display names
+        display_name=model.model_name,  # Could be enhanced with better display names
         description=None,
         capabilities=LLMService.get_capabilities_for_hosted_model(model.provider_id, model.model_name),
-        inputTokenLimit=model.input_token_limit,
-        outputTokenLimit=model.output_token_limit,
-        defaultTemperature=model.default_temperature,
-        supportsThinking=model.thinking_budget_min is not None,
-        thinkingBudgetMin=model.thinking_budget_min,
-        thinkingBudgetMax=model.thinking_budget_max,
-        inputCostPerMillion=model.input_cost_per_million_tokens,
-        outputCostPerMillion=model.output_cost_per_million_tokens
+        input_token_limit=model.input_token_limit,
+        output_token_limit=model.output_token_limit,
+        default_temperature=model.default_temperature,
+        supports_thinking=model.thinking_budget_min is not None,
+        thinking_budget_min=model.thinking_budget_min,
+        thinking_budget_max=model.thinking_budget_max,
+        input_cost_per_million=model.input_cost_per_million_tokens,
+        output_cost_per_million=model.output_cost_per_million_tokens
     )
 
 
@@ -72,10 +73,10 @@ def _convert_provider_to_response(provider, include_models: bool = True) -> Prov
         models = [_convert_model_to_response(model) for model in hosted_models]
     
     return ProviderResponse(
-        providerId=provider.provider_id,
-        displayName=provider.display_name,
-        apiKeyFormatHint=provider.api_key_format_hint,
-        defaultModel=provider.default_model_name,
+        provider_id=provider.provider_id,
+        display_name=provider.display_name,
+        api_key_format_hint=provider.api_key_format_hint,
+        default_model=provider.default_model_name,
         models=models
     )
 
@@ -109,8 +110,8 @@ async def _stream_chat_completion(
             chunk_response = ChatCompletionStreamChunk(
                 content=chunk.content,
                 model=chunk.model,
-                chunkType=chunk.chunk_type,
-                isFinal=False,  # Will be set to True for the last chunk
+                chunk_type=chunk.chunk_type,
+                is_final=False,  # Will be set to True for the last chunk
                 usage=chunk.usage,
                 metadata=chunk.metadata or {}
             )
@@ -122,8 +123,8 @@ async def _stream_chat_completion(
         final_chunk = ChatCompletionStreamChunk(
             content="",
             model=request.model,
-            chunkType=ChunkType.CONTENT,
-            isFinal=True,
+            chunk_type=ChunkType.CONTENT,
+            is_final=True,
             usage=None,
             metadata={"stream_complete": True}
         )
@@ -190,7 +191,7 @@ async def chat_completion(
         chat_response = ChatCompletionResponse(
             content=response.content,
             model=response.model,
-            chunkType=response.chunk_type,
+            chunk_type=response.chunk_type,
             usage=response.usage,
             metadata=response.metadata or {}
         )
@@ -229,7 +230,6 @@ async def validate_api_key(
         test_model = request.test_model or LLMService.get_default_test_model_name_for_provider(request.provider)
         
         # Test the API key with a simple request
-        from src.schemas.llm.models import LLMMessage
         test_messages = [LLMMessage(role="user", content="Hello")]
         
         try:
@@ -244,30 +244,32 @@ async def validate_api_key(
             
             validation_response = APIKeyValidationResponse(
                 provider=request.provider,
-                isValid=True,
-                validationStatus="valid",
+                is_valid=True,
+                validation_status="valid",
                 message="API key is valid and working",
-                testedWithModel=test_model
+                tested_with_model=test_model
             )
+            return validation_response
             
-        except Exception as validation_error:
-            logger.warning(f"API key validation failed: {validation_error}")
+        except Exception as e:
+            logger.warning(f"API key validation failed for provider {request.provider}: {e}")
             validation_response = APIKeyValidationResponse(
                 provider=request.provider,
-                isValid=False,
-                validationStatus="invalid",
-                message="API key validation failed",
-                testedWithModel=test_model,
-                errorDetails=str(validation_error)
+                is_valid=False,
+                validation_status="invalid",
+                message=f"API key validation failed: {str(e)}",
+                tested_with_model=test_model,
+                error_details=str(e)
             )
-        
-        return validation_response
-        
+            return validation_response
+            
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error validating API key: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="API key validation failed"
+            detail="Internal server error during key validation"
         )
 
 
@@ -277,52 +279,72 @@ async def store_api_key(
     user_id: str = Depends(get_current_user_id)
 ) -> StoredAPIKeyResponse:
     """
-    Store an encrypted API key for the user
-    
-    The API key is encrypted before storage and can optionally be validated.
+    Store an encrypted API key for a user
     """
     try:
         repos = get_repositories()
+        llm_service = LLMService(user_repository=repos.user)
         
-        validation_status = "unknown"
+        # Optional: Validate the key before storing
         if request.validate_key:
-            # Validate the key before storing
-            validation_request = ValidateAPIKeyRequest(
-                provider=request.provider,
-                apiKey=request.api_key
-            )
-            validation_result = await validate_api_key(validation_request, user_id)
-            validation_status = validation_result.data.validation_status if validation_result.data else "unknown"
-        
-        # Encrypt the API key
+            test_model = LLMService.get_default_test_model_name_for_provider(request.provider)
+            try:
+                await llm_service.chat_completion(
+                    provider=request.provider,
+                    model=test_model,
+                    messages=[LLMMessage(role="user", content="Hello")],
+                    api_key=request.api_key,
+                    max_tokens=5,
+                    stream=False
+                )
+                validation_status = "valid"
+                message = "API key stored and validated successfully"
+            except Exception as e:
+                validation_status = "invalid"
+                message = f"API key stored but validation failed: {str(e)}"
+                logger.warning(f"Stored API key validation failed for user {user_id}, provider {request.provider}: {e}")
+        else:
+            validation_status = "not_validated"
+            message = "API key stored without validation"
+            
+        # Encrypt the API key before storing
         encrypted_key = encrypt_api_key(request.api_key)
         
-        # Store in repository
-        stored_key = await repos.user.store_api_key(
-            user_id=user_id,
-            provider=request.provider,
-            encrypted_api_key=encrypted_key,
-            validation_status=validation_status,
-            provider_metadata=request.provider_metadata
+        # Store the API key in the database
+        stored_key_data = {
+            "user_id": user_id, # Changed from UUID(user_id) to user_id (str)
+            "provider": request.provider,
+            "encrypted_api_key": encrypted_key,
+            "validation_status": validation_status,
+            "last_validated_at": datetime.utcnow(),
+            "provider_metadata": request.provider_metadata
+        }
+        stored_key = await repos.user.store_api_key( # Changed from upsert_api_key to store_api_key
+            user_id=stored_key_data["user_id"],
+            provider=stored_key_data["provider"],
+            encrypted_api_key=stored_key_data["encrypted_api_key"],
+            validation_status=stored_key_data["validation_status"],
+            provider_metadata=stored_key_data["provider_metadata"]
         )
         
-        key_response = StoredAPIKeyResponse(
+        response_data = StoredAPIKeyResponse(
             provider=stored_key.provider,
-            validationStatus=stored_key.validation_status,
-            lastValidatedAt=stored_key.last_validated_at,
-            providerMetadata=stored_key.provider_metadata,
-            message="API key stored successfully",
-            createdAt=stored_key.created_at,
-            updatedAt=stored_key.updated_at
+            validation_status=stored_key.validation_status,
+            last_validated_at=stored_key.last_validated_at,
+            provider_metadata=stored_key.provider_metadata,
+            message=message,
+            created_at=stored_key.created_at,
+            updated_at=stored_key.updated_at
         )
+        return response_data
         
-        return key_response
-        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error storing API key: {e}")
+        logger.error(f"Error storing API key for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to store API key"
+            detail="Internal server error during key storage"
         )
 
 
@@ -331,25 +353,33 @@ async def delete_api_key(
     provider: PROVIDER_ID,
     user_id: str = Depends(get_current_user_id)
 ) -> DeleteAPIKeyResponse:
-    """Delete a stored API key for the user"""
+    """
+    Delete a stored API key for a user by provider
+    """
     try:
         repos = get_repositories()
+        deleted_count = await repos.user.delete_api_key(user_id, provider) # Changed from UUID(user_id) to user_id (str)
         
-        deleted = await repos.user.delete_api_key(user_id, provider)
-        
-        delete_response = DeleteAPIKeyResponse(
+        if deleted_count > 0:
+            message = f"API key for provider {provider} deleted successfully."
+            deleted = True
+        else:
+            message = f"API key for provider {provider} not found or already deleted."
+            deleted = False
+            
+        return DeleteAPIKeyResponse(
             provider=provider,
             deleted=deleted,
-            message="API key deleted successfully" if deleted else "API key not found"
+            message=message
         )
         
-        return delete_response
-        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error deleting API key: {e}")
+        logger.error(f"Error deleting API key for user {user_id}, provider {provider}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete API key"
+            detail="Internal server error during key deletion"
         )
 
 
@@ -357,37 +387,37 @@ async def delete_api_key(
 async def list_user_api_keys(
     user_id: str = Depends(get_current_user_id)
 ) -> ListUserAPIKeysResponse:
-    """List all stored API keys for the user (without decrypting them)"""
+    """
+    List a user's stored API keys
+    """
     try:
         repos = get_repositories()
+        stored_keys = await repos.user.list_user_api_keys(user_id) # Changed from get_api_keys_by_user_id(UUID(user_id)) to list_user_api_keys(user_id)
         
-        api_keys = await repos.user.list_user_api_keys(user_id)
-        
-        key_responses = [
-            StoredAPIKeyResponse(
+        api_keys_response = []
+        for key in stored_keys:
+            api_keys_response.append(StoredAPIKeyResponse(
                 provider=key.provider,
-                validationStatus=key.validation_status,
-                lastValidatedAt=key.last_validated_at,
-                providerMetadata=key.provider_metadata,
-                message="",
-                createdAt=key.created_at,
-                updatedAt=key.updated_at
-            )
-            for key in api_keys
-        ]
-        
-        list_response = ListUserAPIKeysResponse(
-            apiKeys=key_responses,
-            totalKeys=len(key_responses)
+                validation_status=key.validation_status,
+                last_validated_at=key.last_validated_at,
+                provider_metadata=key.provider_metadata,
+                message="", # Message is not stored in DB for list response
+                created_at=key.created_at,
+                updated_at=key.updated_at
+            ))
+            
+        return ListUserAPIKeysResponse(
+            api_keys=api_keys_response,
+            total_keys=len(api_keys_response)
         )
         
-        return list_response
-        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error listing API keys: {e}")
+        logger.error(f"Error listing API keys for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list API keys"
+            detail="Internal server error during key listing"
         )
 
 
@@ -401,33 +431,27 @@ async def list_providers(
     user_context: Dict[str, Any] = Depends(require_auth)
 ) -> ListProvidersResponse:
     """
-    List all available LLM providers and their models
-    
-    This endpoint is authenticated to prevent abuse but doesn't require specific user data.
+    List all supported LLM providers and their models
     """
     try:
-        providers = LLMService.get_all_llm_providers()
-        
-        provider_responses = [
-            _convert_provider_to_response(provider, include_models)
-            for provider in providers
-        ]
+        providers = LLMService.get_all_llm_providers() # Changed from get_all_providers to get_all_llm_providers
+        provider_responses = [_convert_provider_to_response(p, include_models) for p in providers]
         
         total_models = sum(len(p.models) for p in provider_responses)
         
-        list_response = ListProvidersResponse(
+        return ListProvidersResponse(
             providers=provider_responses,
-            totalProviders=len(provider_responses),
-            totalModels=total_models
+            total_providers=len(provider_responses),
+            total_models=total_models
         )
         
-        return list_response
-        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error listing providers: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list providers"
+            detail="Internal server error while listing providers"
         )
 
 
@@ -438,34 +462,40 @@ async def list_models(
     user_context: Dict[str, Any] = Depends(require_auth)
 ) -> ListModelsResponse:
     """
-    List available models, optionally filtered by provider
-    
-    This endpoint is authenticated to prevent abuse but doesn't require specific user data.
+    List all supported LLM models, optionally filtered by provider
     """
     try:
         if provider:
-            # Get models for specific provider
-            hosted_models = LLMService.get_hosted_models_for_provider(provider)
-            model_responses = [_convert_model_to_response(model) for model in hosted_models]
+            models = LLMService.get_hosted_models_for_provider(provider)
         else:
-            # Get all models from all providers
-            providers = LLMService.get_all_llm_providers()
-            model_responses = []
-            for llm_provider in providers:
-                hosted_models = LLMService.get_hosted_models_for_provider(llm_provider.provider_id)
-                model_responses.extend([_convert_model_to_response(model) for model in hosted_models])
+            all_providers = LLMService.get_all_llm_providers()
+            models = []
+            for p in all_providers:
+                models.extend(LLMService.get_hosted_models_for_provider(p.provider_id))
+            
+        model_responses = [
+            _convert_model_to_response(m)
+            for m in models
+        ]
+
+        if not include_capabilities:
+            # Filter out capabilities if not requested (though for now, they are always included by _convert_model_to_response)
+            for model_res in model_responses:
+                model_res.capabilities = []
+
+        total_models = len(model_responses)
         
-        list_response = ListModelsResponse(
+        return ListModelsResponse(
             models=model_responses,
-            totalModels=len(model_responses),
-            providerFilter=provider
+            total_models=total_models,
+            provider_filter=provider
         )
         
-        return list_response
-        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error listing models: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list models"
+            detail="Internal server error while listing models"
         )

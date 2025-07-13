@@ -18,14 +18,14 @@ class ChatCompletionRequest(BaseSchema):
     messages: List[LLMMessage]
     
     # Optional parameters
-    api_key: Optional[str] = Field(default=None, alias="apiKey")  # Temporary API key (not stored)
+    api_key: Optional[str] = None  # Temporary API key (not stored)
     temperature: float = Field(default=0.7)
-    max_tokens: Optional[int] = Field(default=None, alias="maxTokens")
+    max_tokens: Optional[int] = None
     thinking: Optional[ThinkingEffort] = None
     stream: bool = Field(default=False)
     
     # Metadata
-    trace_id: Optional[str] = Field(default=None, alias="traceId")
+    trace_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
@@ -34,8 +34,8 @@ class ValidateAPIKeyRequest(BaseSchema):
     model_config = {"populate_by_name": True}
     
     provider: PROVIDER_ID
-    api_key: str = Field(alias="apiKey")
-    test_model: Optional[MODEL_NAME] = Field(default=None, alias="testModel")  # Model to test with
+    api_key: str
+    test_model: Optional[MODEL_NAME] = None  # Model to test with
 
 
 class StoreAPIKeyRequest(BaseSchema):
@@ -43,9 +43,9 @@ class StoreAPIKeyRequest(BaseSchema):
     model_config = {"populate_by_name": True}
     
     provider: PROVIDER_ID
-    api_key: str = Field(alias="apiKey")
-    validate_key: bool = Field(default=True, alias="validateKey")
-    provider_metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, alias="providerMetadata")
+    api_key: str
+    validate_key: bool = Field(default=True)
+    provider_metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class DeleteAPIKeyRequest(BaseSchema):
@@ -59,7 +59,7 @@ class ListProvidersRequest(BaseSchema):
     """Request to list available LLM providers (usually no parameters)"""
     model_config = {"populate_by_name": True}
     
-    include_models: bool = Field(default=True, alias="includeModels")
+    include_models: bool = Field(default=True)
 
 
 class ListModelsRequest(BaseSchema):
@@ -67,4 +67,4 @@ class ListModelsRequest(BaseSchema):
     model_config = {"populate_by_name": True}
     
     provider: Optional[PROVIDER_ID] = None  # If None, return models for all providers
-    include_capabilities: bool = Field(default=True, alias="includeCapabilities")
+    include_capabilities: bool = Field(default=True)

@@ -109,7 +109,8 @@ Response 200:
     "total": 1,
     "limit": 20,
     "offset": 0,
-    "has_more": false
+    "has_more": false,
+    "next_offset": null
   }
 }
 ```
@@ -252,7 +253,7 @@ Content-Type: application/json
 
 Response 201:
 {
-  "id": "ft_5",
+  "id": "ft_new",
   "name": "new-folder",
   "type": "folder",
   "path": "/characters/new-folder",
@@ -263,7 +264,62 @@ Response 201:
 }
 ```
 
-### Move File/Folder
+### Create File
+
+```http
+POST /api/projects/{project_id}/file-tree/files
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "new-file.md",
+  "parent_id": "ft_2",
+  "path": "/characters/protagonists/new-file.md",
+  "document_id": "doc_456"
+}
+
+Response 201:
+{
+  "id": "ft_new_file",
+  "name": "new-file.md",
+  "type": "file",
+  "path": "/characters/protagonists/new-file.md",
+  "parent_id": "ft_2",
+  "document_id": "doc_456",
+  "icon": null,
+  "tags": [],
+  "word_count": 0,
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-01T00:00:00Z"
+}
+```
+
+### Update File Tree Item
+
+```http
+PUT /api/projects/{project_id}/file-tree/{item_id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "updated-folder-name",
+  "tags": ["new-tag"]
+}
+
+Response 200:
+{
+  "id": "ft_1",
+  "name": "updated-folder-name",
+  "type": "folder",
+  "path": "/characters/updated-folder-name",
+  "parent_id": null,
+  "children": [],
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-01T13:00:00Z"
+}
+```
+
+### Move File Tree Item
 
 ```http
 PUT /api/projects/{project_id}/file-tree/{item_id}/move
@@ -271,39 +327,66 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "new_parent_id": "ft_2",
-  "new_name": "renamed-item",
-  "new_path": "/characters/protagonists/renamed-item"
+  "new_parent_id": "ft_new_parent",
+  "new_position": 0
 }
 
 Response 200:
 {
   "id": "ft_3",
-  "name": "renamed-item",
+  "name": "elara.md",
   "type": "file",
-  "path": "/characters/protagonists/renamed-item",
-  "parent_id": "ft_2",
-  "updated_at": "2025-01-01T12:30:00Z"
+  "path": "/new-path/elara.md",
+  "parent_id": "ft_new_parent",
+  "document_id": "doc_123",
+  "icon": "User",
+  "tags": ["fire-magic", "trauma"],
+  "word_count": 1200,
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-01T14:00:00Z"
+}
+```
+
+### Delete File Tree Item
+
+```http
+DELETE /api/projects/{project_id}/file-tree/{item_id}
+Authorization: Bearer {token}
+
+Response 200:
+{
+  "message": "File tree item deleted successfully."
+}
+
+Response 404:
+{
+  "error": "item_not_found",
+  "message": "File tree item not found or access denied."
 }
 ```
 
 ## Document Management
 
-### Get Document
+### Get Document by ID
 
 ```http
 GET /api/documents/{document_id}
 Authorization: Bearer {token}
-Query Parameters:
-  - include_content: boolean (default: true)
-  - version: string (optional, for versioning)
 
 Response 200:
 {
   "id": "doc_123",
   "project_id": "prj_123",
-  "title": "Elara Moonwhisper",
+  "title": "Elara's Character Profile",
   "path": "/characters/protagonists/elara.md",
+  "tags": ["character", "magic"],
+  "word_count": 1200,
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-01T12:00:00Z",
+  "version": "1.0.0",
+  "is_locked": false,
+  "locked_by": null,
+  "file_tree_id": "ft_3",
   "content": {
     "type": "doc",
     "content": [
@@ -312,26 +395,12 @@ Response 200:
         "content": [
           {
             "type": "text",
-            "text": "Elara is a powerful fire mage..."
+            "text": "Elara is a powerful fire mage with a mysterious past."
           }
         ]
       }
     ]
-  },
-  "tags": ["fire-magic", "trauma"],
-  "word_count": 1200,
-  "created_at": "2025-01-01T00:00:00Z",
-  "updated_at": "2025-01-01T12:00:00Z",
-  "version": "v1.2.3",
-  "is_locked": false,
-  "locked_by": null,
-  "file_tree_id": "ft_3"
-}
-
-Response 404:
-{
-  "error": "document_not_found",
-  "message": "Document not found or access denied"
+  }
 }
 ```
 
@@ -344,34 +413,54 @@ Content-Type: application/json
 
 {
   "project_id": "prj_123",
-  "title": "New Character",
-  "path": "/characters/new-character.md",
+  "title": "New Chapter",
+  "path": "/chapters/chapter-1.md",
   "content": {
     "type": "doc",
     "content": [
       {
         "type": "paragraph",
-        "content": []
+        "content": [
+          {
+            "type": "text",
+            "text": "This is the content of the new chapter."
+          }
+        ]
       }
     ]
   },
-  "tags": ["character"],
-  "file_tree_parent_id": "ft_2"
+  "tags": ["chapter", "draft"],
+  "file_tree_parent_id": "ft_1"
 }
 
 Response 201:
 {
-  "id": "doc_124",
+  "id": "doc_456",
   "project_id": "prj_123",
-  "title": "New Character",
-  "path": "/characters/new-character.md",
-  "content": { ... },
-  "tags": ["character"],
-  "word_count": 0,
+  "title": "New Chapter",
+  "path": "/chapters/chapter-1.md",
+  "tags": ["chapter", "draft"],
+  "word_count": 10,
   "created_at": "2025-01-01T00:00:00Z",
   "updated_at": "2025-01-01T00:00:00Z",
-  "version": "v1.0.0",
-  "file_tree_id": "ft_6"
+  "version": "1.0.0",
+  "is_locked": false,
+  "locked_by": null,
+  "file_tree_id": "ft_1",
+  "content": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "This is the content of the new chapter."
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
@@ -383,139 +472,335 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "title": "Updated Title",
+  "title": "Updated Chapter Title",
   "content": {
     "type": "doc",
-    "content": [...]
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "This is the updated content of the chapter."
+          }
+        ]
+      }
+    ]
   },
-  "tags": ["updated-tag"],
-  "version": "v1.2.3"
+  "tags": ["chapter", "final"],
+  "version": "1.1.0"
 }
 
 Response 200:
 {
-  "id": "doc_123",
-  "title": "Updated Title",
-  "content": { ... },
-  "tags": ["updated-tag"],
-  "word_count": 1250,
-  "updated_at": "2025-01-01T12:30:00Z",
-  "version": "v1.2.4"
-}
-
-Response 409:
-{
-  "error": "version_conflict",
-  "message": "Document has been modified by another user",
-  "current_version": "v1.2.5",
-  "provided_version": "v1.2.3"
+  "id": "doc_456",
+  "project_id": "prj_123",
+  "title": "Updated Chapter Title",
+  "path": "/chapters/chapter-1.md",
+  "tags": ["chapter", "final"],
+  "word_count": 12,
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-01T13:00:00Z",
+  "version": "1.1.0",
+  "is_locked": false,
+  "locked_by": null,
+  "file_tree_id": "ft_1",
+  "content": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "This is the updated content of the chapter."
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-### Get Document Metadata Only
+### Delete Document
 
 ```http
-GET /api/documents/{document_id}/meta
+DELETE /api/documents/{document_id}
 Authorization: Bearer {token}
 
 Response 200:
 {
-  "id": "doc_123",
-  "project_id": "prj_123",
-  "title": "Elara Moonwhisper",
-  "path": "/characters/protagonists/elara.md",
-  "tags": ["fire-magic", "trauma"],
-  "word_count": 1200,
-  "created_at": "2025-01-01T00:00:00Z",
-  "updated_at": "2025-01-01T12:00:00Z",
-  "version": "v1.2.3",
-  "is_locked": false,
-  "locked_by": null,
-  "file_tree_id": "ft_3"
+  "success": true,
+  "message": "Document deleted successfully."
+}
+
+Response 404:
+{
+  "error": "document_not_found",
+  "message": "Document not found or access denied"
 }
 ```
 
-### Bulk Operations
+## LLM Management
+
+### Chat Completion
 
 ```http
-POST /api/documents/bulk
+POST /api/llm/chat
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "operation": "get_multiple",
-  "document_ids": ["doc_123", "doc_124", "doc_125"],
-  "include_content": false
+  "provider": "openai",
+  "model": "gpt-4o",
+  "messages": [
+    { "role": "user", "content": "Hello, how are you?" }
+  ],
+  "api_key": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "temperature": 0.7,
+  "max_tokens": 100,
+  "thinking": "low",
+  "stream": false,
+  "trace_id": "trace_123",
+  "metadata": { "user_preference": "concise" }
 }
 
 Response 200:
 {
-  "documents": [
-    {
-      "id": "doc_123",
-      "title": "Elara Moonwhisper",
-      "word_count": 1200,
-      ...
-    }
-  ],
-  "not_found": [],
-  "access_denied": []
+  "content": "I am an AI assistant, how can I help you?",
+  "model": "gpt-4o",
+  "chunk_type": "content",
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 15,
+    "total_tokens": 25
+  },
+  "metadata": { "request_latency_ms": 200 }
 }
 ```
 
-## Reference System
-
-### Get Document References
+### Stream Chat Completion
 
 ```http
-GET /api/documents/{document_id}/references
+POST /api/llm/chat
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "provider": "anthropic",
+  "model": "claude-3-opus-20240229",
+  "messages": [
+    { "role": "user", "content": "Tell me a story." }
+  ],
+  "stream": true
+}
+
+Response 200 (Server-Sent Events):
+
+```text
+data: {"content": "Once upon a time", "model": "claude-3-opus-20240229", "chunk_type": "content", "is_final": false}
+
+data: {"content": "there was a princess", "model": "claude-3-opus-202402029", "chunk_type": "content", "is_final": false}
+
+data: {"content": "", "model": "claude-3-opus-20240229", "chunk_type": "content", "is_final": true}
+
+```
+
+### Validate API Key
+
+```http
+POST /api/llm/validate-key
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "provider": "openai",
+  "api_key": "sk-testkey",
+  "test_model": "gpt-3.5-turbo"
+}
+
+Response 200 (Valid):
+{
+  "provider": "openai",
+  "is_valid": true,
+  "validation_status": "valid",
+  "message": "API key is valid and working",
+  "tested_with_model": "gpt-3.5-turbo"
+}
+
+Response 200 (Invalid):
+{
+  "provider": "openai",
+  "is_valid": false,
+  "validation_status": "invalid",
+  "message": "API key validation failed: Incorrect API key",
+  "tested_with_model": "gpt-3.5-turbo",
+  "error_details": "Authentication error"
+}
+```
+
+### Store API Key
+
+```http
+POST /api/llm/store-key
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "provider": "openai",
+  "api_key": "sk-stored-testkey",
+  "validate_key": true,
+  "provider_metadata": { "region": "us-east" }
+}
+
+Response 200:
+{
+  "provider": "openai",
+  "validation_status": "valid",
+  "last_validated_at": "2025-01-01T15:00:00Z",
+  "provider_metadata": { "region": "us-east" },
+  "message": "API key stored and validated successfully",
+  "created_at": "2025-01-01T15:00:00Z",
+  "updated_at": "2025-01-01T15:00:00Z"
+}
+```
+
+### Delete API Key
+
+```http
+DELETE /api/llm/keys/{provider}
 Authorization: Bearer {token}
 
 Response 200:
 {
-  "outgoing_references": [
-    {
-      "target_document_id": "doc_124",
-      "target_title": "Marcus Stormwind",
-      "reference_text": "@marcus",
-      "count": 3
-    }
-  ],
-  "incoming_references": [
-    {
-      "source_document_id": "doc_125",
-      "source_title": "Chapter 1",
-      "reference_text": "@elara",
-      "count": 5
-    }
-  ]
+  "provider": "openai",
+  "deleted": true,
+  "message": "API key for provider openai deleted successfully."
 }
 ```
 
-### Search References
+### List User API Keys
 
 ```http
-GET /api/projects/{project_id}/references/search
+GET /api/llm/keys
+Authorization: Bearer {token}
+
+Response 200:
+{
+  "api_keys": [
+    {
+      "provider": "openai",
+      "validation_status": "valid",
+      "last_validated_at": "2025-01-01T15:00:00Z",
+      "provider_metadata": { "region": "us-east" },
+      "message": "",
+      "created_at": "2025-01-01T15:00:00Z",
+      "updated_at": "2025-01-01T15:00:00Z"
+    }
+  ],
+  "total_keys": 1
+}
+```
+
+### List Providers
+
+```http
+GET /api/llm/providers
 Authorization: Bearer {token}
 Query Parameters:
-  - q: string (search query)
-  - type: string (file|folder|both)
-  - limit: number (default: 10)
+  - include_models: boolean (default: true)
 
 Response 200:
 {
-  "results": [
+  "providers": [
     {
-      "id": "doc_123",
-      "title": "Elara Moonwhisper",
-      "type": "file",
-      "path": "/characters/protagonists/elara.md",
-      "icon": "User",
-      "tags": ["fire-magic"],
-      "match_score": 0.95
+      "provider_id": "openai",
+      "display_name": "OpenAI",
+      "api_key_format_hint": "sk-...",
+      "default_model": "gpt-4o",
+      "models": [
+        {
+          "model_name": "gpt-4o",
+          "provider": "openai",
+          "display_name": "GPT-4o",
+          "description": "OpenAI's most advanced, multimodal flagship model.",
+          "capabilities": ["reasoning", "vision", "tool_use", "structured_output"],
+          "input_token_limit": 128000,
+          "output_token_limit": 4096,
+          "default_temperature": 0.7,
+          "supports_thinking": true,
+          "thinking_budget_min": 10,
+          "thinking_budget_max": 500,
+          "input_cost_per_million": 5.0,
+          "output_cost_per_million": 15.0
+        }
+      ]
     }
   ],
-  "total": 1
+  "total_providers": 1,
+  "total_models": 1
+}
+```
+
+### List Models
+
+```http
+GET /api/llm/models
+Authorization: Bearer {token}
+Query Parameters:
+  - provider: string (optional) - filter by provider ID (e.g., 'openai')
+  - include_capabilities: boolean (default: true)
+
+Response 200:
+{
+  "models": [
+    {
+      "model_name": "gpt-4o",
+      "provider": "openai",
+      "display_name": "GPT-4o",
+      "description": "OpenAI's most advanced, multimodal flagship model.",
+      "capabilities": ["reasoning", "vision", "tool_use", "structured_output"],
+      "input_token_limit": 128000,
+      "output_token_limit": 4096,
+      "default_temperature": 0.7,
+      "supports_thinking": true,
+      "thinking_budget_min": 10,
+      "thinking_budget_max": 500,
+      "input_cost_per_million": 5.0,
+      "output_cost_per_million": 15.0
+    }
+  ],
+  "total_models": 1,
+  "provider_filter": "openai"
+}
+```
+
+## Health Check
+
+### Ping
+
+```http
+GET /api/health/ping
+
+Response 200:
+{
+  "message": "pong"
+}
+```
+
+### Status
+
+```http
+GET /api/health/status
+
+Response 200:
+{
+  "status": "healthy (memory fallback)",
+  "service": "shuscribe-api",
+  "version": "0.1.0",
+  "database": "healthy (memory fallback)",
+  "database_type": "memory",
+  "timestamp": "2025-01-01T16:00:00.000000Z"
 }
 ```
 

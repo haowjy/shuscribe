@@ -17,7 +17,7 @@ class ChatCompletionResponse(BaseSchema):
     
     content: str
     model: str
-    chunk_type: ChunkType = Field(alias="chunkType")
+    chunk_type: ChunkType
     usage: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -28,8 +28,8 @@ class ChatCompletionStreamChunk(BaseSchema):
     
     content: str
     model: str
-    chunk_type: ChunkType = Field(alias="chunkType") 
-    is_final: bool = Field(default=False, alias="isFinal")
+    chunk_type: ChunkType
+    is_final: bool = Field(default=False)
     usage: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -39,11 +39,11 @@ class APIKeyValidationResponse(BaseSchema):
     model_config = {"populate_by_name": True}
     
     provider: PROVIDER_ID
-    is_valid: bool = Field(alias="isValid")
-    validation_status: str = Field(alias="validationStatus")  # 'valid' | 'invalid' | 'error'
+    is_valid: bool
+    validation_status: str  # 'valid' | 'invalid' | 'error'
     message: str
-    tested_with_model: Optional[MODEL_NAME] = Field(default=None, alias="testedWithModel")
-    error_details: Optional[str] = Field(default=None, alias="errorDetails")
+    tested_with_model: Optional[MODEL_NAME] = None
+    error_details: Optional[str] = None
 
 
 class StoredAPIKeyResponse(BaseSchema):
@@ -51,47 +51,47 @@ class StoredAPIKeyResponse(BaseSchema):
     model_config = {"populate_by_name": True}
     
     provider: PROVIDER_ID
-    validation_status: str = Field(alias="validationStatus")
-    last_validated_at: Optional[datetime] = Field(default=None, alias="lastValidatedAt")
-    provider_metadata: Optional[Dict[str, Any]] = Field(default=None, alias="providerMetadata")
+    validation_status: str
+    last_validated_at: Optional[datetime] = None
+    provider_metadata: Optional[Dict[str, Any]] = None
     message: str
-    created_at: datetime = Field(alias="createdAt")
-    updated_at: Optional[datetime] = Field(default=None, alias="updatedAt")
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 class ModelCapabilityResponse(BaseSchema):
     """Model with its capabilities"""
     model_config = {"populate_by_name": True}
     
-    model_name: MODEL_NAME = Field(alias="modelName")
+    model_name: MODEL_NAME
     provider: PROVIDER_ID
-    display_name: str = Field(alias="displayName")
+    display_name: str
     description: Optional[str] = None
     capabilities: List[LLMCapability] = Field(default_factory=list)
     
     # Model specifications
-    input_token_limit: Optional[int] = Field(default=None, alias="inputTokenLimit")
-    output_token_limit: Optional[int] = Field(default=None, alias="outputTokenLimit")
-    default_temperature: float = Field(default=0.7, alias="defaultTemperature")
+    input_token_limit: Optional[int] = None
+    output_token_limit: Optional[int] = None
+    default_temperature: float = Field(default=0.7)
     
     # Thinking capabilities
-    supports_thinking: bool = Field(default=False, alias="supportsThinking")
-    thinking_budget_min: Optional[int] = Field(default=None, alias="thinkingBudgetMin")
-    thinking_budget_max: Optional[int] = Field(default=None, alias="thinkingBudgetMax")
+    supports_thinking: bool = Field(default=False)
+    thinking_budget_min: Optional[int] = None
+    thinking_budget_max: Optional[int] = None
     
     # Cost information
-    input_cost_per_million: Optional[float] = Field(default=None, alias="inputCostPerMillion")
-    output_cost_per_million: Optional[float] = Field(default=None, alias="outputCostPerMillion")
+    input_cost_per_million: Optional[float] = None
+    output_cost_per_million: Optional[float] = None
 
 
 class ProviderResponse(BaseSchema):
     """LLM provider information"""
     model_config = {"populate_by_name": True}
     
-    provider_id: PROVIDER_ID = Field(alias="providerId")
-    display_name: str = Field(alias="displayName")
-    api_key_format_hint: Optional[str] = Field(default=None, alias="apiKeyFormatHint")
-    default_model: Optional[MODEL_NAME] = Field(default=None, alias="defaultModel")
+    provider_id: PROVIDER_ID
+    display_name: str
+    api_key_format_hint: Optional[str] = None
+    default_model: Optional[MODEL_NAME] = None
     models: List[ModelCapabilityResponse] = Field(default_factory=list)
 
 
@@ -100,8 +100,8 @@ class ListProvidersResponse(BaseSchema):
     model_config = {"populate_by_name": True}
     
     providers: List[ProviderResponse] = Field(default_factory=list)
-    total_providers: int = Field(alias="totalProviders")
-    total_models: int = Field(alias="totalModels")
+    total_providers: int
+    total_models: int
 
 
 class ListModelsResponse(BaseSchema):
@@ -109,8 +109,8 @@ class ListModelsResponse(BaseSchema):
     model_config = {"populate_by_name": True}
     
     models: List[ModelCapabilityResponse] = Field(default_factory=list)
-    total_models: int = Field(alias="totalModels")
-    provider_filter: Optional[PROVIDER_ID] = Field(default=None, alias="providerFilter")
+    total_models: int
+    provider_filter: Optional[PROVIDER_ID] = None
 
 
 class DeleteAPIKeyResponse(BaseSchema):
@@ -126,18 +126,18 @@ class ListUserAPIKeysResponse(BaseSchema):
     """Response for listing user's stored API keys"""
     model_config = {"populate_by_name": True}
     
-    api_keys: List[StoredAPIKeyResponse] = Field(default_factory=list, alias="apiKeys")
-    total_keys: int = Field(alias="totalKeys")
+    api_keys: List[StoredAPIKeyResponse] = Field(default_factory=list)
+    total_keys: int
 
 
 class LLMUsageStatsResponse(BaseSchema):
     """Response for LLM usage statistics"""
     model_config = {"populate_by_name": True}
     
-    total_requests: int = Field(alias="totalRequests")
-    total_tokens_used: int = Field(alias="totalTokensUsed")
-    tokens_by_provider: Dict[str, int] = Field(default_factory=dict, alias="tokensByProvider")
-    requests_by_model: Dict[str, int] = Field(default_factory=dict, alias="requestsByModel")
-    cost_estimate: Optional[float] = Field(default=None, alias="costEstimate")
-    period_start: datetime = Field(alias="periodStart")
-    period_end: datetime = Field(alias="periodEnd")
+    total_requests: int
+    total_tokens_used: int
+    tokens_by_provider: Dict[str, int] = Field(default_factory=dict)
+    requests_by_model: Dict[str, int]
+    cost_estimate: Optional[float] = None
+    period_start: datetime
+    period_end: datetime

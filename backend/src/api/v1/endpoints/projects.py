@@ -26,7 +26,7 @@ class ProjectCollaborator(BaseModel):
     """Project collaborator info"""
     model_config = {"populate_by_name": True}
     
-    user_id: str = Field(alias="userId")
+    user_id: str
     role: str  # 'owner' | 'editor' | 'viewer'
     name: str
     avatar: str | None = None
@@ -36,9 +36,9 @@ class ProjectSettings(BaseModel):
     """Project settings"""
     model_config = {"populate_by_name": True}
     
-    auto_save_interval: int = Field(default=30000, alias="autoSaveInterval")  # 30 seconds
-    word_count_target: int = Field(default=0, alias="wordCountTarget")
-    backup_enabled: bool = Field(default=True, alias="backupEnabled")
+    auto_save_interval: int = Field(default=30000)  # 30 seconds
+    word_count_target: int = Field(default=0)
+    backup_enabled: bool = Field(default=True)
 
 
 class ProjectSummary(BaseModel):
@@ -48,10 +48,10 @@ class ProjectSummary(BaseModel):
     id: str
     title: str
     description: str
-    word_count: int = Field(alias="wordCount")
-    document_count: int = Field(alias="documentCount")
-    created_at: str = Field(alias="createdAt")
-    updated_at: str = Field(alias="updatedAt")
+    word_count: int
+    document_count: int
+    created_at: str
+    updated_at: str
     tags: List[str]
     collaborators: List[ProjectCollaborator]
 
@@ -63,10 +63,10 @@ class ProjectDetails(BaseModel):
     id: str
     title: str
     description: str
-    word_count: int = Field(alias="wordCount")
-    document_count: int = Field(alias="documentCount")
-    created_at: str = Field(alias="createdAt")
-    updated_at: str = Field(alias="updatedAt")
+    word_count: int
+    document_count: int
+    created_at: str
+    updated_at: str
     tags: List[str]
     collaborators: List[ProjectCollaborator]
     settings: ProjectSettings
@@ -79,8 +79,8 @@ class PaginationMeta(BaseModel):
     total: int
     limit: int
     offset: int
-    has_more: bool = Field(alias="hasMore")
-    next_offset: int | None = Field(default=None, alias="nextOffset")
+    has_more: bool
+    next_offset: int | None = None
 
 
 class ProjectListResponse(BaseModel):
@@ -119,34 +119,34 @@ class FileTreeItemResponse(BaseModel):
     name: str
     type: str  # 'file' | 'folder'
     path: str
-    parent_id: str | None = Field(default=None, alias="parentId")
+    parent_id: str | None = None
     children: List["FileTreeItemResponse"] | None = None
     
     # File-specific properties
-    document_id: str | None = Field(default=None, alias="documentId")
+    document_id: str | None = None
     icon: str | None = None
     tags: List[str] = []
-    word_count: int | None = Field(default=None, alias="wordCount")
+    word_count: int | None = None
     
     # Timestamps
-    created_at: str = Field(alias="createdAt")
-    updated_at: str = Field(alias="updatedAt")
+    created_at: str
+    updated_at: str
 
 
 class FileTreeMetadata(BaseModel):
     """File tree metadata"""
     model_config = {"populate_by_name": True}
     
-    total_files: int = Field(alias="totalFiles")
-    total_folders: int = Field(alias="totalFolders")
-    last_updated: str = Field(alias="lastUpdated")
+    total_files: int
+    total_folders: int
+    last_updated: str
 
 
 class FileTreeResponse(BaseModel):
     """File tree response matching frontend FileTreeResponse interface"""
     model_config = {"populate_by_name": True}
     
-    file_tree: List[FileTreeItemResponse] = Field(alias="fileTree")
+    file_tree: List[FileTreeItemResponse]
     metadata: FileTreeMetadata
 
 
@@ -162,7 +162,7 @@ def project_to_summary(project: Project) -> ProjectSummary:
     collaborators = []
     for collab in project.collaborators:
         collaborators.append(ProjectCollaborator(
-            userId=collab.get("user_id", ""),
+            user_id=collab.get("user_id", ""),
             role=collab.get("role", "viewer"),
             name=collab.get("name", ""),
             avatar=collab.get("avatar"),
@@ -172,10 +172,10 @@ def project_to_summary(project: Project) -> ProjectSummary:
         id=project.id,
         title=project.title,
         description=project.description,
-        wordCount=project.word_count,
-        documentCount=project.document_count,
-        createdAt=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
-        updatedAt=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
+        word_count=project.word_count,
+        document_count=project.document_count,
+        created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
+        updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
         tags=project.tags,
         collaborators=collaborators,
     )
@@ -187,7 +187,7 @@ def project_to_response(project: Project) -> ProjectDetails:
     collaborators = []
     for collab in project.collaborators:
         collaborators.append(ProjectCollaborator(
-            userId=collab.get("user_id", ""),
+            user_id=collab.get("user_id", ""),
             role=collab.get("role", "viewer"),
             name=collab.get("name", ""),
             avatar=collab.get("avatar"),
@@ -196,19 +196,19 @@ def project_to_response(project: Project) -> ProjectDetails:
     # Parse settings from JSON with defaults
     settings_data = project.settings or {}
     settings = ProjectSettings(
-        autoSaveInterval=settings_data.get("auto_save_interval", 30000),
-        wordCountTarget=settings_data.get("word_count_target", 0),
-        backupEnabled=settings_data.get("backup_enabled", True),
+        auto_save_interval=settings_data.get("auto_save_interval", 30000),
+        word_count_target=settings_data.get("word_count_target", 0),
+        backup_enabled=settings_data.get("backup_enabled", True),
     )
     
     return ProjectDetails(
         id=project.id,
         title=project.title,
         description=project.description,
-        wordCount=project.word_count,
-        documentCount=project.document_count,
-        createdAt=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
-        updatedAt=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
+        word_count=project.word_count,
+        document_count=project.document_count,
+        created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
+        updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
         tags=project.tags,
         collaborators=collaborators,
         settings=settings,
@@ -222,14 +222,14 @@ def file_tree_item_to_response(item: FileTreeItem, children: List["FileTreeItemR
         name=item.name,
         type=item.type,
         path=item.path,
-        parentId=item.parent_id,
+        parent_id=item.parent_id,
         children=children if children else None,
-        documentId=item.document_id,
+        document_id=item.document_id,
         icon=item.icon,
         tags=item.tags,
-        wordCount=item.word_count,
-        createdAt=item.created_at.isoformat() if hasattr(item.created_at, 'isoformat') else str(item.created_at),
-        updatedAt=item.updated_at.isoformat() if hasattr(item.updated_at, 'isoformat') else str(item.updated_at),
+        word_count=item.word_count,
+        created_at=item.created_at.isoformat() if hasattr(item.created_at, 'isoformat') else str(item.created_at),
+        updated_at=item.updated_at.isoformat() if hasattr(item.updated_at, 'isoformat') else str(item.updated_at),
     )
 
 
@@ -309,8 +309,8 @@ async def list_projects(
             total=total,
             limit=limit,
             offset=offset,
-            hasMore=has_more,
-            nextOffset=next_offset
+            has_more=has_more,
+            next_offset=next_offset
         )
         
         response_data = ProjectListResponse(
@@ -400,15 +400,15 @@ async def get_project_file_tree(
         last_updated = last_updated_obj.isoformat() if hasattr(last_updated_obj, 'isoformat') else str(last_updated_obj)
         
         metadata = FileTreeMetadata(
-            totalFiles=total_files,
-            totalFolders=total_folders,
-            lastUpdated=last_updated,
+            total_files=total_files,
+            total_folders=total_folders,
+            last_updated=last_updated,
         )
         
         logger.info(f"Retrieved file tree for project {project_id}: {total_files} files, {total_folders} folders")
         
         response_data = FileTreeResponse(
-            fileTree=file_tree,
+            file_tree=file_tree,
             metadata=metadata,
         )
         return response_data
@@ -499,6 +499,12 @@ async def update_project(
         # Update project
         updated_project = await repos.project.update(project_id, updates)
         
+        if updated_project is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update project: Updated project not returned"
+            )
+
         logger.info(f"Updated project: {project_id} for user: {user_id}")
         response_data = project_to_response(updated_project)
         return response_data

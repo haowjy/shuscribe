@@ -53,17 +53,17 @@ class DocumentMeta(BaseModel):
     model_config = {"populate_by_name": True}
     
     id: str
-    project_id: str = Field(alias="projectId")
+    project_id: str
     title: str
     path: str
     tags: List[str]
-    word_count: int = Field(alias="wordCount")
-    created_at: str = Field(alias="createdAt")
-    updated_at: str = Field(alias="updatedAt")
+    word_count: int
+    created_at: str
+    updated_at: str
     version: str
-    is_locked: bool = Field(alias="isLocked")
-    locked_by: str | None = Field(default=None, alias="lockedBy")
-    file_tree_id: str | None = Field(default=None, alias="fileTreeId")
+    is_locked: bool
+    locked_by: str | None = None
+    file_tree_id: str | None = None
 
 
 class DocumentResponse(DocumentMeta):
@@ -75,12 +75,12 @@ class CreateDocumentRequest(BaseModel):
     """Request to create a new document"""
     model_config = {"populate_by_name": True}
     
-    project_id: str = Field(alias="projectId")
+    project_id: str
     title: str
     path: str
     content: DocumentContent = DocumentContent()
     tags: List[str] = []
-    file_tree_parent_id: str | None = Field(default=None, alias="fileTreeParentId")
+    file_tree_parent_id: str | None = None
 
 
 class UpdateDocumentRequest(BaseModel):
@@ -249,7 +249,7 @@ async def create_document(
             "word_count": project.word_count + word_count,
         })
         
-        logger.info(f"Created document: {document.title} (ID: {document.id})")
+        logger.info(f"Created document: {document.title} (ID: {document.id}) for project {request.project_id}")
         return document_to_response(document)
         
     except HTTPException:
@@ -276,7 +276,7 @@ async def update_document(
     try:
         repos = get_repositories()
         
-        # Get existing document
+        # Check if document exists
         existing_document = await repos.document.get_by_id(document_id)
         if not existing_document:
             raise HTTPException(
@@ -287,37 +287,37 @@ async def update_document(
         # Prepare updates
         updates = {}
         old_word_count = existing_document.word_count
+        new_word_count = old_word_count
         
         if request.title is not None:
             updates["title"] = request.title
-        
         if request.content is not None:
             updates["content"] = request.content.model_dump()
-            # Recalculate word count
             new_word_count = calculate_word_count(request.content)
             updates["word_count"] = new_word_count
-        else:
-            new_word_count = old_word_count
-        
         if request.tags is not None:
             updates["tags"] = request.tags
-        
         if request.version is not None:
             updates["version"] = request.version
-        
+            
         # Update document
         updated_document = await repos.document.update(document_id, updates)
         
+        if updated_document is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update document: Updated document not returned"
+            )
+            
         # Update project word count if content changed
-        if "word_count" in updates:
-            word_count_delta = new_word_count - old_word_count
+        if new_word_count != old_word_count:
             project = await repos.project.get_by_id(existing_document.project_id)
             if project:
                 await repos.project.update(existing_document.project_id, {
-                    "word_count": project.word_count + word_count_delta,
+                    "word_count": project.word_count - old_word_count + new_word_count,
                 })
-        
-        logger.info(f"Updated document: {updated_document.title} (ID: {document_id})")
+                
+        logger.info(f"Updated document: {document_id} for project {existing_document.project_id}")
         return document_to_response(updated_document)
         
     except HTTPException:
@@ -343,29 +343,33 @@ async def delete_document(
     try:
         repos = get_repositories()
         
-        # Get document to update project counts
-        document = await repos.document.get_by_id(document_id)
-        if not document:
+        # Check if document exists and get its project ID and word count for project update
+        existing_document = await repos.document.get_by_id(document_id)
+        if not existing_document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Document with ID {document_id} not found"
             )
-        
+
         # Delete document
         success = await repos.document.delete(document_id)
         
         if success:
-            # Update project counts
-            project = await repos.project.get_by_id(document.project_id)
+            # Update project document count and word count
+            project = await repos.project.get_by_id(existing_document.project_id)
             if project:
-                await repos.project.update(document.project_id, {
-                    "document_count": max(0, project.document_count - 1),
-                    "word_count": max(0, project.word_count - document.word_count),
+                await repos.project.update(existing_document.project_id, {
+                    "document_count": project.document_count - 1,
+                    "word_count": project.word_count - existing_document.word_count,
                 })
-            
-            logger.info(f"Deleted document: {document.title} (ID: {document_id})")
-        
-        return DeleteResponse(success=success)
+                
+            logger.info(f"Deleted document: {document_id} from project {existing_document.project_id}")
+            return DeleteResponse(success=True)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete document"
+            )
         
     except HTTPException:
         raise

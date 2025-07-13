@@ -70,7 +70,7 @@ export interface ProjectCollaborator {
   user_id: string;
   role: 'owner' | 'editor' | 'viewer';
   name: string;
-  avatar?: string;
+  avatar?: string | null;
 }
 
 export interface ProjectSettings {

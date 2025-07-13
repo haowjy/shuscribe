@@ -19,12 +19,12 @@ class CreateDocumentRequest(BaseSchema):
     """Request to create a new document"""
     model_config = {"populate_by_name": True}
     
-    project_id: str = Field(alias="projectId")
+    project_id: str
     title: str
     path: str
     content: DocumentContent = Field(default_factory=DocumentContent)
     tags: List[str] = Field(default_factory=list)
-    file_tree_parent_id: Optional[str] = Field(default=None, alias="fileTreeParentId")
+    file_tree_parent_id: Optional[str] = None
 
 
 class UpdateDocumentRequest(BaseSchema):
@@ -41,7 +41,7 @@ class BulkDocumentRequest(BaseSchema):
     """Request for bulk document operations"""
     model_config = {"populate_by_name": True}
     
-    document_ids: List[str] = Field(alias="documentIds")
+    document_ids: List[str]
     operation: str  # 'delete', 'tag', 'move'
     parameters: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
@@ -51,7 +51,7 @@ class DocumentSearchRequest(BaseSchema):
     model_config = {"populate_by_name": True}
     
     query: str
-    project_id: Optional[str] = Field(default=None, alias="projectId")
+    project_id: Optional[str] = None
     tags: Optional[List[str]] = Field(default=None)
     limit: int = Field(default=20)
     offset: int = Field(default=0)

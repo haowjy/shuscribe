@@ -1,3 +1,5 @@
+import { ProjectCollaborator } from '@/types/api';
+
 export interface Project {
   id: string;
   title: string;
@@ -6,7 +8,8 @@ export interface Project {
   updated_at: string;
   document_count: number;
   word_count: number;
-  collaborators: number;
+  collaborators: ProjectCollaborator[];
+  tags: string[];
   genre?: string;
 }
 
@@ -79,7 +82,15 @@ export const mockProjects: Project[] = [
     updated_at: "2024-01-20T14:22:00Z",
     document_count: 23,
     word_count: 45230,
-    collaborators: 1,
+    collaborators: [
+      {
+        user_id: "user-1",
+        role: "owner",
+        name: "You",
+        avatar: null
+      }
+    ],
+    tags: ["Fantasy", "Magic", "Coming of Age"],
     genre: "Fantasy"
   },
   {
@@ -90,7 +101,21 @@ export const mockProjects: Project[] = [
     updated_at: "2024-01-18T16:45:00Z",
     document_count: 15,
     word_count: 28750,
-    collaborators: 2,
+    collaborators: [
+      {
+        user_id: "user-1",
+        role: "owner",
+        name: "You",
+        avatar: null
+      },
+      {
+        user_id: "user-2",
+        role: "editor",
+        name: "Alex Chen",
+        avatar: null
+      }
+    ],
+    tags: ["Sci-Fi", "Noir", "Cyberpunk"],
     genre: "Sci-Fi"
   },
   {
@@ -101,7 +126,15 @@ export const mockProjects: Project[] = [
     updated_at: "2024-01-19T13:30:00Z",
     document_count: 8,
     word_count: 12400,
-    collaborators: 1,
+    collaborators: [
+      {
+        user_id: "user-1",
+        role: "owner",
+        name: "You",
+        avatar: null
+      }
+    ],
+    tags: ["Mystery", "Contemporary", "Small Town"],
     genre: "Mystery"
   }
 ];

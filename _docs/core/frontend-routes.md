@@ -64,7 +64,7 @@ ShuScribe uses Next.js App Router for client-side navigation and server-side ren
 - **Component**: `src/app/dashboard/page.tsx`
 - **Purpose**: Project selection and management hub
 - **Features**: 
-  - Project list with metadata (word count, document count, last updated)
+  - Project list with metadata (word_count, document_count, last_updated)
   - Create new project button
   - Project cards with click-to-open functionality
   - Empty state for new users
@@ -116,7 +116,7 @@ ShuScribe includes Next.js API routes for development and MSW integration:
 ## Route Parameters
 
 ### Project ID Parameter
-- **Format**: `?project=<projectId>`
+- **Format**: `?project=<project_id>`
 - **Example**: `/?project=prj_fantasy_novel`
 - **Validation**: Should match backend project ID format
 - **Fallback**: Redirects to `/dashboard` if invalid or missing

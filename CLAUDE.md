@@ -88,8 +88,8 @@ docker-compose down                      # Stop all services
 - **Error Handling**: Consistent error format across frontend and backend
 
 **Field Naming Conventions**:
-- **Frontend**: camelCase (`projectId`, `createdAt`, `wordCount`)
-- **Backend**: snake_case with Pydantic aliases for automatic conversion
+- **Frontend**: snake_case (`project_id`, `created_at`, `word_count`)
+- **Backend**: snake_case (prefer no aliases)
 - **API**: Backend handles both formats seamlessly
 
 ### Integration Development Workflow
@@ -129,7 +129,6 @@ docker-compose down                      # Stop all services
 ### API & Integration Documentation
 
 - **📝 API Contracts**: [`/_docs/api/contracts.md`](_docs/api/contracts.md) - Frontend-backend interface definitions
-- **🔗 Field Mapping**: [`/_docs/api/field-mapping.md`](_docs/api/field-mapping.md) - camelCase/snake_case conversion guide (planned)
 - **🔐 Authentication**: [`/_docs/api/authentication.md`](_docs/api/authentication.md) - Auth implementation details (planned)
 
 ### Development Documentation

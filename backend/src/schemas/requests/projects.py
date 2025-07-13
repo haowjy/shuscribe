@@ -11,7 +11,7 @@ class ProjectCollaborator(BaseModel):
     """Project collaborator info"""
     model_config = {"populate_by_name": True}
     
-    user_id: str = Field(alias="userId")
+    user_id: str
     role: str  # 'owner' | 'editor' | 'viewer'
     name: str
     avatar: Optional[str] = None
@@ -21,9 +21,9 @@ class ProjectSettings(BaseModel):
     """Project settings"""
     model_config = {"populate_by_name": True}
     
-    auto_save_interval: int = Field(default=30000, alias="autoSaveInterval")
-    word_count_target: int = Field(default=0, alias="wordCountTarget")
-    backup_enabled: bool = Field(default=True, alias="backupEnabled")
+    auto_save_interval: int = Field(default=30000)
+    word_count_target: int = Field(default=0)
+    backup_enabled: bool = Field(default=True)
 
 
 class CreateProjectRequest(BaseSchema):
@@ -52,7 +52,7 @@ class CreateFileTreeItemRequest(BaseSchema):
     
     name: str
     type: str  # 'file' | 'folder'
-    parent_id: Optional[str] = Field(default=None, alias="parentId")
+    parent_id: Optional[str] = None
     icon: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
 
@@ -62,7 +62,7 @@ class UpdateFileTreeItemRequest(BaseSchema):
     model_config = {"populate_by_name": True}
     
     name: Optional[str] = None
-    parent_id: Optional[str] = Field(default=None, alias="parentId")
+    parent_id: Optional[str] = None
     icon: Optional[str] = None
     tags: Optional[List[str]] = None
 
@@ -71,8 +71,8 @@ class MoveFileTreeItemRequest(BaseSchema):
     """Request to move a file tree item"""
     model_config = {"populate_by_name": True}
     
-    new_parent_id: Optional[str] = Field(alias="newParentId")
-    new_position: Optional[int] = Field(default=None, alias="newPosition")
+    new_parent_id: Optional[str] = None
+    new_position: Optional[int] = None
 
 
 class ProjectSearchRequest(BaseSchema):
@@ -83,5 +83,5 @@ class ProjectSearchRequest(BaseSchema):
     tags: Optional[List[str]] = None
     limit: int = Field(default=20)
     offset: int = Field(default=0)
-    sort_by: str = Field(default="updated_at", alias="sortBy")  # 'created_at' | 'updated_at' | 'title'
-    sort_order: str = Field(default="desc", alias="sortOrder")  # 'asc' | 'desc'
+    sort_by: str = Field(default="updated_at")  # 'created_at' | 'updated_at' | 'title'
+    sort_order: str = Field(default="desc")  # 'asc' | 'desc'

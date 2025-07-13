@@ -22,8 +22,8 @@ class BaseSchema(BaseModel):
 
 class TimestampSchema(BaseSchema):
     """Schema with timestamp fields"""
-    created_at: datetime = Field(alias="createdAt")
-    updated_at: Optional[datetime] = Field(None, alias="updatedAt")
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 class UUIDSchema(BaseSchema):
@@ -34,7 +34,7 @@ class UUIDSchema(BaseSchema):
 class PaginationParams(BaseSchema):
     """Pagination parameters"""
     page: int = 1
-    page_size: int = Field(default=20, alias="pageSize")
+    page_size: int = Field(default=20)
     
     def offset(self) -> int:
         return (self.page - 1) * self.page_size
@@ -45,8 +45,8 @@ class PaginatedResponse(BaseSchema):
     items: list
     total: int
     page: int
-    page_size: int = Field(alias="pageSize")
-    total_pages: int = Field(alias="totalPages")
+    page_size: int
+    total_pages: int
     
     @classmethod
     def create(cls, items: list, total: int, pagination: PaginationParams):
@@ -55,8 +55,8 @@ class PaginatedResponse(BaseSchema):
             items=items,
             total=total,
             page=pagination.page,
-            pageSize=pagination.page_size,
-            totalPages=total_pages,
+            page_size=pagination.page_size,
+            total_pages=total_pages,
         )
 
 

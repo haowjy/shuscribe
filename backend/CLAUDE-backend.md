@@ -15,7 +15,6 @@ This is the **backend-specific** guide. For complete project context, see:
 **Key Integration Points**:
 - **API Contract Source**: Frontend `src/types/api.ts` defines the expected API structure
 - **Response Format**: Backend returns `ApiResponse<T>` wrapper matching frontend
-- **Field Naming**: Backend uses Pydantic aliases for camelCase/snake_case compatibility
 - **Authentication**: Backend trusts frontend auth tokens, extracts for context only
 - **Error Handling**: Consistent error format matching frontend expectations
 
@@ -226,7 +225,6 @@ When using file backend, the structure in `temp/` is:
 
 ### API Documentation (`/_docs/api/`)
 - **📝 API Contracts**: [`/_docs/api/contracts.md`](/_docs/api/contracts.md) - Frontend-backend interface definitions
-- **🔗 Field Mapping**: [`/_docs/api/field-mapping.md`](/_docs/api/field-mapping.md) - camelCase/snake_case conversion guide (planned)
 - **🔐 Authentication**: [`/_docs/api/authentication.md`](/_docs/api/authentication.md) - Auth implementation details (planned)
 
 ### Development Documentation (`/_docs/development/`)
@@ -258,7 +256,7 @@ async def get_project(
     return ApiResponse.success(project_to_response(project))
 ```
 
-### Pydantic Model with Field Aliases
+### Pydantic Model
 
 ```python
 class ProjectDetails(BaseModel):
@@ -266,8 +264,8 @@ class ProjectDetails(BaseModel):
     model_config = {"populate_by_name": True}
     
     id: str
-    word_count: int = Field(alias="wordCount")  # Frontend uses camelCase
-    created_at: str = Field(alias="createdAt")  # Backend uses snake_case
+    word_count: int
+    created_at: str
 ```
 
 ### Authentication Integration
@@ -314,7 +312,6 @@ When making backend changes, update documentation in this order:
 - **Stub Implementation**: Use `NotImplementedError` with TODO comments for planned features
 - **Frontend Contract**: Always check `/frontend/src/types/api.ts` before implementing new API endpoints
 - **Response Format**: Use `ApiResponse<T>` wrapper for all API responses to match frontend expectations
-- **Field Naming**: Include Pydantic aliases for camelCase/snake_case compatibility
 - **Documentation**: Include complete request/response schemas with examples in API documentation
 
 ### Backend Documentation Scope

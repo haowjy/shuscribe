@@ -16,11 +16,11 @@ class AuthorNote(BaseSchema):
     title: str
     content: str
     tags: List[str] = Field(default_factory=list)
-    project_id: str = Field(alias="projectId")
-    document_id: Optional[str] = Field(None, alias="documentId")
+    project_id: str
+    document_id: Optional[str] = None
     priority: str = Field(default="normal")  # low, normal, high
-    created_at: datetime = Field(alias="createdAt")
-    updated_at: Optional[datetime] = Field(None, alias="updatedAt")
+    created_at: datetime
+    updated_at: Optional[datetime] = None
     
     
 class ResearchItem(BaseSchema):
@@ -30,10 +30,10 @@ class ResearchItem(BaseSchema):
     content: str
     source: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
-    project_id: str = Field(alias="projectId")
+    project_id: str
     category: str = Field(default="general")  # general, worldbuilding, character, plot
-    created_at: datetime = Field(alias="createdAt")
-    updated_at: Optional[datetime] = Field(None, alias="updatedAt")
+    created_at: datetime
+    updated_at: Optional[datetime] = None
     
     
 class CharacterProfile(BaseSchema):
@@ -45,7 +45,7 @@ class CharacterProfile(BaseSchema):
     relationships: Dict[str, Any] = Field(default_factory=dict)
     backstory: str = Field(default="")
     tags: List[str] = Field(default_factory=list)
-    project_id: str = Field(alias="projectId")
-    avatar_url: Optional[str] = Field(None, alias="avatarUrl")
-    created_at: datetime = Field(alias="createdAt")
-    updated_at: Optional[datetime] = Field(None, alias="updatedAt")
+    project_id: str
+    avatar_url: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None

@@ -20,17 +20,17 @@ class DocumentMeta(BaseSchema):
     model_config = {"populate_by_name": True}
     
     id: str
-    project_id: str = Field(alias="projectId")
+    project_id: str
     title: str
     path: str
     tags: List[str] = Field(default_factory=list)
-    word_count: int = Field(alias="wordCount")
-    created_at: str = Field(alias="createdAt")
-    updated_at: str = Field(alias="updatedAt")
+    word_count: int
+    created_at: str
+    updated_at: str
     version: str
-    is_locked: bool = Field(alias="isLocked")
-    locked_by: Optional[str] = Field(default=None, alias="lockedBy")
-    file_tree_id: Optional[str] = Field(default=None, alias="fileTreeId")
+    is_locked: bool
+    locked_by: Optional[str] = None
+    file_tree_id: Optional[str] = None
 
 
 class DocumentResponse(DocumentMeta):
@@ -46,7 +46,7 @@ class DocumentReference(BaseSchema):
     title: str
     path: str
     type: str  # 'character' | 'location' | 'item' | 'chapter' | 'note'
-    project_id: str = Field(alias="projectId")
+    project_id: str
     tags: List[str] = Field(default_factory=list)
 
 
@@ -58,8 +58,8 @@ class DocumentListResponse(BaseSchema):
     total: int
     limit: int
     offset: int
-    has_more: bool = Field(alias="hasMore")
-    next_offset: Optional[int] = Field(default=None, alias="nextOffset")
+    has_more: bool
+    next_offset: Optional[int] = None
 
 
 class DocumentSearchResponse(BaseSchema):
@@ -71,7 +71,7 @@ class DocumentSearchResponse(BaseSchema):
     query: str
     limit: int
     offset: int
-    has_more: bool = Field(alias="hasMore")
+    has_more: bool
 
 
 class DeleteResponse(BaseSchema):
@@ -80,7 +80,7 @@ class DeleteResponse(BaseSchema):
     
     success: bool
     message: str
-    deleted_count: int = Field(alias="deletedCount")
+    deleted_count: int
 
 
 class BulkOperationResponse(BaseSchema):
@@ -89,6 +89,6 @@ class BulkOperationResponse(BaseSchema):
     
     success: bool
     message: str
-    processed_count: int = Field(alias="processedCount")
-    failed_count: int = Field(alias="failedCount")
+    processed_count: int
+    failed_count: int
     errors: List[str] = Field(default_factory=list)

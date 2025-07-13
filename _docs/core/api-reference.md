@@ -8,7 +8,6 @@ Complete API documentation for the ShuScribe backend service.
 - [Authentication](#authentication)
 - [Response Format](#response-format)
 - [Error Handling](#error-handling)
-- [Field Naming Conventions](#field-naming-conventions)
 - [Health Endpoints](#health-endpoints)
 - [Projects API](#projects-api)
 - [Documents API](#documents-api)
@@ -99,20 +98,6 @@ interface ApiError {
 }
 ```
 
-## Field Naming Conventions
-
-The API handles field name conversion between frontend (camelCase) and backend (snake_case):
-
-| Frontend (camelCase) | Backend (snake_case) | Example |
-|---------------------|---------------------|---------|
-| `projectId` | `project_id` | Project identifier |
-| `createdAt` | `created_at` | Creation timestamp |
-| `updatedAt` | `updated_at` | Update timestamp |
-| `wordCount` | `word_count` | Document word count |
-| `documentCount` | `document_count` | Project document count |
-| `isLocked` | `is_locked` | Document lock status |
-| `fileTreeId` | `file_tree_id` | File tree reference |
-
 ## Health Endpoints
 
 ### Ping Check
@@ -183,8 +168,8 @@ interface ProjectListResponse {
       total: number;
       limit: number;
       offset: number;
-      hasMore: boolean;
-      nextOffset?: number;
+      has_more: boolean;
+      next_offset?: number;
     };
   };
 }
@@ -193,16 +178,16 @@ interface ProjectSummary {
   id: string;
   title: string;
   description: string;
-  wordCount: number;
-  documentCount: number;
-  createdAt: string;
-  updatedAt: string;
+  word_count: number;
+  document_count: number;
+  created_at: string;
+  updated_at: string;
   tags: string[];
   collaborators: ProjectCollaborator[];
 }
 
 interface ProjectCollaborator {
-  userId: string;
+  user_id: string;
   role: "owner" | "editor" | "viewer";
   name: string;
   avatar?: string;
@@ -228,9 +213,9 @@ GET /api/v1/projects/{projectId}
 ```typescript
 interface ProjectDetails extends ProjectSummary {
   settings: {
-    autoSaveInterval: number;  // milliseconds
-    wordCountTarget: number;
-    backupEnabled: boolean;
+    auto_save_interval: number;  // milliseconds
+    word_count_target: number;
+    backup_enabled: boolean;
   };
 }
 ```
@@ -242,23 +227,23 @@ interface ProjectDetails extends ProjectSummary {
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "title": "The Quantum Chronicles",
     "description": "A science fiction series about time travel",
-    "wordCount": 15420,
-    "documentCount": 8,
-    "createdAt": "2024-01-01T00:00:00Z",
-    "updatedAt": "2024-01-15T10:30:00Z",
+    "word_count": 15420,
+    "document_count": 8,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T10:30:00Z",
     "tags": ["sci-fi", "time-travel", "adventure"],
     "collaborators": [
       {
-        "userId": "user-123",
+        "user_id": "user-123",
         "role": "owner",
         "name": "Jane Author",
         "avatar": "https://example.com/avatar.jpg"
       }
     ],
     "settings": {
-      "autoSaveInterval": 30000,
-      "wordCountTarget": 80000,
-      "backupEnabled": true
+      "auto_save_interval": 30000,
+      "word_count_target": 80000,
+      "backup_enabled": true
     }
   },
   "error": null,
@@ -287,9 +272,9 @@ GET /api/v1/projects/{projectId}/file-tree
 interface FileTreeResponse {
   fileTree: FileTreeItem[];
   metadata: {
-    totalFiles: number;
-    totalFolders: number;
-    lastUpdated: string;
+    total_files: number;
+    total_folders: number;
+    last_updated: string;
   };
 }
 
@@ -298,18 +283,18 @@ interface FileTreeItem {
   name: string;
   type: "file" | "folder";
   path: string;
-  parentId?: string;
+  parent_id?: string;
   children?: FileTreeItem[];
   
   // File-specific properties
-  documentId?: string;
+  document_id?: string;
   icon?: string;
   tags: string[];
-  wordCount?: number;
+  word_count?: number;
   
   // Timestamps
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 ```
 
@@ -330,9 +315,9 @@ interface CreateProjectRequest {
   description: string;
   tags?: string[];
   settings?: {
-    autoSaveInterval?: number;
-    wordCountTarget?: number;
-    backupEnabled?: boolean;
+    auto_save_interval?: number;
+    word_count_target?: number;
+    backup_enabled?: boolean;
   };
 }
 ```
@@ -344,9 +329,9 @@ interface CreateProjectRequest {
   "description": "An epic fantasy adventure",
   "tags": ["fantasy", "adventure"],
   "settings": {
-    "autoSaveInterval": 30000,
-    "wordCountTarget": 100000,
-    "backupEnabled": true
+    "auto_save_interval": 30000,
+    "word_count_target": 100000,
+    "backup_enabled": true
   }
 }
 ```
@@ -375,9 +360,9 @@ interface UpdateProjectRequest {
   description?: string;
   tags?: string[];
   settings?: {
-    autoSaveInterval?: number;
-    wordCountTarget?: number;
-    backupEnabled?: boolean;
+    auto_save_interval?: number;
+    word_count_target?: number;
+    backup_enabled?: boolean;
   };
 }
 ```
@@ -432,18 +417,18 @@ GET /api/v1/documents/{documentId}
 ```typescript
 interface DocumentResponse {
   id: string;
-  projectId: string;
+  project_id: string;
   title: string;
   path: string;
   content: ProseMirrorContent;
   tags: string[];
-  wordCount: number;
-  createdAt: string;
-  updatedAt: string;
+  word_count: number;
+  created_at: string;
+  updated_at: string;
   version: string;
-  isLocked: boolean;
-  lockedBy?: string;
-  fileTreeId?: string;
+  is_locked: boolean;
+  locked_by?: string;
+  file_tree_id?: string;
 }
 
 interface ProseMirrorContent {
@@ -470,7 +455,7 @@ interface ProseMirrorMark {
 {
   "data": {
     "id": "doc-123",
-    "projectId": "project-456",
+    "project_id": "project-456",
     "title": "Chapter 1: The Beginning",
     "path": "/chapters/chapter-01.md",
     "content": {
@@ -488,13 +473,13 @@ interface ProseMirrorMark {
       ]
     },
     "tags": ["chapter", "intro"],
-    "wordCount": 1247,
-    "createdAt": "2024-01-01T00:00:00Z",
-    "updatedAt": "2024-01-15T10:30:00Z",
+    "word_count": 1247,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T10:30:00Z",
     "version": "1.2.0",
-    "isLocked": false,
-    "lockedBy": null,
-    "fileTreeId": "tree-item-789"
+    "is_locked": false,
+    "locked_by": null,
+    "file_tree_id": "tree-item-789"
   },
   "error": null,
   "message": null,
@@ -515,19 +500,19 @@ POST /api/v1/documents
 **Request Body**:
 ```typescript
 interface CreateDocumentRequest {
-  projectId: string;
+  project_id: string;
   title: string;
   path: string;
   content?: ProseMirrorContent;
   tags?: string[];
-  fileTreeParentId?: string;
+  file_tree_parent_id?: string;
 }
 ```
 
 **Example Request**:
 ```json
 {
-  "projectId": "550e8400-e29b-41d4-a716-446655440000",
+  "project_id": "550e8400-e29b-41d4-a716-446655440000",
   "title": "Chapter 2: The Discovery",
   "path": "/chapters/chapter-02.md",
   "content": {
@@ -545,7 +530,7 @@ interface CreateDocumentRequest {
     ]
   },
   "tags": ["chapter"],
-  "fileTreeParentId": "chapters-folder-id"
+  "file_tree_parent_id": "chapters-folder-id"
 }
 ```
 
@@ -629,12 +614,12 @@ interface ChatCompletionRequest {
   model: string;
   messages: LLMMessage[];
   temperature?: number;
-  maxTokens?: number;
+  max_tokens?: number;
   stream?: boolean;
   thinking?: "low" | "medium" | "high";
-  traceId?: string;
+  trace_id?: string;
   metadata?: Record<string, any>;
-  apiKey?: string;  // Optional: use temporary API key instead of stored key
+  api_key?: string;  // Optional: use temporary API key instead of stored key
 }
 
 interface LLMMessage {
@@ -659,7 +644,7 @@ interface LLMMessage {
     }
   ],
   "temperature": 0.7,
-  "maxTokens": 500,
+  "max_tokens": 500,
   "stream": false
 }
 ```
@@ -669,11 +654,11 @@ interface LLMMessage {
 interface ChatCompletionResponse {
   content: string;
   model: string;
-  chunkType: "content" | "thinking";
+  chunk_type: "content" | "thinking";
   usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
   metadata: Record<string, any>;
 }
@@ -683,11 +668,11 @@ interface ChatCompletionResponse {
 When `stream: true`, returns Server-Sent Events with `Content-Type: text/event-stream`:
 
 ```
-data: {"data": {"content": "The", "model": "gpt-4", "chunkType": "content", "isFinal": false}, "status": 200}
+data: {"data": {"content": "The", "model": "gpt-4", "chunk_type": "content", "is_final": false}, "status": 200}
 
-data: {"data": {"content": " year", "model": "gpt-4", "chunkType": "content", "isFinal": false}, "status": 200}
+data: {"data": {"content": " year", "model": "gpt-4", "chunk_type": "content", "is_final": false}, "status": 200}
 
-data: {"data": {"content": "", "model": "gpt-4", "chunkType": "content", "isFinal": true}, "status": 200}
+data: {"data": {"content": "", "model": "gpt-4", "chunk_type": "content", "is_final": true}, "status": 200}
 ```
 
 ### Validate API Key
@@ -704,8 +689,8 @@ POST /api/v1/llm/validate-key
 ```typescript
 interface ValidateAPIKeyRequest {
   provider: "openai" | "anthropic" | "google";
-  apiKey: string;
-  testModel?: string;  // Optional: specific model to test with
+  api_key: string;
+  test_model?: string;  // Optional: specific model to test with
 }
 ```
 
@@ -713,11 +698,11 @@ interface ValidateAPIKeyRequest {
 ```typescript
 interface APIKeyValidationResponse {
   provider: string;
-  isValid: boolean;
-  validationStatus: "valid" | "invalid" | "error";
+  is_valid: boolean;
+  validation_status: "valid" | "invalid" | "error";
   message: string;
-  testedWithModel: string;
-  errorDetails?: string;
+  tested_with_model: string;
+  error_details?: string;
 }
 ```
 
@@ -735,9 +720,9 @@ POST /api/v1/llm/store-key
 ```typescript
 interface StoreAPIKeyRequest {
   provider: "openai" | "anthropic" | "google";
-  apiKey: string;
-  validateKey?: boolean;  // Default: false
-  providerMetadata?: Record<string, any>;
+  api_key: string;
+  validate_key?: boolean;  // Default: false
+  provider_metadata?: Record<string, any>;
 }
 ```
 
@@ -745,12 +730,12 @@ interface StoreAPIKeyRequest {
 ```typescript
 interface StoredAPIKeyResponse {
   provider: string;
-  validationStatus: string;
-  lastValidatedAt?: string;
-  providerMetadata?: Record<string, any>;
+  validation_status: string;
+  last_validated_at?: string;
+  provider_metadata?: Record<string, any>;
   message: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 ```
 
@@ -791,8 +776,8 @@ GET /api/v1/llm/keys
 **Response**:
 ```typescript
 interface ListUserAPIKeysResponse {
-  apiKeys: StoredAPIKeyResponse[];
-  totalKeys: number;
+  api_keys: StoredAPIKeyResponse[];
+  total_keys: number;
 }
 ```
 
@@ -809,21 +794,21 @@ GET /api/v1/llm/providers?includeModels=true
 **Query Parameters**:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `includeModels` | boolean | true | Include model details for each provider |
+| `include_models` | boolean | true | Include model details for each provider |
 
 **Response**:
 ```typescript
 interface ListProvidersResponse {
   providers: ProviderResponse[];
-  totalProviders: number;
-  totalModels: number;
+  total_providers: number;
+  total_models: number;
 }
 
 interface ProviderResponse {
-  providerId: string;
-  displayName: string;
-  apiKeyFormatHint: string;
-  defaultModel: string;
+  provider_id: string;
+  display_name: string;
+  api_key_format_hint: string;
+  default_model: string;
   models: ModelCapabilityResponse[];
 }
 ```
@@ -842,30 +827,30 @@ GET /api/v1/llm/models?provider=openai&includeCapabilities=true
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `provider` | string | - | Filter by specific provider |
-| `includeCapabilities` | boolean | true | Include model capabilities |
+| `include_capabilities` | boolean | true | Include model capabilities |
 
 **Response**:
 ```typescript
 interface ListModelsResponse {
   models: ModelCapabilityResponse[];
-  totalModels: number;
-  providerFilter?: string;
+  total_models: number;
+  provider_filter?: string;
 }
 
 interface ModelCapabilityResponse {
-  modelName: string;
+  model_name: string;
   provider: string;
-  displayName: string;
+  display_name: string;
   description?: string;
   capabilities: string[];
-  inputTokenLimit: number;
-  outputTokenLimit: number;
-  defaultTemperature: number;
-  supportsThinking: boolean;
-  thinkingBudgetMin?: number;
-  thinkingBudgetMax?: number;
-  inputCostPerMillion: number;
-  outputCostPerMillion: number;
+  input_token_limit: number;
+  output_token_limit: number;
+  default_temperature: number;
+  supports_thinking: boolean;
+  thinking_budget_min?: number;
+  thinking_budget_max?: number;
+  input_cost_per_million: number;
+  output_cost_per_million: number;
 }
 ```
 
@@ -912,7 +897,7 @@ auth_token=your-supabase-jwt-token
    Content-Type: application/json
    
    {
-     "projectId": "{{project_id_from_step_3}}",
+     "project_id": "{{project_id_from_step_3}}",
      "title": "Test Document",
      "path": "/test.md",
      "content": {
@@ -939,7 +924,7 @@ auth_token=your-supabase-jwt-token
      "messages": [
        {"role": "user", "content": "Say hello"}
      ],
-     "apiKey": "your-openai-api-key"
+     "api_key": "your-openai-api-key"
    }
    ```
 
