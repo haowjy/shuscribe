@@ -18,11 +18,6 @@ export const aiModes: AiMode[] = [
   { value: "dialogue", label: "Dialogue Polish", icon: "💬" },
 ];
 
-export const mockContext: ContextItem[] = [
-  { type: "character", name: "elara", description: "Fire magic user, trauma survivor" },
-  { type: "location", name: "capital-city", description: "Urban setting, political intrigue" },
-  { type: "tag", name: "fire-magic", description: "Elemental magic system" },
-];
 
 export function getAiModeById(value: string): AiMode | undefined {
   return aiModes.find(mode => mode.value === value);

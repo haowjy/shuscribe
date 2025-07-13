@@ -185,97 +185,26 @@ export function useFileTree(projectId: string) {
   });
 }
 
-// Active File State Management Interface
-interface ActiveFileState {
-  selectedFileId: string | null;
-  activeTabId: string | null;
-  openTabs: string[];
-}
-
-// Centralized Active File State Hook
-export function useActiveFile(projectId: string) {
+// Simple file selection state (for highlighting in file tree)
+export function useSelectedFile(projectId: string) {
   const queryClient = useQueryClient();
-  const queryKey = queryKeys.activeFile(projectId);
+  const queryKey = [...queryKeys.activeFile(projectId), 'selectedFile'];
   
-  // Initialize state with default values
-  const defaultState: ActiveFileState = {
-    selectedFileId: null,
-    activeTabId: null,
-    openTabs: []
-  };
-
-  // Use TanStack Query as state manager (with no fetching)
-  const { data: state = defaultState } = useQuery({
+  const { data: selectedFileId = null } = useQuery({
     queryKey,
-    queryFn: () => Promise.resolve(defaultState),
+    queryFn: () => Promise.resolve(null as string | null),
     enabled: !!projectId,
-    staleTime: Infinity, // Never stale - purely client state
-    gcTime: Infinity, // Never garbage collect
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
-  // Update state function
-  const updateState = useCallback((updates: Partial<ActiveFileState>) => {
-    const newState = { ...state, ...updates };
-    queryClient.setQueryData(queryKey, newState);
-  }, [queryClient, queryKey, state]);
-
-  // Helper functions for common operations
   const setSelectedFile = useCallback((fileId: string | null) => {
-    updateState({ selectedFileId: fileId });
-  }, [updateState]);
-
-  const setActiveTab = useCallback((tabId: string | null) => {
-    updateState({ 
-      activeTabId: tabId,
-      selectedFileId: tabId // Keep selected file in sync with active tab
-    });
-  }, [updateState]);
-
-  const addTab = useCallback((tabId: string) => {
-    const newOpenTabs = state.openTabs.includes(tabId) 
-      ? state.openTabs 
-      : [...state.openTabs, tabId];
-    
-    updateState({ 
-      openTabs: newOpenTabs,
-      activeTabId: tabId,
-      selectedFileId: tabId // Keep selected file in sync
-    });
-  }, [updateState, state.openTabs]);
-
-  const removeTab = useCallback((tabId: string) => {
-    const newOpenTabs = state.openTabs.filter(id => id !== tabId);
-    const newActiveTab = state.activeTabId === tabId 
-      ? (newOpenTabs.length > 0 ? newOpenTabs[newOpenTabs.length - 1] : null)
-      : state.activeTabId;
-    
-    updateState({ 
-      openTabs: newOpenTabs,
-      activeTabId: newActiveTab,
-      selectedFileId: newActiveTab // Keep selected file in sync
-    });
-  }, [updateState, state.openTabs, state.activeTabId]);
-
-  const openFile = useCallback((fileId: string) => {
-    addTab(fileId);
-  }, [addTab]);
+    queryClient.setQueryData(queryKey, fileId);
+  }, [queryClient, queryKey]);
 
   return {
-    // State
-    selectedFileId: state.selectedFileId,
-    activeTabId: state.activeTabId,
-    openTabs: state.openTabs,
-    
-    // Actions
+    selectedFileId,
     setSelectedFile,
-    setActiveTab,
-    addTab,
-    removeTab,
-    openFile,
-    
-    // Raw state for advanced usage
-    state,
-    updateState,
   };
 }
 

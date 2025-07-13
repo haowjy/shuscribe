@@ -45,6 +45,14 @@ export class LRUCacheManager<T> {
 
       const cacheEntry: CacheEntry<T> = JSON.parse(item);
       
+      // Validate cache entry before using
+      if (!this.isValidCacheEntry(cacheEntry)) {
+        console.warn(`Removing corrupted cache entry during get: ${key}`);
+        localStorage.removeItem(fullKey);
+        this.updateMetrics({ ...metrics, misses: metrics.misses + 1, totalAccesses: metrics.totalAccesses + 1 });
+        return null;
+      }
+      
       // Update access time
       cacheEntry.accessTime = Date.now();
       localStorage.setItem(fullKey, JSON.stringify(cacheEntry));
@@ -204,11 +212,25 @@ export class LRUCacheManager<T> {
       if (!item) return null;
       
       const cacheEntry: CacheEntry<T> = JSON.parse(item);
+      
+      // Validate cache entry
+      if (!this.isValidCacheEntry(cacheEntry)) {
+        console.warn(`Removing corrupted cache entry during getEntryInfo: ${key}`);
+        localStorage.removeItem(fullKey);
+        return null;
+      }
+      
       return {
         size: cacheEntry.size,
         accessTime: cacheEntry.accessTime
       };
     } catch (error) {
+      // Clean up malformed entry
+      try {
+        localStorage.removeItem(fullKey);
+      } catch (removeError) {
+        console.warn(`Failed to remove malformed entry: ${fullKey}`, removeError);
+      }
       return null;
     }
   }
@@ -234,7 +256,9 @@ export class LRUCacheManager<T> {
         break;
       }
       
-      console.log(`Cache evicting LRU entry: ${entry.key} (${entry.size} bytes, accessed ${new Date(entry.accessTime).toISOString()})`);
+      // Safely format access time, handle invalid timestamps
+      const accessTimeStr = this.formatAccessTime(entry.accessTime);
+      console.log(`Cache evicting LRU entry: ${entry.key} (${entry.size} bytes, accessed ${accessTimeStr})`);
       localStorage.removeItem(`${this.keyPrefix}_${entry.key}`);
       currentSize -= entry.size;
     }
@@ -254,15 +278,28 @@ export class LRUCacheManager<T> {
           const item = localStorage.getItem(fullKey);
           if (item) {
             const cacheEntry: CacheEntry<T> = JSON.parse(item);
-            entries.push({
-              key: fullKey.substring(prefixLength),
-              size: cacheEntry.size,
-              accessTime: cacheEntry.accessTime
-            });
+            
+            // Validate cache entry structure and data
+            if (this.isValidCacheEntry(cacheEntry)) {
+              entries.push({
+                key: fullKey.substring(prefixLength),
+                size: cacheEntry.size || 0,
+                accessTime: cacheEntry.accessTime
+              });
+            } else {
+              // Remove corrupted entry
+              console.warn(`Removing corrupted cache entry: ${fullKey}`);
+              localStorage.removeItem(fullKey);
+            }
           }
         } catch (error) {
-          // Skip malformed entries
-          console.warn(`Skipping malformed cache entry: ${fullKey}`);
+          // Skip malformed entries and remove them
+          console.warn(`Removing malformed cache entry: ${fullKey}`, error);
+          try {
+            localStorage.removeItem(fullKey);
+          } catch (removeError) {
+            console.warn(`Failed to remove malformed entry: ${fullKey}`, removeError);
+          }
         }
       }
     }
@@ -292,6 +329,57 @@ export class LRUCacheManager<T> {
       localStorage.setItem(this.metricsKey, JSON.stringify(metrics));
     } catch (error) {
       console.warn('Error updating cache metrics:', error);
+    }
+  }
+
+  /**
+   * Validate cache entry structure and data integrity
+   */
+  private isValidCacheEntry(entry: any): entry is CacheEntry<T> {
+    if (!entry || typeof entry !== 'object') {
+      return false;
+    }
+
+    // Check required fields exist
+    if (!('data' in entry) || !('accessTime' in entry) || !('size' in entry)) {
+      return false;
+    }
+
+    // Validate accessTime is a valid timestamp
+    const accessTime = entry.accessTime;
+    if (typeof accessTime !== 'number' || 
+        !Number.isFinite(accessTime) || 
+        accessTime < 0 || 
+        accessTime > Date.now() + 86400000) { // Not more than 24 hours in the future
+      return false;
+    }
+
+    // Validate size is a reasonable number
+    const size = entry.size;
+    if (typeof size !== 'number' || !Number.isFinite(size) || size < 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Safely format access time, handling invalid timestamps
+   */
+  private formatAccessTime(accessTime: number): string {
+    try {
+      if (typeof accessTime !== 'number' || !Number.isFinite(accessTime)) {
+        return 'invalid timestamp';
+      }
+
+      const date = new Date(accessTime);
+      if (isNaN(date.getTime())) {
+        return 'invalid date';
+      }
+
+      return date.toISOString();
+    } catch (error) {
+      return 'format error';
     }
   }
 }

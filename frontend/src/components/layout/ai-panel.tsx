@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { aiModes, mockContext, getAiModeById } from "@/data/ai-modes";
+import { aiModes, getAiModeById } from "@/data/ai-modes";
 
 export function AiPanel() {
   const [selectedMode, setSelectedMode] = useState("writing");
@@ -56,19 +56,7 @@ export function AiPanel() {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-2">
-            {mockContext.map((item, index) => (
-              <Badge key={index} variant="secondary" className="w-full justify-start p-2 h-auto">
-                <div className="flex flex-col items-start w-full">
-                  <div className="font-medium text-foreground text-xs">
-                    {item.type === "character" && "👤"}
-                    {item.type === "location" && "📍"}
-                    {item.type === "tag" && "🏷️"}
-                    {" " + item.name}
-                  </div>
-                  <div className="text-muted-foreground text-xs mt-1">{item.description}</div>
-                </div>
-              </Badge>
-            ))}
+            <p>TODO: No context available</p>
           </div>
         </CardContent>
       </Card>

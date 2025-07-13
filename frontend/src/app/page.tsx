@@ -3,9 +3,6 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WorkspaceLayout } from "@/components/layout/workspace-layout";
-import { FileExplorer } from "@/components/layout/file-explorer";
-import { EditorWorkspace } from "@/components/layout/editor-workspace";
-import { AiPanel } from "@/components/layout/ai-panel";
 
 export default function HomePage() {
   const router = useRouter();
@@ -35,12 +32,5 @@ export default function HomePage() {
     );
   }
 
-  return (
-    <WorkspaceLayout
-      projectId={projectId}
-      fileExplorer={<FileExplorer projectId={projectId} />}
-      editor={<EditorWorkspace projectId={projectId} />}
-      aiPanel={<AiPanel />}
-    />
-  );
+  return <WorkspaceLayout projectId={projectId} />;
 }

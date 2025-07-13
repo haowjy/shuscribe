@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { TreeItem } from "@/types/api";
-import { useActiveFile, useFileTree } from "@/lib/query/hooks";
+import { useSelectedFile, useFileTree } from "@/lib/query/hooks";
 import { isFile, isFolder } from "@/data/file-tree";
 import { cn } from "@/lib/utils";
 
@@ -45,9 +45,19 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
   const isSelected = selectedFileId === item.id;
 
   const handleClick = () => {
+    console.log('🔄 [FileTreeItem] handleClick:', {
+      itemId: item.id,
+      itemName: item.name,
+      itemType: item.type,
+      isFile: isFile(item),
+      isFolder: isFolder(item)
+    });
+    
     if (isFolder(item)) {
+      console.log('🔄 [FileTreeItem] Toggling folder expansion:', item.name);
       setIsExpanded(!isExpanded);
     } else if (isFile(item)) {
+      console.log('🔄 [FileTreeItem] Calling onFileSelect for file:', item.name);
       onFileSelect?.(item);
     }
   };
@@ -183,19 +193,30 @@ function FileTreeItem({ item, depth, selectedFileId, onFileSelect, onFileAction 
 
 interface FileExplorerProps {
   projectId: string;
+  onFileClick: (fileId: string) => void;
 }
 
-export function FileExplorer({ projectId }: FileExplorerProps) {
-  // Use centralized file tree and active file state
+export function FileExplorer({ projectId, onFileClick }: FileExplorerProps) {
+  // Use file tree and simple selection state
   const { data: fileTree = [], isLoading, error } = useFileTree(projectId);
-  const { selectedFileId, openFile, setSelectedFile } = useActiveFile(projectId);
+  const { selectedFileId, setSelectedFile } = useSelectedFile(projectId);
 
   const handleFileSelect = (file: TreeItem) => {
+    console.log('📁 [FileExplorer] handleFileSelect called:', {
+      fileId: file.id,
+      fileName: file.name,
+      fileType: file.type,
+      isFile: isFile(file)
+    });
+    
     if (isFile(file)) {
-      // For files, open them (this will also update selectedFileId)
-      openFile(file.id);
+      // For files, call the parent's onFileClick handler
+      console.log('📁 [FileExplorer] Calling onFileClick:', file.id);
+      onFileClick(file.id);
+      setSelectedFile(file.id); // Also update selection for highlighting
     } else {
       // For folders, just update the selected state for highlighting
+      console.log('📁 [FileExplorer] Setting selected folder:', file.id);
       setSelectedFile(file.id);
     }
   };
