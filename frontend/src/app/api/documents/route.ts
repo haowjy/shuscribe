@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDocuments } from '@/lib/api/mock-data-tiptap';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
@@ -33,8 +32,6 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
       isTemp: body.isTemp || false
     };
-    
-    mockDocuments[documentId] = newDocument;
     
     return NextResponse.json(newDocument);
   } catch {

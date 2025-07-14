@@ -56,8 +56,32 @@ export function validateFolderItem(item: any): item is FolderItem {
   );
 }
 
+export function validateTag(tag: any): tag is Tag {
+  return (
+    tag &&
+    typeof tag === "object" &&
+    typeof tag.id === "string" &&
+    typeof tag.name === "string" &&
+    tag.name.length > 0 &&
+    (tag.color === undefined || typeof tag.color === "string") &&
+    (tag.icon === undefined || typeof tag.icon === "string")
+  );
+}
+
+export function cleanTags(tags: any[]): Tag[] {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+  return tags.filter(validateTag);
+}
+
 export function validateTreeItem(item: any): item is TreeItem {
-  return validateFileItem(item) || validateFolderItem(item);
+  const isValid = validateFileItem(item) || validateFolderItem(item);
+  if (isValid && item.tags) {
+    // Clean invalid tags
+    item.tags = cleanTags(item.tags);
+  }
+  return isValid;
 }
 
 export function findItemById(id: string, items: TreeItem[]): TreeItem | undefined {

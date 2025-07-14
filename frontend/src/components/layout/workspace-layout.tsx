@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { ImperativePanelHandle } from "react-resizable-panels";
-import { usePersistedLayout } from "@/hooks/use-persisted-layout";
+import { usePersistedLayout, LayoutPreferences } from "@/hooks/use-persisted-layout";
 import { loadDocument } from "@/lib/api/document-service";
 import { useProjectData, useFileTree, useUpdateDocument } from "@/lib/query/hooks";
 import { EditorDocument } from "@/lib/editor";
 import { findItemById } from "@/lib/api/file-tree-service";
 import { isFile, Tag } from "@/data/file-tree";
-import { FileExplorer } from "./file-explorer";
+import { FileExplorer } from "../file-explorer";
 import { EditorPane } from "./editor-pane";
 import { AiPanel } from "./ai-panel";
 
@@ -73,12 +73,10 @@ interface WorkspaceLayoutProps {
 }
 
 export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
-  // Panel layout state
+  // Panel state managed by persisted layout hook
   const [isFileExplorerCollapsed, setIsFileExplorerCollapsed] = useState(false);
   const [isAiPanelCollapsed, setIsAiPanelCollapsed] = useState(false);
-  const [fileExplorerSize, setFileExplorerSize] = useState(20);
-  const [editorSize, setEditorSize] = useState(55);
-  const [aiPanelSize, setAiPanelSize] = useState(25);
+  const [panelSizes, setPanelSizes] = useState([20, 55, 25]); // [fileExplorer, editor, aiPanel]
   
   // MASTER EDITOR STATE - Single Source of Truth
   const [openTabs, setOpenTabs] = useState<EditorTab[]>([]);
@@ -87,26 +85,47 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
   const fileExplorerRef = useRef<ImperativePanelHandle>(null);
   const aiPanelRef = useRef<ImperativePanelHandle>(null);
   const { user, signOut } = useAuth();
-  
-  // Data hooks
-  const { data: projectData, isLoading: isLoadingProject, error: projectError } = useProjectData(projectId);
-  const { data: fileTree = [], isLoading: isLoadingFileTree } = useFileTree(projectId);
-  const updateDocumentMutation = useUpdateDocument();
-  
-  // Initialize layout persistence
+
+  // Memoized layout loaded callback with guards to prevent unnecessary updates
+  const onLayoutLoaded = useCallback((layout: LayoutPreferences) => {
+    // Only update if values have actually changed
+    const newSizes = [layout.fileExplorerSize, layout.editorSize, layout.aiPanelSize];
+    setPanelSizes(prev => {
+      // Check if sizes actually changed
+      if (prev[0] !== newSizes[0] || prev[1] !== newSizes[1] || prev[2] !== newSizes[2]) {
+        return newSizes;
+      }
+      return prev;
+    });
+
+    setIsFileExplorerCollapsed(prev => {
+      if (prev !== layout.isFileExplorerCollapsed) {
+        return layout.isFileExplorerCollapsed;
+      }
+      return prev;
+    });
+
+    setIsAiPanelCollapsed(prev => {
+      if (prev !== layout.isAiPanelCollapsed) {
+        return layout.isAiPanelCollapsed;
+      }
+      return prev;
+    });
+  }, []);
+
+  // Initialize persisted layout hook
   const {
     updatePanelSizes,
     updateCollapsedStates,
   } = usePersistedLayout({
     projectId,
-    onLayoutLoaded: (layout) => {
-      setFileExplorerSize(layout.fileExplorerSize);
-      setEditorSize(layout.editorSize);
-      setAiPanelSize(layout.aiPanelSize);
-      setIsFileExplorerCollapsed(layout.isFileExplorerCollapsed);
-      setIsAiPanelCollapsed(layout.isAiPanelCollapsed);
-    },
+    onLayoutLoaded,
   });
+  
+  // Data hooks
+  const { data: projectData, isLoading: isLoadingProject, error: projectError } = useProjectData(projectId);
+  const { data: fileTree = [] } = useFileTree(projectId);
+  const updateDocumentMutation = useUpdateDocument();
 
   // Handle project data loading states
   const currentProject = {
@@ -318,74 +337,79 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
     setActiveTabId(newTab.id);
   }, []);
 
-  // Panel control functions (keeping existing logic)
-  const toggleFileExplorer = () => {
-    if (fileExplorerRef.current) {
-      const newState = !isFileExplorerCollapsed;
-      if (newState) {
-        fileExplorerRef.current.collapse();
-      } else {
-        fileExplorerRef.current.expand();
-      }
-      updateCollapsedStates({ isFileExplorerCollapsed: newState });
+  // Simplified panel control functions - let the onCollapse handlers manage state
+  const toggleFileExplorer = useCallback(() => {
+    if (!fileExplorerRef.current) {
+      console.warn('File explorer panel ref not available');
+      return;
     }
-  };
 
-  const toggleAiPanel = () => {
-    if (aiPanelRef.current) {
-      const newState = !isAiPanelCollapsed;
-      if (newState) {
-        aiPanelRef.current.collapse();
+    try {
+      const isCurrentlyCollapsed = fileExplorerRef.current.isCollapsed();
+      
+      if (isCurrentlyCollapsed) {
+        fileExplorerRef.current.expand();
       } else {
-        aiPanelRef.current.expand();
+        fileExplorerRef.current.collapse();
       }
-      updateCollapsedStates({ isAiPanelCollapsed: newState });
+      
+      // The onCollapse handler will manage state updates
+      
+    } catch (error) {
+      console.error('Error toggling file explorer:', error);
     }
-  };
+  }, []);
+
+  const toggleAiPanel = useCallback(() => {
+    if (!aiPanelRef.current) {
+      console.warn('AI panel ref not available');
+      return;
+    }
+
+    try {
+      const isCurrentlyCollapsed = aiPanelRef.current.isCollapsed();
+      
+      if (isCurrentlyCollapsed) {
+        aiPanelRef.current.expand();
+      } else {
+        aiPanelRef.current.collapse();
+      }
+      
+      // The onCollapse handler will manage state updates
+      
+    } catch (error) {
+      console.error('Error toggling AI panel:', error);
+    }
+  }, []);
   
-  // Handle panel resize events (keeping existing logic)
-  const handlePanelResize = (sizes: number[]) => {
-    const [newFileExplorerSize, newEditorSize, newAiPanelSize] = sizes;
-    setFileExplorerSize(newFileExplorerSize);
-    setEditorSize(newEditorSize);
-    setAiPanelSize(newAiPanelSize);
-    
-    const fileExplorerShouldBeCollapsed = isFileExplorerCollapsed 
-      ? newFileExplorerSize < PANEL_CONFIG.fileExplorer.collapseThreshold
-      : newFileExplorerSize <= PANEL_CONFIG.fileExplorer.collapseThreshold;
-    const aiPanelShouldBeCollapsed = isAiPanelCollapsed
-      ? newAiPanelSize < PANEL_CONFIG.aiPanel.collapseThreshold
-      : newAiPanelSize <= PANEL_CONFIG.aiPanel.collapseThreshold;
-    
-    if (fileExplorerShouldBeCollapsed !== isFileExplorerCollapsed) {
-      setIsFileExplorerCollapsed(fileExplorerShouldBeCollapsed);
+  // Panel resize handler with proper state synchronization
+  const handlePanelResize = useCallback((sizes: number[]) => {
+    if (sizes.length !== 3) {
+      console.warn('Invalid panel sizes array:', sizes);
+      return;
     }
+
+    setPanelSizes(sizes);
     
-    if (aiPanelShouldBeCollapsed !== isAiPanelCollapsed) {
-      setIsAiPanelCollapsed(aiPanelShouldBeCollapsed);
-    }
-    
+    // Update persisted panel sizes
     updatePanelSizes({
-      fileExplorerSize: newFileExplorerSize,
-      editorSize: newEditorSize,
-      aiPanelSize: newAiPanelSize,
+      fileExplorerSize: sizes[0],
+      editorSize: sizes[1],
+      aiPanelSize: sizes[2],
     });
-    
-    updateCollapsedStates({
-      isFileExplorerCollapsed: fileExplorerShouldBeCollapsed,
-      isAiPanelCollapsed: aiPanelShouldBeCollapsed,
-    });
-  };
-  
-  // Apply collapsed states when layout is loaded
-  useEffect(() => {
-    if (isFileExplorerCollapsed && fileExplorerRef.current) {
-      fileExplorerRef.current.collapse();
-    }
-    if (isAiPanelCollapsed && aiPanelRef.current) {
-      aiPanelRef.current.collapse();
-    }
-  }, [isFileExplorerCollapsed, isAiPanelCollapsed]);
+  }, [updatePanelSizes]);
+
+  // Handle panel collapse/expand events from the resizable panels
+  const handleFileExplorerCollapse = useCallback((collapsed: boolean) => {
+    setIsFileExplorerCollapsed(collapsed);
+    updateCollapsedStates({ isFileExplorerCollapsed: collapsed });
+  }, [updateCollapsedStates]);
+
+  const handleAiPanelCollapse = useCallback((collapsed: boolean) => {
+    setIsAiPanelCollapsed(collapsed);
+    updateCollapsedStates({ isAiPanelCollapsed: collapsed });
+  }, [updateCollapsedStates]);
+
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -461,13 +485,12 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
           {/* File Explorer Panel */}
           <ResizablePanel
             ref={fileExplorerRef}
-            defaultSize={fileExplorerSize}
+            defaultSize={panelSizes[0]}
             minSize={PANEL_CONFIG.fileExplorer.minSize}
             maxSize={PANEL_CONFIG.fileExplorer.maxSize}
             collapsedSize={PANEL_CONFIG.fileExplorer.collapsedSize}
             collapsible={true}
-            onCollapse={() => setIsFileExplorerCollapsed(true)}
-            onExpand={() => setIsFileExplorerCollapsed(false)}
+            onCollapse={handleFileExplorerCollapse}
           >
             <div className="h-full border-r bg-background flex flex-col">
               <div className="flex items-center justify-between p-2 border-b flex-shrink-0">
@@ -489,6 +512,7 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
                   <FileExplorer 
                     projectId={projectId}
                     onFileClick={handleFileOpen}
+                    paneWidthPercentage={panelSizes[0]}
                   />
                 </div>
               )}
@@ -498,7 +522,7 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
           <ResizableHandle />
 
           {/* Editor Panel */}
-          <ResizablePanel defaultSize={editorSize} minSize={30}>
+          <ResizablePanel defaultSize={panelSizes[1]} minSize={30}>
             <EditorPane
               tabs={openTabs}
               activeTabId={activeTabId}
@@ -520,13 +544,12 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
           {/* AI Panel */}
           <ResizablePanel
             ref={aiPanelRef}
-            defaultSize={aiPanelSize}
+            defaultSize={panelSizes[2]}
             minSize={PANEL_CONFIG.aiPanel.minSize}
             maxSize={PANEL_CONFIG.aiPanel.maxSize}
             collapsedSize={PANEL_CONFIG.aiPanel.collapsedSize}
             collapsible={true}
-            onCollapse={() => setIsAiPanelCollapsed(true)}
-            onExpand={() => setIsAiPanelCollapsed(false)}
+            onCollapse={handleAiPanelCollapse}
           >
             <div className="h-full border-l bg-background flex flex-col">
               <div className="flex items-center justify-between p-2 border-b flex-shrink-0">

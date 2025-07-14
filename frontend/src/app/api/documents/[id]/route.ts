@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMockDocument } from '@/lib/api/mock-project-data';
+import { cookies } from 'next/headers';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export async function GET(
   request: NextRequest,
@@ -8,20 +10,44 @@ export async function GET(
   try {
     const { id: documentId } = await params;
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Get auth token from cookies
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('sb-access-token')?.value;
     
-    const document = getMockDocument(documentId, '1'); // Using project ID 1
-    
-    if (!document) {
+    if (!authToken) {
       return NextResponse.json(
-        { error: 'Document not found' },
-        { status: 404 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
     
+    // Call backend API
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return NextResponse.json(
+          { error: 'Document not found' },
+          { status: 404 }
+        );
+      }
+      
+      const errorData = await response.json().catch(() => ({}));
+      return NextResponse.json(
+        { error: errorData.error || 'Failed to fetch document' },
+        { status: response.status }
+      );
+    }
+    
+    const document = await response.json();
     return NextResponse.json(document);
-  } catch {
+  } catch (error) {
+    console.error('Error fetching document:', error);
     return NextResponse.json(
       { error: 'Failed to fetch document' },
       { status: 500 }
@@ -37,31 +63,46 @@ export async function PUT(
     const { id: documentId } = await params;
     const body = await request.json();
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Get auth token from cookies
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('sb-access-token')?.value;
     
-    const document = getMockDocument(documentId, '1');
-    
-    if (!document) {
+    if (!authToken) {
       return NextResponse.json(
-        { error: 'Document not found' },
-        { status: 404 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
     
-    // Update document
-    const updatedDocument = {
-      ...document,
-      ...body,
-      updatedAt: new Date().toISOString(),
-      wordCount: body.content ? countWords(body.content) : document.wordCount
-    };
+    // Call backend API
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
     
-    // TODO: Implement proper document storage/persistence
-    // For now, just return the updated document without persisting
+    if (!response.ok) {
+      if (response.status === 404) {
+        return NextResponse.json(
+          { error: 'Document not found' },
+          { status: 404 }
+        );
+      }
+      
+      const errorData = await response.json().catch(() => ({}));
+      return NextResponse.json(
+        { error: errorData.error || 'Failed to update document' },
+        { status: response.status }
+      );
+    }
     
+    const updatedDocument = await response.json();
     return NextResponse.json(updatedDocument);
-  } catch {
+  } catch (error) {
+    console.error('Error updating document:', error);
     return NextResponse.json(
       { error: 'Failed to update document' },
       { status: 500 }
@@ -76,23 +117,45 @@ export async function DELETE(
   try {
     const { id: documentId } = await params;
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 150));
+    // Get auth token from cookies
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('sb-access-token')?.value;
     
-    const document = getMockDocument(documentId, '1');
-    
-    if (!document) {
+    if (!authToken) {
       return NextResponse.json(
-        { error: 'Document not found' },
-        { status: 404 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
     
-    // TODO: Implement proper document deletion
-    // For now, just return success without actually deleting
+    // Call backend API
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
     
-    return NextResponse.json({ success: true });
-  } catch {
+    if (!response.ok) {
+      if (response.status === 404) {
+        return NextResponse.json(
+          { error: 'Document not found' },
+          { status: 404 }
+        );
+      }
+      
+      const errorData = await response.json().catch(() => ({}));
+      return NextResponse.json(
+        { error: errorData.error || 'Failed to delete document' },
+        { status: response.status }
+      );
+    }
+    
+    const result = await response.json();
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('Error deleting document:', error);
     return NextResponse.json(
       { error: 'Failed to delete document' },
       { status: 500 }
@@ -100,24 +163,3 @@ export async function DELETE(
   }
 }
 
-// Helper function to count words in ProseMirror content
-function countWords(content: any): number {
-  if (!content || !content.content) return 0;
-  
-  let wordCount = 0;
-  
-  function countNode(node: any) {
-    if (node.type === 'text' && node.text) {
-      wordCount += String(node.text).split(/\s+/).filter(Boolean).length;
-    }
-    
-    if (node.content && Array.isArray(node.content)) {
-      node.content.forEach(countNode);
-    }
-  }
-  
-  if (Array.isArray(content.content)) {
-    content.content.forEach(countNode);
-  }
-  return wordCount;
-}

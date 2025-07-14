@@ -26,6 +26,7 @@ import {
   User,
   LogOut
 } from "lucide-react";
+import { DynamicIcon } from "lucide-react/dynamic";
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
@@ -43,7 +44,7 @@ export default function DashboardPage() {
   };
 
   const handleOpenProject = (projectId: string) => {
-    router.push(`/?project=${projectId}`);
+    router.push(`/workspace?project=${projectId}`);
   };
 
   // Loading state
@@ -245,9 +246,30 @@ export default function DashboardPage() {
                         {project.title}
                       </CardTitle>
                       {project.tags && project.tags.length > 0 && (
-                        <Badge variant="outline" className="mt-2 text-xs">
-                          {project.tags[0]}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {project.tags.slice(0, 3).map((tag, index) => (
+                            tag?.name && (
+                              <Badge 
+                                key={tag.id || index}
+                                variant="secondary"
+                                className="text-xs px-1.5 py-1 h-auto leading-none"
+                                style={tag.color ? { 
+                                  backgroundColor: tag.color, 
+                                  color: '#fff',
+                                  borderColor: tag.color 
+                                } : undefined}
+                              >
+                                {tag.icon && <DynamicIcon name={tag.icon} className="w-3 h-3" />}
+                                {tag.name}
+                              </Badge>
+                            )
+                          ))}
+                          {project.tags.length > 3 && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-1 h-auto leading-none">
+                              +{project.tags.length - 3}
+                            </Badge>
+                          )}
+                        </div>
                       )}
                     </div>
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
