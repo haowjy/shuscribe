@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     DATABASE_POOL_TIMEOUT: int = 30         # Timeout for getting connection from pool
     DATABASE_CONNECT_TIMEOUT: int = 30      # Timeout for initial connection establishment
     
+    # Database Connection Pool Configuration
+    DATABASE_POOL_SIZE: int = 20             # Base number of connections to maintain in pool
+    DATABASE_MAX_OVERFLOW: int = 30          # Additional connections allowed beyond pool_size
+                                             # Total max connections = pool_size + max_overflow = 50
+    
     # Logging
     LOG_LEVEL: str = "INFO"
     

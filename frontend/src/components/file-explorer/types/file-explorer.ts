@@ -3,7 +3,7 @@ import { TreeItem } from "@/data/file-tree";
 export interface FileExplorerProps {
   projectId: string;
   onFileClick: (fileId: string) => void;
-  paneWidthPercentage?: number; // Real-time pane width as percentage of screen
+  // Removed paneWidthPercentage - FileTreeItems now handle responsiveness internally
 }
 
 export interface FileTreeItemProps {
@@ -13,7 +13,7 @@ export interface FileTreeItemProps {
   onFileSelect?: (file: TreeItem) => void;
   onFileAction?: (action: string, file: TreeItem) => void;
   onTagClick?: (tagName: string) => void;
-  maxVisibleTags?: number; // Number of tags to show (calculated by parent)
+  // Removed responsive props - now handled internally with ResizeObserver
 }
 
 export interface TagDisplayProps {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useFileTree } from "@/lib/query/hooks";
@@ -13,7 +13,7 @@ import { useFileTreeSearch } from "./hooks/useFileTreeSearch";
 import { useUpdateDocument } from "@/lib/query/hooks";
 import { UpdateDocumentRequest } from "@/types/api";
 
-export function FileExplorer({ projectId, onFileClick, paneWidthPercentage = 20 }: FileExplorerProps) {
+export function FileExplorer({ projectId, onFileClick }: FileExplorerProps) {
   // Data loading
   const { data: fileTree = [], isLoading, error } = useFileTree(projectId);
   const updateDocumentMutation = useUpdateDocument();
@@ -37,13 +37,7 @@ export function FileExplorer({ projectId, onFileClick, paneWidthPercentage = 20 
   // Search and filtering logic
   const { filteredFileTree, allTags } = useFileTreeSearch(fileTree, fileTreeState.searchState);
 
-  // Calculate max tags based on pane width percentage
-  const maxVisibleTags = useMemo(() => {
-    if (paneWidthPercentage > 20) return 3;  // Wide pane (>20%): 3 tags
-    if (paneWidthPercentage > 15) return 2;  // Medium pane (15-20%): 2 tags  
-    if (paneWidthPercentage > 10) return 1;  // Narrow pane (10-15%): 1 tag
-    return 0;                                // Very narrow pane (<10%): no tags
-  }, [paneWidthPercentage]);
+  // FileTreeItems now handle their own responsiveness with ResizeObserver
 
   // Handle file selection
   const handleFileSelect = (file: TreeItem) => {
@@ -214,7 +208,6 @@ export function FileExplorer({ projectId, onFileClick, paneWidthPercentage = 20 
               onFileSelect={handleFileSelect}
               onFileAction={handleFileAction}
               onTagClick={handleTagClick}
-              maxVisibleTags={maxVisibleTags}
             />
           ))}
           {filteredFileTree.length === 0 && (

@@ -512,7 +512,6 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
                   <FileExplorer 
                     projectId={projectId}
                     onFileClick={handleFileOpen}
-                    paneWidthPercentage={panelSizes[0]}
                   />
                 </div>
               )}

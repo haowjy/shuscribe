@@ -3,7 +3,7 @@
 Database connection and session management for Supabase + SQLAlchemy
 """
 import logging
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, Dict, Any
 from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -57,6 +57,9 @@ def init_database() -> None:
             pool_pre_ping=True,  # Verify connections before use
             pool_recycle=3600,   # Recycle connections every hour
             pool_timeout=settings.DATABASE_POOL_TIMEOUT,  # Timeout for getting connection from pool
+            pool_size=settings.DATABASE_POOL_SIZE,  # Base number of connections in pool
+            max_overflow=settings.DATABASE_MAX_OVERFLOW,  # Additional connections beyond pool_size
+            pool_reset_on_return='commit',  # Ensure clean connections on return to pool
             connect_args=connect_args
         )
         
@@ -68,6 +71,7 @@ def init_database() -> None:
         )
         
         logger.info("Database connection initialized successfully")
+        logger.info(f"Connection pool configured: size={settings.DATABASE_POOL_SIZE}, max_overflow={settings.DATABASE_MAX_OVERFLOW}, total_max={settings.DATABASE_POOL_SIZE + settings.DATABASE_MAX_OVERFLOW}")
         
     except Exception as e:
         logger.error(f"Failed to initialize database engine: {e}")
@@ -178,6 +182,31 @@ async def health_check() -> bool:
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         return False
+
+
+async def get_pool_status() -> Dict[str, Any]:
+    """Get detailed connection pool status for monitoring"""
+    if not engine:
+        return {"status": "not_initialized", "pool": None}
+    
+    try:
+        pool = engine.pool
+        return {
+            "status": "healthy",
+            "pool": {
+                "size": pool.size(),
+                "checked_in": pool.checkedin(),
+                "checked_out": pool.checkedout(),
+                "overflow": pool.overflow(),
+                "configured_size": settings.DATABASE_POOL_SIZE,
+                "max_overflow": settings.DATABASE_MAX_OVERFLOW,
+                "total_max": settings.DATABASE_POOL_SIZE + settings.DATABASE_MAX_OVERFLOW,
+                "utilization_percent": round((pool.checkedout() / (settings.DATABASE_POOL_SIZE + settings.DATABASE_MAX_OVERFLOW)) * 100, 2)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to get pool status: {e}")
+        return {"status": "error", "error": str(e), "pool": None}
 
 
 # Helper function for repositories that need manual session management

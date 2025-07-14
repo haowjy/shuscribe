@@ -11,20 +11,36 @@ export function TagDisplay({
   maxVisible = 3,
   onTagClick 
 }: TagDisplayProps) {
+  // Debug logging
+  console.log('🏷️ [TagDisplay] Props received:', {
+    tagsLength: tags?.length || 0,
+    maxVisible,
+    tagsArray: tags
+  });
+
   if (!tags || tags.length === 0 || maxVisible === 0) {
+    console.log('🏷️ [TagDisplay] Returning null - no tags or maxVisible=0');
     return null;
   }
 
   const visibleTags = tags.slice(0, maxVisible);
   const overflowCount = Math.max(0, tags.length - maxVisible);
+  
+  console.log('🏷️ [TagDisplay] Processing tags:', {
+    totalTags: tags.length,
+    maxVisible,
+    visibleTagsCount: visibleTags.length,
+    overflowCount,
+    visibleTagNames: visibleTags.map(t => t.name)
+  });
 
   return (
-    <div className="flex gap-1 items-center flex-shrink-0 overflow-hidden">
+    <div className="flex gap-1 items-center flex-shrink-0">
         {visibleTags.map((tag) => (
           <Tooltip key={tag.id}>
             <TooltipTrigger asChild>
               <Badge
-                variant="secondary"
+                variant="tag"
                 className="text-xs px-1 py-0.5 h-auto cursor-pointer hover:bg-accent transition-colors"
                 style={tag.color ? { backgroundColor: tag.color, color: '#fff' } : undefined}
                 onClick={() => tag.name && onTagClick?.(tag.name)}

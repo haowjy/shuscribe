@@ -23,6 +23,7 @@
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tooltip": "^1.2.7",
+    "@react-hook/resize-observer": "^2.0.2",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.3",
     "@tanstack/react-query": "^5.81.5",
@@ -47,6 +48,7 @@
     "react-resizable-panels": "^3.0.3",
     "tailwind-merge": "^3.3.1",
     "tippy.js": "^6.3.7",
+    "use-resize-observer": "^9.1.0",
     "uuid": "^11.1.0",
     "zod": "^3.25.75"
   },
