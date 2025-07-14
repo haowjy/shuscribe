@@ -27,6 +27,7 @@ dependencies = [
     "faker>=37.4.0",
     "alembic>=1.16.4",
     "psycopg2-binary>=2.9.10",
+    "greenlet>=3.2.3",
 ]
 
 [project.optional-dependencies]
