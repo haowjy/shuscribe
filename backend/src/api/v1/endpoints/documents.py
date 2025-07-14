@@ -9,8 +9,9 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, field_validator, Field
 
 from src.database.factory import get_repositories
-from src.database.models import Document
+from src.database.models import Document, Tag
 from src.schemas.base import ApiResponse
+from src.schemas.responses.tags import TagInfo
 from src.api.dependencies import require_auth, get_current_user_id
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,16 @@ class DeleteResponse(BaseModel):
 # Helper Functions
 # ============================================================================
 
+def tag_to_info(tag: Tag) -> TagInfo:
+    """Convert Tag model to TagInfo response"""
+    return TagInfo(
+        id=tag.id,
+        name=tag.name,
+        icon=tag.icon,
+        color=tag.color
+    )
+
+
 def document_to_response(document: Document) -> DocumentResponse:
     """Convert Document model to DocumentResponse"""
     # Ensure content has the right structure
@@ -118,7 +129,7 @@ def document_to_response(document: Document) -> DocumentResponse:
         title=document.title,
         path=document.path,
         content=document_content,
-        tags=document.tag_ids or [],
+        tags=[tag_to_info(tag) for tag in document.tags],
         word_count=document.word_count,
         created_at=document.created_at.isoformat() if hasattr(document.created_at, 'isoformat') else str(document.created_at),
         updated_at=document.updated_at.isoformat() if hasattr(document.updated_at, 'isoformat') else str(document.updated_at),
@@ -233,7 +244,7 @@ async def create_document(
             "title": request.title,
             "path": request.path,
             "content": request.content.model_dump(),
-            "tag_ids": request.tags,
+            # Note: tags will be assigned after document creation via relationship
             "word_count": word_count,
             "version": "1.0.0",
             "is_locked": False,
@@ -296,7 +307,8 @@ async def update_document(
             new_word_count = calculate_word_count(request.content)
             updates["word_count"] = new_word_count
         if request.tags is not None:
-            updates["tag_ids"] = request.tags
+            # Note: tags will be updated via relationship, not direct field assignment
+            pass
         if request.version is not None:
             updates["version"] = request.version
             

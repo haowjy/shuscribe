@@ -367,6 +367,12 @@ class MockDataFactory:
             {"name": "high-priority", "icon": "alert-circle", "color": "#ef4444", "category": "priority"},
             {"name": "medium-priority", "icon": "circle", "color": "#f59e0b", "category": "priority"},
             {"name": "low-priority", "icon": "minus-circle", "color": "#9ca3af", "category": "priority"},
+            
+            # Additional tags for testing UI responsiveness
+            {"name": "important", "icon": "star", "color": "#fbbf24", "category": "meta"},
+            {"name": "needs-editing", "icon": "edit-2", "color": "#f97316", "category": "workflow"},
+            {"name": "complete", "icon": "check", "color": "#22c55e", "category": "workflow"},
+            {"name": "in-progress", "icon": "clock", "color": "#3b82f6", "category": "workflow"},
         ]
         
         # Add default values for global tags
@@ -417,14 +423,13 @@ class ProjectTemplates:
             {"name": "Characters", "path": "/Characters"},
             {"name": "Chapters", "path": "/Chapters"},  
             {"name": "Locations", "path": "/Locations"},
-            {"name": "Magic System", "path": "/Magic System"},
             {"name": "Notes", "path": "/Notes"}
         ],
         "documents": [
-            {"type": "character", "folder": "Characters", "count": 4},
-            {"type": "chapter", "folder": "Chapters", "count": 8},
-            {"type": "location", "folder": "Locations", "count": 3},
-            {"type": "notes", "folder": "Notes", "count": 2}
+            {"type": "character", "folder": "Characters", "count": 2},
+            {"type": "chapter", "folder": "Chapters", "count": 3},
+            {"type": "location", "folder": "Locations", "count": 2},
+            {"type": "notes", "folder": "Notes", "count": 1}
         ]
     }
     
@@ -434,15 +439,13 @@ class ProjectTemplates:
             {"name": "Characters", "path": "/Characters"},
             {"name": "Chapters", "path": "/Chapters"},
             {"name": "Technology", "path": "/Technology"},
-            {"name": "Locations", "path": "/Locations"},
-            {"name": "Research", "path": "/Research"}
+            {"name": "Locations", "path": "/Locations"}
         ],
         "documents": [
-            {"type": "character", "folder": "Characters", "count": 3},
-            {"type": "chapter", "folder": "Chapters", "count": 6},
-            {"type": "location", "folder": "Locations", "count": 2},
-            {"type": "notes", "folder": "Technology", "count": 2},
-            {"type": "notes", "folder": "Research", "count": 1}
+            {"type": "character", "folder": "Characters", "count": 2},
+            {"type": "chapter", "folder": "Chapters", "count": 3},
+            {"type": "location", "folder": "Locations", "count": 1},
+            {"type": "notes", "folder": "Technology", "count": 1}
         ]
     }
     
@@ -452,14 +455,12 @@ class ProjectTemplates:
             {"name": "Characters", "path": "/Characters"},
             {"name": "Chapters", "path": "/Chapters"},
             {"name": "Clues", "path": "/Clues"},
-            {"name": "Timeline", "path": "/Timeline"},
             {"name": "Notes", "path": "/Notes"}
         ],
         "documents": [
-            {"type": "character", "folder": "Characters", "count": 5},
-            {"type": "chapter", "folder": "Chapters", "count": 10},
-            {"type": "notes", "folder": "Clues", "count": 3},
-            {"type": "notes", "folder": "Timeline", "count": 1},
-            {"type": "notes", "folder": "Notes", "count": 2}
+            {"type": "character", "folder": "Characters", "count": 2},
+            {"type": "chapter", "folder": "Chapters", "count": 3},
+            {"type": "notes", "folder": "Clues", "count": 2},
+            {"type": "notes", "folder": "Notes", "count": 1}
         ]
     }

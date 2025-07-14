@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 from src.schemas.base import BaseSchema
+from src.schemas.responses.tags import TagInfo
 
 
 class ProjectCollaborator(BaseModel):
@@ -37,7 +38,7 @@ class ProjectDetails(BaseSchema):
     document_count: int
     created_at: str
     updated_at: str
-    tags: List[str] = Field(default_factory=list)
+    tags: List[TagInfo] = Field(default_factory=list)
     collaborators: List[ProjectCollaborator] = Field(default_factory=list)
     settings: ProjectSettings = Field(default_factory=ProjectSettings)
 
@@ -53,7 +54,7 @@ class ProjectSummary(BaseSchema):
     document_count: int
     created_at: str
     updated_at: str
-    tags: List[str] = Field(default_factory=list)
+    tags: List[TagInfo] = Field(default_factory=list)
 
 
 class FileTreeItemResponse(BaseSchema):
@@ -70,7 +71,7 @@ class FileTreeItemResponse(BaseSchema):
     # File-specific properties
     document_id: Optional[str] = None
     icon: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
+    tags: List[TagInfo] = Field(default_factory=list)
     word_count: Optional[int] = None
     
     # Timestamps

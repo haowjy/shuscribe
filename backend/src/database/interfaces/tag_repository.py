@@ -27,6 +27,11 @@ class TagRepository(ABC):
         pass
     
     @abstractmethod
+    async def get_by_project_id(self, project_id: str, include_archived: bool = False) -> List[Tag]:
+        """Get all tags for a project"""
+        pass
+    
+    @abstractmethod
     async def get_by_name(self, name: str, user_id: Optional[str] = None) -> Optional[Tag]:
         """Get tag by name (global if user_id is None, private if user_id provided)"""
         pass

@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Essential Tools
 
 * context7: when the user requests code examples, setup or configuration steps, or library/API documentation
+* Use `uv run python` for running Python commands in the backend
 
 ## Project Overview
 

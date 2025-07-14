@@ -289,6 +289,26 @@ now = datetime.now(UTC)
 
 ## Documentation
 
+## Recent Architecture Changes
+
+### Tag System Refactor (2025-01-14)
+**BREAKING CHANGE**: Replaced JSON `tag_ids` arrays with proper SQLAlchemy many-to-many relationships.
+
+**What Changed**:
+- **Database Schema**: Removed `tag_ids` JSON columns from Project, Document, FileTreeItem models
+- **Junction Tables**: Added `project_tags`, `document_tags`, `file_tree_item_tags` association tables
+- **Tag Model**: Added `project_id` field for project-scoped tags
+- **Repository Methods**: Added `assign_tag()` and `unassign_tag()` methods to FileTreeRepository
+- **API Endpoints**: Updated tag assignment/unassignment to use relationships instead of JSON manipulation
+
+**Benefits**:
+- **Referential Integrity**: Database enforces valid tag relationships
+- **Better Performance**: Proper indexes and joins instead of JSON queries  
+- **CASCADE Operations**: Deleting tags properly removes relationships
+- **Type Safety**: SQLAlchemy relationships instead of manual array manipulation
+
+**Migration Required**: Database needs reseeding - existing JSON tag data will be lost.
+
 ### Backend Documentation Maintenance
 
 When making backend changes, update documentation in this order:

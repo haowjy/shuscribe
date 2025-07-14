@@ -9,7 +9,7 @@ from typing import Dict, Any, List
 from src.config import settings
 from src.database.factory import get_repositories, RepositoryContainer
 from src.database.connection import get_session_context
-from src.database.models import Base
+from src.database.models import Base, Project, Document, FileTreeItem
 from src.database.seed import MockDataFactory, ProjectTemplates
 
 logger = logging.getLogger(__name__)
@@ -69,9 +69,9 @@ class DatabaseSeeder:
             
             # Determine number of projects based on data size
             project_counts = {
-                "small": 2,
-                "medium": 3,
-                "large": 5
+                "small": 1,
+                "medium": 2,
+                "large": 3
             }
             num_projects = project_counts.get(data_size, 3)
             
@@ -164,7 +164,12 @@ class DatabaseSeeder:
             engine = get_engine()
             
             async with engine.begin() as conn:
-                # Clear in reverse dependency order to avoid foreign key constraints
+                # Clear junction tables first to avoid foreign key constraints
+                await conn.execute(text(f"DELETE FROM {settings.table_prefix}project_tags"))
+                await conn.execute(text(f"DELETE FROM {settings.table_prefix}document_tags"))
+                await conn.execute(text(f"DELETE FROM {settings.table_prefix}file_tree_item_tags"))
+                
+                # Then clear main tables in reverse dependency order
                 await conn.execute(text(f"DELETE FROM {settings.table_prefix}file_tree_items"))
                 await conn.execute(text(f"DELETE FROM {settings.table_prefix}documents")) 
                 await conn.execute(text(f"DELETE FROM {settings.table_prefix}projects"))
@@ -181,12 +186,13 @@ class DatabaseSeeder:
         # Generate project data
         project_data = self.factory.generate_project(genre=template["genre"])
         
-        # Assign relevant global tags to the project
+        project = await self.repositories.project.create(project_data)
+        
+        # Assign relevant global tags to the project using direct SQL
         if global_tags:
             project_tags = self._select_relevant_tags(global_tags, template["genre"], "project")
-            project_data["tag_ids"] = [tag.id for tag in project_tags]
-        
-        project = await self.repositories.project.create(project_data)
+            if project_tags:
+                await self._assign_tags_to_project(project.id, project_tags)
         
         result = {
             "project_title": project.title,
@@ -205,12 +211,13 @@ class DatabaseSeeder:
                 path=folder_config["path"]
             )
             
-            # Assign relevant global tags to folders
+            folder_item = await self.repositories.file_tree.create(folder_item_data)
+            
+            # Assign relevant global tags to folders using direct SQL
             if global_tags:
                 folder_tags = self._select_relevant_tags(global_tags, folder_config["name"], "folder")
-                folder_item_data["tag_ids"] = [tag.id for tag in folder_tags]
-            
-            folder_item = await self.repositories.file_tree.create(folder_item_data)
+                if folder_tags:
+                    await self._assign_tags_to_file_tree_item(folder_item.id, folder_tags)
             folder_map[folder_config["name"]] = folder_item
             result["file_tree_items_created"] += 1
         
@@ -239,12 +246,13 @@ class DatabaseSeeder:
                         document_type=doc_config["type"]
                     )
                 
-                # Assign relevant global tags to documents
+                document = await self.repositories.document.create(document_data)
+                
+                # Assign relevant global tags to documents using direct SQL
                 if global_tags:
                     doc_tags = self._select_relevant_tags(global_tags, doc_config["type"], "document")
-                    document_data["tag_ids"] = [tag.id for tag in doc_tags]
-                
-                document = await self.repositories.document.create(document_data)
+                    if doc_tags:
+                        await self._assign_tags_to_document(document.id, doc_tags)
                 result["documents_created"] += 1
                 
                 # Create corresponding file tree item
@@ -260,12 +268,13 @@ class DatabaseSeeder:
                     document_id=document.id
                 )
                 
+                file_item = await self.repositories.file_tree.create(file_item_data)
+                
                 # Assign relevant global tags to file items (inherit from document plus file-specific)
                 if global_tags:
                     file_tags = self._select_relevant_tags(global_tags, doc_config["type"], "file")
-                    file_item_data["tag_ids"] = [tag.id for tag in file_tags]
-                
-                await self.repositories.file_tree.create(file_item_data)
+                    if file_tags:
+                        await self._assign_tags_to_file_tree_item(file_item.id, file_tags)
                 result["file_tree_items_created"] += 1
         
         # Update project document count
@@ -319,7 +328,7 @@ class DatabaseSeeder:
         # Always add some status tags with probability
         status_tags = ["draft", "review", "published"]
         for tag_name in status_tags:
-            if tag_name in tag_map and random.random() < 0.3:  # 30% chance
+            if tag_name in tag_map and random.random() < 0.4:  # 40% chance (increased for more tags)
                 relevant_tags.append(tag_map[tag_name])
         
         # Add content type tags based on context
@@ -356,14 +365,32 @@ class DatabaseSeeder:
         
         # Add some random priority tags occasionally
         priority_tags = ["high-priority", "medium-priority", "low-priority"]
-        if random.random() < 0.2:  # 20% chance
+        if random.random() < 0.35:  # 35% chance (increased for more tags)
             priority_tag = random.choice(priority_tags)
             if priority_tag in tag_map and tag_map[priority_tag] not in relevant_tags:
                 relevant_tags.append(tag_map[priority_tag])
         
-        # Limit to 2-4 tags per entity to keep it realistic
-        if len(relevant_tags) > 4:
-            relevant_tags = random.sample(relevant_tags, 4)
+        # Add workflow and meta tags for more variety (especially for items with 5+ tags)
+        workflow_tags = ["needs-editing", "complete", "in-progress"]
+        meta_tags = ["important"]
+        
+        if random.random() < 0.25:  # 25% chance for workflow tags
+            workflow_tag = random.choice(workflow_tags)
+            if workflow_tag in tag_map and tag_map[workflow_tag] not in relevant_tags:
+                relevant_tags.append(tag_map[workflow_tag])
+        
+        if random.random() < 0.20:  # 20% chance for meta tags
+            meta_tag = random.choice(meta_tags)
+            if meta_tag in tag_map and tag_map[meta_tag] not in relevant_tags:
+                relevant_tags.append(tag_map[meta_tag])
+        
+        # Limit tags per entity: most get 2-4 tags, but some get 5-7 for UI testing
+        max_tags = 4
+        if random.random() < 0.25:  # 25% chance of getting 5-7 tags for responsiveness testing
+            max_tags = random.randint(5, 7)
+        
+        if len(relevant_tags) > max_tags:
+            relevant_tags = random.sample(relevant_tags, max_tags)
         
         return relevant_tags
     
@@ -376,6 +403,75 @@ class DatabaseSeeder:
             return []
         except Exception:
             return []
+    
+    async def _assign_tags_to_project(self, project_id: str, tags: List) -> None:
+        """Assign tags to a project using bulk SQL INSERT"""
+        if not tags:
+            return
+            
+        from src.database.connection import get_engine
+        from sqlalchemy import text
+        
+        # Prepare bulk insert data
+        tag_data = [{"project_id": project_id, "tag_id": tag.id} for tag in tags]
+        
+        engine = get_engine()
+        async with engine.begin() as conn:
+            # Use bulk insert for all tags at once
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {settings.table_prefix}project_tags (project_id, tag_id) 
+                    VALUES (:project_id, :tag_id) 
+                    ON CONFLICT DO NOTHING
+                """),
+                tag_data
+            )
+    
+    async def _assign_tags_to_document(self, document_id: str, tags: List) -> None:
+        """Assign tags to a document using bulk SQL INSERT"""
+        if not tags:
+            return
+            
+        from src.database.connection import get_engine
+        from sqlalchemy import text
+        
+        # Prepare bulk insert data
+        tag_data = [{"document_id": document_id, "tag_id": tag.id} for tag in tags]
+        
+        engine = get_engine()
+        async with engine.begin() as conn:
+            # Use bulk insert for all tags at once
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {settings.table_prefix}document_tags (document_id, tag_id) 
+                    VALUES (:document_id, :tag_id) 
+                    ON CONFLICT DO NOTHING
+                """),
+                tag_data
+            )
+    
+    async def _assign_tags_to_file_tree_item(self, file_tree_item_id: str, tags: List) -> None:
+        """Assign tags to a file tree item using bulk SQL INSERT"""
+        if not tags:
+            return
+            
+        from src.database.connection import get_engine
+        from sqlalchemy import text
+        
+        # Prepare bulk insert data
+        tag_data = [{"file_tree_item_id": file_tree_item_id, "tag_id": tag.id} for tag in tags]
+        
+        engine = get_engine()
+        async with engine.begin() as conn:
+            # Use bulk insert for all tags at once
+            await conn.execute(
+                text(f"""
+                    INSERT INTO {settings.table_prefix}file_tree_item_tags (file_tree_item_id, tag_id) 
+                    VALUES (:file_tree_item_id, :tag_id) 
+                    ON CONFLICT DO NOTHING
+                """),
+                tag_data
+            )
 
 
 async def seed_development_database(force: bool = False) -> Dict[str, Any]:

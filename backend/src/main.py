@@ -53,8 +53,18 @@ async def lifespan(app: FastAPI):
             
             if should_seed_database():
                 logging.info("Starting database seeding for development environment...")
+                
+                # Temporarily reduce SQLAlchemy logging verbosity during seeding
+                sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
+                original_level = sqlalchemy_logger.level
+                sqlalchemy_logger.setLevel(logging.WARNING)
+                
                 try:
-                    seed_results = await seed_development_database()
+                    # Use force=True if CLEAR_BEFORE_SEED is enabled
+                    force_seed = getattr(settings, 'CLEAR_BEFORE_SEED', False)
+                    if force_seed:
+                        logging.info("CLEAR_BEFORE_SEED=true - forcing seeding even with existing data")
+                    seed_results = await seed_development_database(force=force_seed)
                     
                     if "error" in seed_results:
                         logging.warning(f"Database seeding failed: {seed_results['error']}")
@@ -67,6 +77,9 @@ async def lifespan(app: FastAPI):
                             
                 except Exception as e:
                     logging.error(f"Database seeding failed with exception: {e}")
+                finally:
+                    # Restore original SQLAlchemy logging level
+                    sqlalchemy_logger.setLevel(original_level)
             else:
                 logging.info("Database seeding disabled by configuration")
         

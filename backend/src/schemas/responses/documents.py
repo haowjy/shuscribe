@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 from src.schemas.base import BaseSchema
+from src.schemas.responses.tags import TagInfo
 
 
 class DocumentContent(BaseModel):
@@ -23,7 +24,7 @@ class DocumentMeta(BaseSchema):
     project_id: str
     title: str
     path: str
-    tags: List[str] = Field(default_factory=list)
+    tags: List[TagInfo] = Field(default_factory=list)
     word_count: int
     created_at: str
     updated_at: str
@@ -47,7 +48,7 @@ class DocumentReference(BaseSchema):
     path: str
     type: str  # 'character' | 'location' | 'item' | 'chapter' | 'note'
     project_id: str
-    tags: List[str] = Field(default_factory=list)
+    tags: List[TagInfo] = Field(default_factory=list)
 
 
 class DocumentListResponse(BaseSchema):

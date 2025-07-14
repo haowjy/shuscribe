@@ -30,3 +30,18 @@ class FileTreeRepository(ABC):
     async def delete(self, item_id: str) -> bool:
         """Delete file tree item"""
         pass
+    
+    @abstractmethod
+    async def get_by_id(self, item_id: str) -> Optional[FileTreeItem]:
+        """Get file tree item by ID"""
+        pass
+    
+    @abstractmethod
+    async def assign_tag(self, item_id: str, tag_id: str) -> bool:
+        """Assign tag to file tree item"""
+        pass
+    
+    @abstractmethod
+    async def unassign_tag(self, item_id: str, tag_id: str) -> bool:
+        """Unassign tag from file tree item"""
+        pass

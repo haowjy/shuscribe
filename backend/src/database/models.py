@@ -6,7 +6,7 @@ from datetime import datetime, UTC
 from typing import Optional, Any, Dict, List
 import uuid
 
-from sqlalchemy import String, Text, Integer, Boolean, DateTime, JSON, ForeignKey, CheckConstraint, Index
+from sqlalchemy import String, Text, Integer, Boolean, DateTime, JSON, ForeignKey, CheckConstraint, Index, Table, Column
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from src.config import settings
@@ -15,6 +15,29 @@ from src.config import settings
 class Base(DeclarativeBase):
     """Base class for all database models"""
     pass
+
+
+# Association tables for many-to-many relationships
+project_tags = Table(
+    f"{settings.table_prefix}project_tags",
+    Base.metadata,
+    Column("project_id", String(36), ForeignKey(f"{settings.table_prefix}projects.id"), primary_key=True),
+    Column("tag_id", String(36), ForeignKey(f"{settings.table_prefix}tags.id"), primary_key=True)
+)
+
+document_tags = Table(
+    f"{settings.table_prefix}document_tags",
+    Base.metadata,
+    Column("document_id", String(36), ForeignKey(f"{settings.table_prefix}documents.id"), primary_key=True),
+    Column("tag_id", String(36), ForeignKey(f"{settings.table_prefix}tags.id"), primary_key=True)
+)
+
+file_tree_item_tags = Table(
+    f"{settings.table_prefix}file_tree_item_tags",
+    Base.metadata,
+    Column("file_tree_item_id", String(36), ForeignKey(f"{settings.table_prefix}file_tree_items.id"), primary_key=True),
+    Column("tag_id", String(36), ForeignKey(f"{settings.table_prefix}tags.id"), primary_key=True)
+)
 
 
 class Project(Base):
@@ -33,7 +56,6 @@ class Project(Base):
     document_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     
     # JSON fields for flexibility
-    tag_ids: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     collaborators: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
     settings: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     
@@ -44,6 +66,7 @@ class Project(Base):
     # Relationships
     documents: Mapped[List["Document"]] = relationship("Document", back_populates="project", cascade="all, delete-orphan")
     file_tree_items: Mapped[List["FileTreeItem"]] = relationship("FileTreeItem", back_populates="project", cascade="all, delete-orphan")
+    tags: Mapped[List["Tag"]] = relationship("Tag", secondary=project_tags, back_populates="projects")
 
 
 class Document(Base):
@@ -64,7 +87,6 @@ class Document(Base):
     content: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     
     # Metadata
-    tag_ids: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     version: Mapped[str] = mapped_column(String(50), nullable=False, default="1.0.0")
     
@@ -82,6 +104,7 @@ class Document(Base):
     # Relationships
     project: Mapped["Project"] = relationship("Project", back_populates="documents")
     file_tree_item: Mapped[Optional["FileTreeItem"]] = relationship("FileTreeItem", back_populates="document")
+    tags: Mapped[List["Tag"]] = relationship("Tag", secondary=document_tags, back_populates="documents")
 
 
 class FileTreeItem(Base):
@@ -105,7 +128,6 @@ class FileTreeItem(Base):
     
     # Display info
     icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    tag_ids: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     word_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Timestamps
@@ -133,6 +155,7 @@ class FileTreeItem(Base):
     parent: Mapped[Optional["FileTreeItem"]] = relationship("FileTreeItem", remote_side=[id], back_populates="children")
     children: Mapped[List["FileTreeItem"]] = relationship("FileTreeItem", back_populates="parent")
     document: Mapped[Optional["Document"]] = relationship("Document", back_populates="file_tree_item")
+    tags: Mapped[List["Tag"]] = relationship("Tag", secondary=file_tree_item_tags, back_populates="file_tree_items")
 
 
 class Tag(Base):
@@ -152,6 +175,7 @@ class Tag(Base):
     # Scope and ownership
     is_global: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     user_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # null for global tags
+    project_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey(f"{settings.table_prefix}projects.id"), nullable=True)  # null for global tags
     
     # Metadata
     usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -172,4 +196,11 @@ class Tag(Base):
         Index(f"ix_{settings.table_prefix}tags_category", "category"),
         Index(f"ix_{settings.table_prefix}tags_system", "is_system"),
         Index(f"ix_{settings.table_prefix}tags_archived", "is_archived"),
+        Index(f"ix_{settings.table_prefix}tags_project", "project_id"),
     )
+    
+    # Relationships
+    project: Mapped[Optional["Project"]] = relationship("Project")
+    projects: Mapped[List["Project"]] = relationship("Project", secondary=project_tags, back_populates="tags")
+    documents: Mapped[List["Document"]] = relationship("Document", secondary=document_tags, back_populates="tags")
+    file_tree_items: Mapped[List["FileTreeItem"]] = relationship("FileTreeItem", secondary=file_tree_item_tags, back_populates="tags")

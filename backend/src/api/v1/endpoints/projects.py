@@ -9,8 +9,9 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from pydantic import BaseModel, Field
 
 from src.database.factory import get_repositories
-from src.database.models import Project, FileTreeItem
+from src.database.models import Project, FileTreeItem, Tag
 from src.schemas.base import ApiResponse
+from src.schemas.responses.tags import TagInfo
 from src.api.dependencies import require_auth, get_current_user_id
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class ProjectSummary(BaseModel):
     document_count: int
     created_at: str
     updated_at: str
-    tags: List[str]
+    tags: List[TagInfo]
     collaborators: List[ProjectCollaborator]
 
 
@@ -67,7 +68,7 @@ class ProjectDetails(BaseModel):
     document_count: int
     created_at: str
     updated_at: str
-    tags: List[str]
+    tags: List[TagInfo]
     collaborators: List[ProjectCollaborator]
     settings: ProjectSettings
 
@@ -97,7 +98,7 @@ class CreateProjectRequest(BaseModel):
     
     title: str
     description: str
-    tags: List[str] = []
+    tags: List[TagInfo] = []
     settings: ProjectSettings | None = None
 
 
@@ -107,7 +108,7 @@ class UpdateProjectRequest(BaseModel):
     
     title: str | None = None
     description: str | None = None
-    tags: List[str] | None = None
+    tags: List[TagInfo] | None = None
     settings: ProjectSettings | None = None
 
 
@@ -125,7 +126,7 @@ class FileTreeItemResponse(BaseModel):
     # File-specific properties
     document_id: str | None = None
     icon: str | None = None
-    tags: List[str] = []
+    tags: List[TagInfo] = []
     word_count: int | None = None
     
     # Timestamps
@@ -155,6 +156,16 @@ class FileTreeResponse(BaseModel):
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
+def tag_to_info(tag: Tag) -> TagInfo:
+    """Convert Tag model to TagInfo response"""
+    return TagInfo(
+        id=tag.id,
+        name=tag.name,
+        icon=tag.icon,
+        color=tag.color
+    )
+
 
 async def recalculate_project_word_count(project: Project, repos) -> int:
     """
@@ -220,7 +231,7 @@ def project_to_summary(project: Project) -> ProjectSummary:
         document_count=project.document_count,
         created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
         updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
-        tags=project.tag_ids,
+        tags=[tag_to_info(tag) for tag in project.tags],
         collaborators=collaborators,
     )
 
@@ -253,7 +264,7 @@ def project_to_response(project: Project) -> ProjectDetails:
         document_count=project.document_count,
         created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
         updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
-        tags=project.tag_ids,
+        tags=[tag_to_info(tag) for tag in project.tags],
         collaborators=collaborators,
         settings=settings,
     )
@@ -270,7 +281,7 @@ def file_tree_item_to_response(item: FileTreeItem, children: List["FileTreeItemR
         children=children if children else None,
         document_id=item.document_id,
         icon=item.icon,
-        tags=item.tag_ids,
+        tags=[tag_to_info(tag) for tag in item.tags],
         word_count=item.word_count,
         created_at=item.created_at.isoformat() if hasattr(item.created_at, 'isoformat') else str(item.created_at),
         updated_at=item.updated_at.isoformat() if hasattr(item.updated_at, 'isoformat') else str(item.updated_at),
@@ -492,7 +503,7 @@ async def create_project(
         project_data = {
             "title": request.title,
             "description": request.description,
-            "tag_ids": request.tags,
+            # Note: tags will be assigned after project creation via relationship
             "collaborators": [],  # Start with empty collaborators
             "settings": request.settings.model_dump() if request.settings else {},
             "word_count": 0,
@@ -542,7 +553,8 @@ async def update_project(
         if request.description is not None:
             updates["description"] = request.description
         if request.tags is not None:
-            updates["tag_ids"] = request.tags
+            # Note: tags will be updated via relationship, not direct field assignment
+            pass
         if request.settings is not None:
             updates["settings"] = request.settings.model_dump()
         

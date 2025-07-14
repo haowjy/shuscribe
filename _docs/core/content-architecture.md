@@ -63,7 +63,7 @@ interface UniverseProject {
   // Content containers
   contentUnits: ContentUnit[];
   sharedReferences: SharedReference[];
-  universeTags: string[];
+  tags: Tag[]; // Many-to-many relationship with tags
   
   // Team management
   collaborators: ProjectCollaborator[];
@@ -94,7 +94,7 @@ interface ContentUnit {
   // Content structure
   chapters: Chapter[];
   metadata: ContentMetadata;
-  tags: string[];
+  tags: Tag[]; // Many-to-many relationship with tags
   
   // Publishing configuration
   publishingConfig: PublishingConfig;
@@ -240,6 +240,66 @@ type RelationshipType =
   | 'temporal_sequence'
   | 'hierarchical'
   | 'thematic_connection';
+```
+
+### Tag System Model
+
+```typescript
+interface Tag {
+  id: string;
+  
+  // Tag properties
+  name: string;
+  icon?: string;
+  color?: string; // hex color code
+  description?: string;
+  category?: string;
+  
+  // Scope and ownership
+  isGlobal: boolean;
+  userId?: string; // null for global tags
+  projectId?: string; // null for global tags
+  
+  // Metadata
+  usageCount: number;
+  isSystem: boolean;
+  isArchived: boolean;
+  
+  // Many-to-many relationships
+  projects: UniverseProject[];
+  contentUnits: ContentUnit[];
+  chapters: Chapter[];
+  fileTreeItems: FileTreeItem[];
+  
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface FileTreeItem {
+  id: string;
+  projectId: string;
+  
+  // Tree structure
+  name: string;
+  type: 'file' | 'folder';
+  path: string;
+  parentId?: string;
+  
+  // Document reference (for files only)
+  documentId?: string;
+  
+  // Display info
+  icon?: string;
+  wordCount?: number;
+  
+  // Many-to-many relationship with tags
+  tags: Tag[];
+  
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+}
 ```
 
 ### Wiki System Model
@@ -420,7 +480,6 @@ CREATE TABLE projects (
   description TEXT,
   owner_id UUID NOT NULL REFERENCES users(id),
   settings JSONB NOT NULL DEFAULT '{}',
-  universe_tags TEXT[],
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -434,7 +493,6 @@ CREATE TABLE content_units (
   content_type VARCHAR(50) NOT NULL,
   content_format VARCHAR(50) NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
-  tags TEXT[],
   publishing_config JSONB NOT NULL DEFAULT '{}',
   access_control JSONB NOT NULL DEFAULT '{}',
   status VARCHAR(50) NOT NULL DEFAULT 'draft',
@@ -532,6 +590,66 @@ CREATE TABLE wiki_entries (
   
   UNIQUE(wiki_id, slug)
 );
+
+-- Tags system
+CREATE TABLE tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL,
+  icon VARCHAR(50),
+  color VARCHAR(7), -- hex color code
+  description TEXT,
+  category VARCHAR(100),
+  is_global BOOLEAN NOT NULL DEFAULT FALSE,
+  user_id UUID REFERENCES users(id),
+  project_id UUID REFERENCES projects(id),
+  usage_count INTEGER NOT NULL DEFAULT 0,
+  is_system BOOLEAN NOT NULL DEFAULT FALSE,
+  is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Junction tables for many-to-many tag relationships
+CREATE TABLE project_tags (
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (project_id, tag_id)
+);
+
+CREATE TABLE content_unit_tags (
+  content_unit_id UUID NOT NULL REFERENCES content_units(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (content_unit_id, tag_id)
+);
+
+CREATE TABLE chapter_tags (
+  chapter_id UUID NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (chapter_id, tag_id)
+);
+
+-- File tree items for hierarchical organization
+CREATE TABLE file_tree_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(10) NOT NULL CHECK (type IN ('file', 'folder')),
+  path VARCHAR(500) NOT NULL,
+  parent_id UUID REFERENCES file_tree_items(id),
+  document_id UUID,
+  icon VARCHAR(50),
+  word_count INTEGER,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  CHECK ((type = 'file' AND document_id IS NOT NULL) OR (type = 'folder' AND document_id IS NULL))
+);
+
+CREATE TABLE file_tree_item_tags (
+  file_tree_item_id UUID NOT NULL REFERENCES file_tree_items(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (file_tree_item_id, tag_id)
+);
 ```
 
 ### Indexes for Performance
@@ -557,6 +675,30 @@ CREATE INDEX idx_references_validation ON references(is_valid, validation_status
 CREATE INDEX idx_wiki_entries_wiki_id ON wiki_entries(wiki_id);
 CREATE INDEX idx_wiki_entries_entity_type ON wiki_entries(entity_type);
 CREATE INDEX idx_wiki_entries_spoiler_level ON wiki_entries(spoiler_level);
+
+-- Tag system queries
+CREATE INDEX idx_tags_global ON tags(is_global);
+CREATE INDEX idx_tags_user ON tags(user_id);
+CREATE INDEX idx_tags_project ON tags(project_id);
+CREATE INDEX idx_tags_category ON tags(category);
+CREATE INDEX idx_tags_system ON tags(is_system);
+CREATE INDEX idx_tags_archived ON tags(is_archived);
+CREATE INDEX idx_tags_name ON tags(name);
+
+-- Tag relationship queries
+CREATE INDEX idx_project_tags_project ON project_tags(project_id);
+CREATE INDEX idx_project_tags_tag ON project_tags(tag_id);
+CREATE INDEX idx_content_unit_tags_unit ON content_unit_tags(content_unit_id);
+CREATE INDEX idx_content_unit_tags_tag ON content_unit_tags(tag_id);
+CREATE INDEX idx_chapter_tags_chapter ON chapter_tags(chapter_id);
+CREATE INDEX idx_chapter_tags_tag ON chapter_tags(tag_id);
+
+-- File tree queries
+CREATE INDEX idx_file_tree_items_project ON file_tree_items(project_id);
+CREATE INDEX idx_file_tree_items_parent ON file_tree_items(parent_id);
+CREATE INDEX idx_file_tree_items_type ON file_tree_items(type);
+CREATE INDEX idx_file_tree_item_tags_item ON file_tree_item_tags(file_tree_item_id);
+CREATE INDEX idx_file_tree_item_tags_tag ON file_tree_item_tags(tag_id);
 
 -- Full-text search
 CREATE INDEX idx_chapters_content_search ON chapters USING GIN (to_tsvector('english', content_json::text));

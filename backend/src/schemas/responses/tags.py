@@ -8,6 +8,16 @@ from pydantic import BaseModel, Field
 from src.schemas.base import BaseSchema
 
 
+class TagInfo(BaseSchema):
+    """Simplified tag info for use in other responses"""
+    model_config = {"populate_by_name": True}
+    
+    id: str
+    name: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
+
+
 class TagResponse(BaseSchema):
     """Tag response schema"""
     model_config = {"populate_by_name": True}

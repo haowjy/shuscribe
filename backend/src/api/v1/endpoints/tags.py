@@ -366,11 +366,9 @@ async def assign_tag_to_file(
         if not file_item or file_item.project_id != project_id:
             raise HTTPException(status_code=404, detail="File not found")
         
-        # Add tag to file tree item if not already present
-        if tag_id not in file_item.tag_ids:
-            updated_tag_ids = file_item.tag_ids + [tag_id]
-            await repositories.file_tree.update(request.file_tree_item_id, {"tag_ids": updated_tag_ids})
-            
+        # Add tag to file tree item using proper relationship
+        assigned = await repositories.file_tree.assign_tag(request.file_tree_item_id, tag_id)
+        if assigned:
             # Increment tag usage count
             await repositories.tag.increment_usage(tag_id)
         
@@ -406,11 +404,9 @@ async def unassign_tag_from_file(
         if not file_item or file_item.project_id != project_id:
             raise HTTPException(status_code=404, detail="File not found")
         
-        # Remove tag from file tree item if present
-        if tag_id in file_item.tag_ids:
-            updated_tag_ids = [tid for tid in file_item.tag_ids if tid != tag_id]
-            await repositories.file_tree.update(request.file_tree_item_id, {"tag_ids": updated_tag_ids})
-            
+        # Remove tag from file tree item using proper relationship
+        unassigned = await repositories.file_tree.unassign_tag(request.file_tree_item_id, tag_id)
+        if unassigned:
             # Decrement tag usage count
             await repositories.tag.decrement_usage(tag_id)
         

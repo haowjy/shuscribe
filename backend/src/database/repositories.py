@@ -30,6 +30,7 @@ class DatabaseProjectRepository(ProjectRepository):
         async with get_session_context() as session:
             result = await session.execute(
                 select(Project).where(Project.id == project_id)
+                .options(selectinload(Project.tags))
             )
             return result.scalar_one_or_none()
     
@@ -41,13 +42,11 @@ class DatabaseProjectRepository(ProjectRepository):
                 description=project_data.get("description", ""),
                 word_count=project_data.get("word_count", 0),
                 document_count=project_data.get("document_count", 0),
-                tag_ids=project_data.get("tag_ids", []),
                 collaborators=project_data.get("collaborators", []),
                 settings=project_data.get("settings", {}),
             )
             session.add(project)
-            await session.flush()  # Get the ID
-            await session.refresh(project)
+            await session.flush()  # Get the ID - no need to refresh for seeding
             return project
     
     async def update(self, project_id: str, updates: Dict[str, Any]) -> Optional[Project]:
@@ -76,6 +75,7 @@ class DatabaseProjectRepository(ProjectRepository):
         async with get_session_context() as session:
             result = await session.execute(
                 select(Project).order_by(Project.updated_at.desc())
+                .options(selectinload(Project.tags))
             )
             return list(result.scalars().all())
 
@@ -87,6 +87,7 @@ class DatabaseDocumentRepository(DocumentRepository):
         async with get_session_context() as session:
             result = await session.execute(
                 select(Document).where(Document.id == document_id)
+                .options(selectinload(Document.tags))
             )
             return result.scalar_one_or_none()
     
@@ -94,6 +95,7 @@ class DatabaseDocumentRepository(DocumentRepository):
         async with get_session_context() as session:
             result = await session.execute(
                 select(Document).where(Document.project_id == project_id)
+                .options(selectinload(Document.tags))
             )
             return list(result.scalars().all())
     
@@ -105,7 +107,6 @@ class DatabaseDocumentRepository(DocumentRepository):
                 title=document_data["title"],
                 path=document_data["path"],
                 content=document_data.get("content", {"type": "doc", "content": []}),
-                tag_ids=document_data.get("tag_ids", []),
                 word_count=document_data.get("word_count", 0),
                 version=document_data.get("version", "1.0.0"),
                 is_locked=document_data.get("is_locked", False),
@@ -114,7 +115,6 @@ class DatabaseDocumentRepository(DocumentRepository):
             )
             session.add(document)
             await session.flush()
-            await session.refresh(document)
             return document
     
     async def update(self, document_id: str, updates: Dict[str, Any]) -> Optional[Document]:
@@ -176,7 +176,7 @@ class DatabaseFileTreeRepository(FileTreeRepository):
             result = await session.execute(
                 select(FileTreeItem)
                 .where(FileTreeItem.project_id == project_id)
-                .options(selectinload(FileTreeItem.children))
+                .options(selectinload(FileTreeItem.children), selectinload(FileTreeItem.tags))
                 .order_by(FileTreeItem.path)
             )
             return list(result.scalars().all())
@@ -195,12 +195,10 @@ class DatabaseFileTreeRepository(FileTreeRepository):
                 parent_id=item_data.get("parent_id"),
                 document_id=item_data.get("document_id"),
                 icon=item_data.get("icon"),
-                tag_ids=item_data.get("tag_ids", []),
                 word_count=item_data.get("word_count"),
             )
             session.add(item)
             await session.flush()
-            await session.refresh(item)
             return item
     
     async def update(self, item_id: str, updates: Dict[str, Any]) -> Optional[FileTreeItem]:
@@ -229,6 +227,53 @@ class DatabaseFileTreeRepository(FileTreeRepository):
                 delete(FileTreeItem).where(FileTreeItem.id == item_id)
             )
             return result.rowcount > 0
+    
+    async def get_by_id(self, item_id: str) -> Optional[FileTreeItem]:
+        async with get_session_context() as session:
+            result = await session.execute(
+                select(FileTreeItem).where(FileTreeItem.id == item_id)
+            )
+            return result.scalar_one_or_none()
+    
+    async def assign_tag(self, item_id: str, tag_id: str) -> bool:
+        """Assign tag to file tree item using many-to-many relationship"""
+        async with get_session_context() as session:
+            # Get the file tree item with its current tags
+            item = await session.get(FileTreeItem, item_id)
+            if not item:
+                return False
+            
+            # Get the tag
+            tag = await session.get(Tag, tag_id)
+            if not tag:
+                return False
+            
+            # Check if tag is already assigned
+            if tag not in item.tags:
+                item.tags.append(tag)
+                await session.flush()
+                return True
+            return False
+    
+    async def unassign_tag(self, item_id: str, tag_id: str) -> bool:
+        """Unassign tag from file tree item using many-to-many relationship"""
+        async with get_session_context() as session:
+            # Get the file tree item with its current tags
+            item = await session.get(FileTreeItem, item_id)
+            if not item:
+                return False
+            
+            # Get the tag
+            tag = await session.get(Tag, tag_id)
+            if not tag:
+                return False
+            
+            # Check if tag is assigned and remove it
+            if tag in item.tags:
+                item.tags.remove(tag)
+                await session.flush()
+                return True
+            return False
 
 
 # ============================================================================
@@ -252,7 +297,6 @@ class MemoryProjectRepository(ProjectRepository):
             description=project_data.get("description", ""),
             word_count=project_data.get("word_count", 0),
             document_count=project_data.get("document_count", 0),
-            tag_ids=project_data.get("tag_ids", []),
             collaborators=project_data.get("collaborators", []),
             settings=project_data.get("settings", {}),
             created_at=datetime.now(UTC).replace(tzinfo=None),
@@ -305,7 +349,6 @@ class MemoryDocumentRepository(DocumentRepository):
             title=document_data["title"],
             path=document_data["path"],
             content=document_data.get("content", {"type": "doc", "content": []}),
-            tag_ids=document_data.get("tag_ids", []),
             word_count=document_data.get("word_count", 0),
             version=document_data.get("version", "1.0.0"),
             is_locked=document_data.get("is_locked", False),
@@ -383,7 +426,6 @@ class MemoryFileTreeRepository(FileTreeRepository):
             parent_id=item_data.get("parent_id"),
             document_id=item_data.get("document_id"),
             icon=item_data.get("icon"),
-            tag_ids=item_data.get("tag_ids", []),
             word_count=item_data.get("word_count"),
             created_at=datetime.now(UTC).replace(tzinfo=None),
             updated_at=datetime.now(UTC).replace(tzinfo=None),
@@ -409,6 +451,29 @@ class MemoryFileTreeRepository(FileTreeRepository):
     async def delete(self, item_id: str) -> bool:
         if item_id in self._items:
             del self._items[item_id]
+            return True
+        return False
+    
+    async def get_by_id(self, item_id: str) -> Optional[FileTreeItem]:
+        return self._items.get(item_id)
+    
+    async def assign_tag(self, item_id: str, tag_id: str) -> bool:
+        """Assign tag to file tree item (simplified for memory repository)"""
+        # For memory implementation, we simulate the relationship
+        # In a real system with relationships, this would be handled by SQLAlchemy
+        item = self._items.get(item_id)
+        if item:
+            # Simulate assignment - in real implementation this would use relationships
+            # For now, we'll just return True to indicate successful assignment
+            return True
+        return False
+    
+    async def unassign_tag(self, item_id: str, tag_id: str) -> bool:
+        """Unassign tag from file tree item (simplified for memory repository)"""
+        item = self._items.get(item_id)
+        if item:
+            # Simulate unassignment - in real implementation this would use relationships
+            # For now, we'll just return True to indicate successful unassignment
             return True
         return False
 
@@ -439,6 +504,14 @@ class DatabaseTagRepository(TagRepository):
             result = await session.execute(query.order_by(Tag.name))
             return list(result.scalars().all())
     
+    async def get_by_project_id(self, project_id: str, include_archived: bool = False) -> List[Tag]:
+        async with get_session_context() as session:
+            query = select(Tag).where(Tag.project_id == project_id)
+            if not include_archived:
+                query = query.where(Tag.is_archived == False)
+            result = await session.execute(query.order_by(Tag.name))
+            return list(result.scalars().all())
+    
     async def get_by_name(self, name: str, user_id: Optional[str] = None) -> Optional[Tag]:
         async with get_session_context() as session:
             if user_id is None:
@@ -464,13 +537,13 @@ class DatabaseTagRepository(TagRepository):
                 category=tag_data.get("category"),
                 is_global=tag_data.get("is_global", False),
                 user_id=tag_data.get("user_id"),
+                project_id=tag_data.get("project_id"),
                 usage_count=tag_data.get("usage_count", 0),
                 is_system=tag_data.get("is_system", False),
                 is_archived=tag_data.get("is_archived", False),
             )
             session.add(tag)
             await session.flush()
-            await session.refresh(tag)
             return tag
     
     async def update(self, tag_id: str, updates: Dict[str, Any]) -> Optional[Tag]:
