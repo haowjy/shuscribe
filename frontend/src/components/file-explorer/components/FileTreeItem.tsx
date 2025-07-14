@@ -66,16 +66,17 @@ export function FileTreeItem({
 
   // Calculate responsive styles - prioritize tag visibility over text
   const getResponsiveState = () => {
-    // Tags get priority - only reduce count at very narrow widths
-    // Let filename text compress/truncate first before hiding tags
-    if (containerWidth > 180) {
+    // Tags get priority - reduce count early to avoid panel collapse oscillation
+    // Start collapsing well before panel collapse threshold (~80-120px)
+    // Note: maxVisible=3 can show up to 4 tags when there are exactly 4
+    if (containerWidth > 260) {
       return { maxVisibleTags: 3, breakpoint: 'lg' as const, indentScale: 1.0 };
-    } else if (containerWidth > 120) {
+    } else if (containerWidth > 180) {
       return { maxVisibleTags: 2, breakpoint: 'md' as const, indentScale: 0.9 };
-    } else if (containerWidth > 80) {
+    } else if (containerWidth > 140) {
       return { maxVisibleTags: 1, breakpoint: 'sm' as const, indentScale: 0.8 };
     } else {
-      // Only hide tags at extremely narrow widths (< 80px)
+      // Hide tags well before panel collapse to prevent oscillation
       return { maxVisibleTags: 0, breakpoint: 'xs' as const, indentScale: 0.7 };
     }
   };

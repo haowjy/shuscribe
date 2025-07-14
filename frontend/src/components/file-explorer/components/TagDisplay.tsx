@@ -23,12 +23,18 @@ export function TagDisplay({
     return null;
   }
 
-  const visibleTags = tags.slice(0, maxVisible);
-  const overflowCount = Math.max(0, tags.length - maxVisible);
+  // If there's exactly maxVisible+1 tags, show all to avoid unnecessary +1 indicator
+  const shouldShowAll = tags.length === maxVisible + 1;
+  const actualMaxVisible = shouldShowAll ? tags.length : maxVisible;
+  
+  const visibleTags = tags.slice(0, actualMaxVisible);
+  const overflowCount = Math.max(0, tags.length - actualMaxVisible);
   
   console.log('🏷️ [TagDisplay] Processing tags:', {
     totalTags: tags.length,
     maxVisible,
+    actualMaxVisible,
+    shouldShowAll,
     visibleTagsCount: visibleTags.length,
     overflowCount,
     visibleTagNames: visibleTags.map(t => t.name)
@@ -77,7 +83,7 @@ export function TagDisplay({
               <div className="space-y-1">
                 <div className="font-medium">{overflowCount} more tag{overflowCount > 1 ? 's' : ''}</div>
                 <div className="text-muted-foreground">
-                  {tags.slice(maxVisible).map(t => t.name || 'Unknown').join(', ')}
+                  {tags.slice(actualMaxVisible).map(t => t.name || 'Unknown').join(', ')}
                 </div>
               </div>
             </TooltipContent>

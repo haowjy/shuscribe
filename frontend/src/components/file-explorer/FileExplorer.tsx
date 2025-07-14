@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useFileTree } from "@/lib/query/hooks";
 import { TreeItem } from "@/data/file-tree";
@@ -197,7 +196,7 @@ export function FileExplorer({ projectId, onFileClick }: FileExplorerProps) {
       />
       
       {/* File Tree */}
-      <ScrollArea className="flex-1 p-1 w-full overflow-hidden">
+      <div className="flex-1 p-1 w-full overflow-auto">
         <div className="space-y-1">
           {filteredFileTree.map((item) => (
             <FileTreeItem
@@ -221,7 +220,7 @@ export function FileExplorer({ projectId, onFileClick }: FileExplorerProps) {
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Metadata Editor Dialog */}
       {metadataEditorItem && (
