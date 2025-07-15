@@ -149,7 +149,8 @@ docker-compose down                      # Stop all services
 - **🛠️ Environment Setup**: [`/_docs/development/environment-setup.md`](_docs/development/environment-setup.md) - Complete dev environment guide (planned)
 - **🧪 Testing Strategy**: [`/_docs/development/testing-strategy.md`](_docs/development/testing-strategy.md) - Testing approach and tools (planned)
 - **📤 Publication System**: [`/_docs/development/publication-system.md`](_docs/development/publication-system.md) - Future publication workflow design
-- **🚀 Deployment Guide**: [`/_docs/development/deployment-guide.md`](_docs/development/deployment-guide.md) - Production deployment process (planned)
+- **🚀 Deployment Guide**: [`/_docs/development/deployment-guide.md`](_docs/development/deployment-guide.md) - Production deployment process
+- **🚂 Railway Deployment**: [`/backend/railway-deploy.md`](backend/railway-deploy.md) - Complete Railway deployment guide
 
 ## Architecture Overview
 
@@ -164,6 +165,7 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 - **Backend**: FastAPI, SQLAlchemy, Supabase (PostgreSQL), Repository pattern
 - **Authentication**: Supabase Auth with OAuth support
 - **AI**: Self-hosted Portkey Gateway with multiple LLM providers
+- **Deployment**: Railway (two-service architecture) + Vercel
 
 ## Environment Setup
 
