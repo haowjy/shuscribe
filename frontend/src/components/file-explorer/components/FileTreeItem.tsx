@@ -150,8 +150,7 @@ export function FileTreeItem({
               <span className={cn(
                 "flex-1 text-left cursor-inherit overflow-hidden",
                 "whitespace-nowrap text-ellipsis min-w-0",
-                "shrink-[999]",
-                isNarrow && "text-xs"
+                "shrink-[999]"
               )}
               style={{ 
                 minWidth: "0px",
