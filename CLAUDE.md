@@ -149,6 +149,7 @@ docker-compose down                      # Stop all services
 - **🛠️ Environment Setup**: [`/_docs/development/environment-setup.md`](_docs/development/environment-setup.md) - Complete dev environment guide (planned)
 - **🧪 Testing Strategy**: [`/_docs/development/testing-strategy.md`](_docs/development/testing-strategy.md) - Testing approach and tools (planned)
 - **📤 Publication System**: [`/_docs/development/publication-system.md`](_docs/development/publication-system.md) - Future publication workflow design
+- **🤖 AI Collaboration**: [`/_docs/development/ai-collaboration-conflict-resolution.md`](_docs/development/ai-collaboration-conflict-resolution.md) - AI-assisted editing and conflict resolution patterns
 - **🚀 Deployment Guide**: [`/_docs/development/deployment-guide.md`](_docs/development/deployment-guide.md) - Production deployment process
 - **🚂 Railway Deployment**: [`/backend/railway-deploy.md`](backend/railway-deploy.md) - Complete Railway deployment guide
 
