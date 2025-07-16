@@ -22,9 +22,8 @@ ENV UV_COMPILE_BYTECODE=1 \
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies with cache mount for faster builds
-RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
-    uv sync --frozen --no-cache
+# Install dependencies
+RUN uv sync --frozen --no-cache
 
 # Copy source code
 COPY . .
