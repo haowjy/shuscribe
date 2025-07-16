@@ -29,9 +29,9 @@ RUN mkdir -p temp
 # Expose port
 EXPOSE 8000
 
-# Health check
+# Health check - use dynamic PORT for Railway compatibility
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Start the application
-CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start the application - use hypercorn with Railway's recommended binding
+CMD ["sh", "-c", "uv run hypercorn src.main:app --bind [::]:${PORT:-8000}"]

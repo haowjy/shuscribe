@@ -122,10 +122,13 @@ backend/
    ```bash
    python -c "import secrets; print(secrets.token_urlsafe(32))"
    ```
-3. Configure environment variables:
+3. Configure environment variables (see [`/_docs/development/environment-configuration.md`](/_docs/development/environment-configuration.md) for complete guide):
+   - `ENVIRONMENT`: development/testing/production (controls validation and seeding)
+   - `DEBUG`: true/false (enables API docs and SQL logging)
    - `ENCRYPTION_KEY`: For API key encryption
    - `PORTKEY_BASE_URL`: Usually `http://localhost:8787`
-   - `SKIP_DATABASE`: Set `true` for file-based mode
+   - `DATABASE_BACKEND`: memory/file/database (storage type)
+   - `TABLE_PREFIX`: Database table isolation (test_, dev_, staging_)
    - `THINKING_BUDGET_*_PERCENT`: For thinking mode costs
 
 ### Docker Services
@@ -229,6 +232,7 @@ When using file backend, the structure in `temp/` is:
 
 ### Development Documentation (`/_docs/development/`)
 - **🛠️ Environment Setup**: [`/_docs/development/environment-setup.md`](/_docs/development/environment-setup.md) - Complete dev environment guide (planned)
+- **⚙️ Environment Configuration**: [`/_docs/development/environment-configuration.md`](/_docs/development/environment-configuration.md) - Environment variables and behavior differences
 - **🧪 Testing Strategy**: [`/_docs/development/testing-strategy.md`](/_docs/development/testing-strategy.md) - Backend testing approach (planned)
 - **🚀 Deployment Guide**: [`/_docs/development/deployment-guide.md`](/_docs/development/deployment-guide.md) - Production deployment (planned)
 

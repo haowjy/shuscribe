@@ -147,6 +147,7 @@ docker-compose down                      # Stop all services
 ### Development Documentation
 
 - **🛠️ Environment Setup**: [`/_docs/development/environment-setup.md`](_docs/development/environment-setup.md) - Complete dev environment guide (planned)
+- **⚙️ Environment Configuration**: [`/_docs/development/environment-configuration.md`](_docs/development/environment-configuration.md) - Environment variables and behavior differences
 - **🧪 Testing Strategy**: [`/_docs/development/testing-strategy.md`](_docs/development/testing-strategy.md) - Testing approach and tools (planned)
 - **📤 Publication System**: [`/_docs/development/publication-system.md`](_docs/development/publication-system.md) - Future publication workflow design
 - **🤖 AI Collaboration**: [`/_docs/development/ai-collaboration-conflict-resolution.md`](_docs/development/ai-collaboration-conflict-resolution.md) - AI-assisted editing and conflict resolution patterns
@@ -189,7 +190,9 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 - **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
 - **File Storage**: Backend file repositories MUST use `backend/temp/` directory (gitignored)
 - **API Documentation**: ALWAYS update `/_docs/core/api-reference.md` when modifying API endpoints
+- **Environment Configuration**: ALWAYS verify environment behavior against [`/_docs/development/environment-configuration.md`](_docs/development/environment-configuration.md) when making changes
 - **Cross-References**: Update all CLAUDE.md files when making documentation changes
+- **Never directly edit `pyproject.toml` or `package.json`**: ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend)
 
 ### @-Reference System (Core Feature)
 

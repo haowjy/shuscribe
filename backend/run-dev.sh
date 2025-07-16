@@ -4,5 +4,6 @@
 # Source the .env file to load fresh values
 source .env
 
-# Run the development server
-uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+# Run the development server with hypercorn (matches production)
+# Note: hypercorn supports --reload for development hot-reloading
+uv run hypercorn src.main:app --reload --bind 0.0.0.0:8000
