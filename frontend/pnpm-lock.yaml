@@ -98,6 +98,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      debug:
+        specifier: ^4.4.1
+        version: 4.4.1
       lowlight:
         specifier: ^3.3.0
         version: 3.3.0

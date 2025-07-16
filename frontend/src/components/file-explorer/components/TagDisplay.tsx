@@ -11,15 +11,8 @@ export function TagDisplay({
   maxVisible = 3,
   onTagClick 
 }: TagDisplayProps) {
-  // Debug logging
-  console.log('🏷️ [TagDisplay] Props received:', {
-    tagsLength: tags?.length || 0,
-    maxVisible,
-    tagsArray: tags
-  });
 
   if (!tags || tags.length === 0 || maxVisible === 0) {
-    console.log('🏷️ [TagDisplay] Returning null - no tags or maxVisible=0');
     return null;
   }
 
@@ -30,15 +23,6 @@ export function TagDisplay({
   const visibleTags = tags.slice(0, actualMaxVisible);
   const overflowCount = Math.max(0, tags.length - actualMaxVisible);
   
-  console.log('🏷️ [TagDisplay] Processing tags:', {
-    totalTags: tags.length,
-    maxVisible,
-    actualMaxVisible,
-    shouldShowAll,
-    visibleTagsCount: visibleTags.length,
-    overflowCount,
-    visibleTagNames: visibleTags.map(t => t.name)
-  });
 
   return (
     <div className="flex gap-1 items-center flex-shrink-0">

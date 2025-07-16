@@ -11,6 +11,9 @@ import {
   createEmptyDocument, 
   sanitizeContent 
 } from '@/lib/editor/content-utils';
+import { createDebug } from '@/lib/utils/logger';
+
+const debug = createDebug('app:hooks');
 
 // Extended query keys for localStorage integration
 export const enhancedQueryKeys = {
@@ -33,7 +36,7 @@ export function useDocumentWithStorage(documentId: string) {
       // 1. First check localStorage for document
       const localDocument = DocumentStorage.getDocument(documentId);
       if (localDocument && localDocument.content) {
-        console.log(`Loaded document ${documentId} from localStorage`);
+        debug(`Loaded document ${documentId} from localStorage`);
         return {
           ...localDocument,
           source: 'localStorage' as const,
@@ -43,7 +46,7 @@ export function useDocumentWithStorage(documentId: string) {
       // 2. Check for draft if no saved document
       const draft = DraftManager.getDraft(documentId);
       if (draft) {
-        console.log(`Loaded draft for document ${documentId}`);
+        debug(`Loaded draft for document ${documentId}`);
         return {
           id: documentId,
           title: draft.title || `Untitled ${documentId}`,
@@ -84,7 +87,7 @@ export function useDocumentWithStorage(documentId: string) {
           // Save to localStorage for next time
           DocumentStorage.saveDocument(documentId, documentState);
 
-          console.log(`Loaded document ${documentId} from API and cached locally`);
+          debug(`Loaded document ${documentId} from API and cached locally`);
           return {
             ...documentState,
             source: 'api' as const,
@@ -135,7 +138,7 @@ export function useProjectDataWithStorage(projectId: string) {
   return useQuery({
     queryKey: enhancedQueryKeys.projectData(projectId),
     queryFn: async () => {
-      console.log('Loading project data with storage for project:', projectId);
+      debug('Loading project data with storage for project:', projectId);
       
       // Try to get real project data from backend first
       let backendProjectData = null;
@@ -143,7 +146,7 @@ export function useProjectDataWithStorage(projectId: string) {
         const response = await apiClient.getProjectData(projectId);
         if (!response.error) {
           backendProjectData = response.data;
-          console.log('Real project data loaded from backend:', backendProjectData?.title);
+          debug('Real project data loaded from backend:', backendProjectData?.title);
         } else {
           console.warn('Backend project data failed:', response.error);
         }
@@ -166,7 +169,7 @@ export function useProjectDataWithStorage(projectId: string) {
       // Get all local documents
       const allLocalDocs = DocumentStorage.getAllDocuments();
       const hasAnyLocalData = Object.keys(allLocalDocs).length > 0;
-      console.log('Local documents found:', Object.keys(allLocalDocs).length);
+      debug('Local documents found:', Object.keys(allLocalDocs).length);
       
       // Create a map of documents starting with backend data
       const documentsMap = new Map<string, Document>();
@@ -213,7 +216,7 @@ export function useProjectDataWithStorage(projectId: string) {
         };
       });
       
-      console.log('Final project data contains', finalDocuments.length, 'documents with IDs:', finalDocuments.map(d => d.id));
+      debug('Final project data contains', finalDocuments.length, 'documents with IDs:', finalDocuments.map(d => d.id));
       
       return {
         ...projectData,
@@ -280,7 +283,7 @@ export function useSaveDocument() {
           documentState.isDirty = false;
           DocumentStorage.saveDocument(documentId, documentState);
           
-          console.log(`Document ${documentId} saved to API and localStorage`);
+          debug(`Document ${documentId} saved to API and localStorage`);
         } catch (error) {
           console.warn(`Failed to save document ${documentId} to API, kept in localStorage:`, error);
           // Keep as dirty for next sync attempt
@@ -362,7 +365,7 @@ export function useCreateDocumentWithStorage() {
           documentState.isDirty = false;
           DocumentStorage.saveDocument(apiResult.id, documentState);
           
-          console.log(`Document created in API with ID ${apiResult.id}`);
+          debug(`Document created in API with ID ${apiResult.id}`);
         } catch (error) {
           console.warn('Failed to create document in API, kept locally:', error);
         }
@@ -441,7 +444,7 @@ export function useSyncLocalChanges() {
         });
       });
 
-      console.log(`Synced ${syncedIds.length} documents to API`);
+      debug(`Synced ${syncedIds.length} documents to API`);
     },
   });
 }
