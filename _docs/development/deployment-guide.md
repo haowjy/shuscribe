@@ -101,7 +101,7 @@ PORT=8787
 
 **Environment Variables:**
 ```bash
-NEXT_PUBLIC_API_URL=https://shuscribe-backend.railway.app
+NEXT_PUBLIC_API_BASE_URL=https://shuscribe-backend.railway.app
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
