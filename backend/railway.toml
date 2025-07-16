@@ -1,6 +1,5 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "uv sync --frozen"
 
 [deploy]
 startCommand = "uv run hypercorn src.main:app --bind [::]:$PORT"
