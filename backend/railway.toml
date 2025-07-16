@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "uv sync --frozen"
 
 [deploy]
-startCommand = "uv run hypercorn src.main:app --bind [::]:$PORT --bind 0.0.0.0:$PORT"
+startCommand = "uv run hypercorn src.main:app --bind [::]:$PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

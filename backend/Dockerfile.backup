@@ -33,5 +33,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Start the application - use hypercorn with dual-stack binding for Railway compatibility
-CMD ["sh", "-c", "uv run hypercorn src.main:app --bind [::]:${PORT:-8000} --bind 0.0.0.0:${PORT:-8000}"]
+# Start the application - use hypercorn with Railway's official configuration
+CMD ["sh", "-c", "uv run hypercorn src.main:app --bind [::]:${PORT:-8000}"]
