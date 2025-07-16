@@ -323,7 +323,7 @@ def build_file_tree_hierarchy(items: List[FileTreeItem]) -> List[FileTreeItemRes
 # ============================================================================
 
 
-@router.get("/", response_model=ProjectListResponse)
+@router.get("", response_model=ProjectListResponse)
 async def list_projects(
     limit: int = Query(default=20, ge=1, le=100, description="Number of projects to return"),
     offset: int = Query(default=0, ge=0, description="Number of projects to skip"),
@@ -486,7 +486,7 @@ async def get_project_file_tree(
 
 
 
-@router.post("/", response_model=ProjectDetails, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProjectDetails, status_code=status.HTTP_201_CREATED)
 async def create_project(
     request: CreateProjectRequest,
     user_id: str = Depends(get_current_user_id)

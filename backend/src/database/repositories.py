@@ -687,6 +687,12 @@ class MemoryTagRepository(TagRepository):
             tags = [tag for tag in tags if not tag.is_archived]
         return sorted(tags, key=lambda t: t.name)
     
+    async def get_by_project_id(self, project_id: str, include_archived: bool = False) -> List[Tag]:
+        tags = [tag for tag in self._tags.values() if tag.project_id == project_id]
+        if not include_archived:
+            tags = [tag for tag in tags if not tag.is_archived]
+        return sorted(tags, key=lambda t: t.name)
+    
     async def get_by_name(self, name: str, user_id: Optional[str] = None) -> Optional[Tag]:
         for tag in self._tags.values():
             if user_id is None:

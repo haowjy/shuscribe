@@ -159,7 +159,7 @@ uv run alembic upgrade head && uv run uvicorn src.main:app --host 0.0.0.0 --port
 Update your Vercel frontend to use Railway backend:
 ```javascript
 // In your frontend .env.local
-NEXT_PUBLIC_API_URL=https://your-backend.railway.app
+NEXT_PUBLIC_API_BASE_URL=https://your-backend.railway.app
 ```
 
 ## Monitoring

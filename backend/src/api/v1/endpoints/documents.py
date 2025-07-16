@@ -11,11 +11,27 @@ from pydantic import BaseModel, field_validator, Field
 from src.database.factory import get_repositories
 from src.database.models import Document, Tag
 from src.schemas.base import ApiResponse
+from src.schemas.responses.tags import TagInfo
+from src.schemas.responses.documents import DocumentMeta, DocumentResponse
 from src.api.dependencies import require_auth, get_current_user_id
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+def tag_to_info(tag: Tag) -> TagInfo:
+    """Convert Tag model to TagInfo response"""
+    return TagInfo(
+        id=tag.id,
+        name=tag.name,
+        icon=tag.icon,
+        color=tag.color
+    )
 
 
 # ============================================================================
@@ -47,28 +63,6 @@ class DocumentContent(BaseModel):
             return "doc"
         return v
 
-
-class DocumentMeta(BaseModel):
-    """Document metadata"""
-    model_config = {"populate_by_name": True}
-    
-    id: str
-    project_id: str
-    title: str
-    path: str
-    tags: List[str]
-    word_count: int
-    created_at: str
-    updated_at: str
-    version: str
-    is_locked: bool
-    locked_by: str | None = None
-    file_tree_id: str | None = None
-
-
-class DocumentResponse(DocumentMeta):
-    """Complete document response including content"""
-    content: DocumentContent
 
 
 class CreateDocumentRequest(BaseModel):
@@ -108,18 +102,19 @@ def document_to_response(document: Document) -> DocumentResponse:
     if not isinstance(content, dict):
         content = {"type": "doc", "content": []}
     
-    document_content = DocumentContent(
-        type=content.get("type", "doc"),
-        content=content.get("content", [])
-    )
+    # Convert to dict format expected by schema
+    content_dict = {
+        "type": content.get("type", "doc"),
+        "content": content.get("content", [])
+    }
     
     return DocumentResponse(
         id=document.id,
         project_id=document.project_id,
         title=document.title,
         path=document.path,
-        content=document_content,
-        tags=[tag.name for tag in document.tags],
+        content=content_dict,
+        tags=[tag_to_info(tag) for tag in document.tags],
         word_count=document.word_count,
         created_at=document.created_at.isoformat() if hasattr(document.created_at, 'isoformat') else str(document.created_at),
         updated_at=document.updated_at.isoformat() if hasattr(document.updated_at, 'isoformat') else str(document.updated_at),

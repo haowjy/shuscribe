@@ -421,7 +421,7 @@ interface DocumentResponse {
   title: string;
   path: string;
   content: ProseMirrorContent;
-  tags: string[];
+  tags: TagInfo[];
   word_count: number;
   created_at: string;
   updated_at: string;
@@ -430,6 +430,17 @@ interface DocumentResponse {
   locked_by?: string;
   file_tree_id?: string;
 }
+
+interface TagInfo {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+}
+
+// Note: Tag data format differs between requests and responses:
+// - Requests (create/update): Send tag names as strings (e.g., tags: ["chapter", "intro"])  
+// - Responses (get): Return full TagInfo objects with metadata
 
 interface ProseMirrorContent {
   type: "doc";
@@ -472,7 +483,20 @@ interface ProseMirrorMark {
         }
       ]
     },
-    "tags": ["chapter", "intro"],
+    "tags": [
+      {
+        "id": "tag-123",
+        "name": "chapter",
+        "icon": "book-open",
+        "color": "#3b82f6"
+      },
+      {
+        "id": "tag-456", 
+        "name": "intro",
+        "icon": "play",
+        "color": "#10b981"
+      }
+    ],
     "word_count": 1247,
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-15T10:30:00Z",
