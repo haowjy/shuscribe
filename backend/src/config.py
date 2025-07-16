@@ -2,10 +2,12 @@
 """
 Application configuration using Pydantic Settings
 """
+import json
 import logging # Added for potential logging in init
 import os
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import dotenv_values
 
@@ -82,6 +84,23 @@ class Settings(BaseSettings):
     THINKING_BUDGET_MEDIUM_PERCENT: float = 50.0   # 50% of available tokens for medium thinking  
     THINKING_BUDGET_HIGH_PERCENT: float = 100.0     # 100% of available tokens for high thinking
     THINKING_BUDGET_DEFAULT_TOKENS: int = 2048     # Default budget when context window unknown
+    
+    @field_validator('ALLOWED_ORIGINS', mode='before')
+    @classmethod
+    def parse_allowed_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        """Parse ALLOWED_ORIGINS from JSON string or return as-is if already a list"""
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+                else:
+                    logger.warning(f"ALLOWED_ORIGINS JSON is not a list: {parsed}")
+                    return [str(parsed)]
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse ALLOWED_ORIGINS as JSON: {v}")
+                return [v]
+        return v
     
     @property
     def supabase_publishable_key(self) -> str:
