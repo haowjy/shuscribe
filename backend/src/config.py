@@ -5,6 +5,7 @@ Application configuration using Pydantic Settings
 import json
 import logging # Added for potential logging in init
 import os
+from enum import Enum
 from typing import List, Literal, Optional, Union
 
 from pydantic import field_validator
@@ -13,16 +14,23 @@ from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__) # Added logger
 
+class Environment(str, Enum):
+    """Environment enumeration for type-safe environment configuration"""
+    DEV = "dev"
+    TEST = "test"
+    STAGING = "staging"
+    PROD = "prod"
+
 # --- Determine environment early to configure Pydantic Settings ---
 # Read the ENVIRONMENT variable directly from the .env file or system environment
 # This allows us to configure `extra` mode conditionally.
 _env_values = dotenv_values(".env") # Load .env file
-CURRENT_ENVIRONMENT = os.getenv("ENVIRONMENT", _env_values.get("ENVIRONMENT", "development"))
+CURRENT_ENVIRONMENT = os.getenv("ENVIRONMENT", _env_values.get("ENVIRONMENT", "dev"))
 if CURRENT_ENVIRONMENT is not None:
     CURRENT_ENVIRONMENT = CURRENT_ENVIRONMENT.lower()
 
 # Set the `extra` mode based on the environment
-_extra_mode = "ignore" if CURRENT_ENVIRONMENT == "development" else "forbid"
+_extra_mode = "ignore" if CURRENT_ENVIRONMENT == "dev" else "forbid"
 logger.info(f"Pydantic Settings 'extra' mode set to: '{_extra_mode}' for environment: '{CURRENT_ENVIRONMENT}'")
 
 class Settings(BaseSettings):
@@ -30,7 +38,7 @@ class Settings(BaseSettings):
     
     # Application
     DEBUG: bool = False
-    ENVIRONMENT: str = "development"
+    ENVIRONMENT: Environment = Environment.DEV
     SECRET_KEY: str = "change-me-in-production"
     
     # Database - Supabase Configuration
@@ -85,6 +93,18 @@ class Settings(BaseSettings):
     THINKING_BUDGET_HIGH_PERCENT: float = 100.0     # 100% of available tokens for high thinking
     THINKING_BUDGET_DEFAULT_TOKENS: int = 2048     # Default budget when context window unknown
     
+    @field_validator('ENVIRONMENT', mode='before')
+    @classmethod
+    def parse_environment(cls, v: Union[str, Environment]) -> Environment:
+        """Parse ENVIRONMENT from string to enum"""
+        if isinstance(v, str):
+            try:
+                return Environment(v.lower())
+            except ValueError:
+                logger.warning(f"Invalid environment value: {v}. Using default: {Environment.DEV}")
+                return Environment.DEV
+        return v
+    
     @field_validator('ALLOWED_ORIGINS', mode='before')
     @classmethod
     def parse_allowed_origins(cls, v: Union[str, List[str]]) -> List[str]:
@@ -115,10 +135,30 @@ class Settings(BaseSettings):
     @property
     def table_prefix(self) -> str:
         """Get table prefix based on environment and configuration"""
-        if self.ENVIRONMENT.lower() in ["development", "testing"]:
+        if self.ENVIRONMENT in [Environment.DEV, Environment.TEST, Environment.STAGING]:
             # Respect configured TABLE_PREFIX, but default to "test_" if empty
             return self.TABLE_PREFIX if self.TABLE_PREFIX else "test_"
         return ""
+    
+    @property
+    def is_dev(self) -> bool:
+        """Check if environment is development"""
+        return self.ENVIRONMENT == Environment.DEV
+    
+    @property
+    def is_test(self) -> bool:
+        """Check if environment is testing"""
+        return self.ENVIRONMENT == Environment.TEST
+    
+    @property
+    def is_staging(self) -> bool:
+        """Check if environment is staging"""
+        return self.ENVIRONMENT == Environment.STAGING
+    
+    @property
+    def is_prod(self) -> bool:
+        """Check if environment is production"""
+        return self.ENVIRONMENT == Environment.PROD
     
     model_config = SettingsConfigDict(
         env_file=".env",

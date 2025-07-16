@@ -20,7 +20,7 @@ import logging
 # Add the parent directory to the path so we can import from src
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.config import settings
+from src.config import settings, Environment
 from src.database.connection import init_database, create_tables, close_database
 from src.database.factory import init_repositories
 from src.database.seeder import seed_development_database, is_database_empty
@@ -52,8 +52,8 @@ async def main():
     logger = logging.getLogger(__name__)
     
     # Check environment
-    if settings.ENVIRONMENT.lower() not in ["development", "testing"]:
-        logger.error("Seeding is only allowed in development/testing environments")
+    if settings.ENVIRONMENT not in [Environment.DEV, Environment.TEST, Environment.STAGING]:
+        logger.error("Seeding is only allowed in dev/test/staging environments")
         logger.error(f"Current environment: {settings.ENVIRONMENT}")
         sys.exit(1)
     

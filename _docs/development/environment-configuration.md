@@ -11,26 +11,33 @@ The ShuScribe backend uses environment-specific configuration to control applica
 ### Core Environment Settings
 
 #### `ENVIRONMENT`
-**Values**: `development` | `testing` | `production`  
-**Default**: `development`
+**Values**: `dev` | `test` | `staging` | `prod`  
+**Default**: `dev`
 
 Controls the primary application behavior mode:
 
-- **`development`**: Maximum flexibility for local development
+- **`dev`**: Maximum flexibility for local development
   - Pydantic validation: Extra fields ignored (flexible schema validation)
   - Database seeding: Allowed
   - Default table prefix: `test_` (if TABLE_PREFIX not set)
   - API documentation: Available when DEBUG=true
   - SQL query logging: Enabled when DEBUG=true
 
-- **`testing`**: Strict validation for test environments
+- **`test`**: Strict validation for test environments
   - Pydantic validation: Extra fields forbidden (strict schema validation)
   - Database seeding: Allowed (for test data setup)
   - Default table prefix: `test_` (if TABLE_PREFIX not set)
   - API documentation: Only available when DEBUG=true
   - SQL query logging: Only when DEBUG=true
 
-- **`production`**: Maximum security and performance
+- **`staging`**: Production-like environment for pre-deployment testing
+  - Pydantic validation: Extra fields forbidden (strict schema validation)
+  - Database seeding: Allowed (for staging data setup)
+  - Default table prefix: `test_` (if TABLE_PREFIX not set)
+  - API documentation: Only available when DEBUG=true
+  - SQL query logging: Only when DEBUG=true
+
+- **`prod`**: Maximum security and performance
   - Pydantic validation: Extra fields forbidden (strict schema validation)
   - Database seeding: **Completely blocked** for security
   - Table prefix: None (empty string)
@@ -124,12 +131,12 @@ DATABASE_MAX_OVERFLOW=30       # Additional connections beyond pool_size
 #### `ENABLE_DATABASE_SEEDING`
 **Values**: `true` | `false`  
 **Default**: `false`  
-**Environment Restriction**: Only works in `development` and `testing`
+**Environment Restriction**: Only works in `dev`, `test`, and `staging`
 
 Controls automatic database seeding behavior:
 
 - **`false`**: No automatic seeding
-- **`true`**: Seeds database if empty on startup (development/testing only)
+- **`true`**: Seeds database if empty on startup (dev/test/staging only)
 
 #### `SEED_DATA_SIZE`
 **Values**: `small` | `medium` | `large`  
@@ -154,20 +161,20 @@ Controls whether to clear existing data before seeding:
 
 ### Security and Validation
 
-| Feature | Development | Testing | Production |
-|---------|-------------|---------|------------|
-| Pydantic Extra Fields | Ignored | Forbidden | Forbidden |
-| Database Seeding | Allowed | Allowed | **Blocked** |
-| Default Table Prefix | `test_` | `test_` | None |
-| API Documentation | If DEBUG=true | If DEBUG=true | If DEBUG=true |
-| SQL Query Logging | If DEBUG=true | If DEBUG=true | If DEBUG=true |
+| Feature | Dev | Test | Staging | Prod |
+|---------|-----|------|---------|------|
+| Pydantic Extra Fields | Ignored | Forbidden | Forbidden | Forbidden |
+| Database Seeding | Allowed | Allowed | Allowed | **Blocked** |
+| Default Table Prefix | `test_` | `test_` | `test_` | None |
+| API Documentation | If DEBUG=true | If DEBUG=true | If DEBUG=true | If DEBUG=true |
+| SQL Query Logging | If DEBUG=true | If DEBUG=true | If DEBUG=true | If DEBUG=true |
 
 ### Configuration Validation
 
 The backend performs different levels of configuration validation based on environment:
 
-- **Development**: Lenient validation, allows extra configuration
-- **Testing/Production**: Strict validation, rejects unknown configuration
+- **Dev**: Lenient validation, allows extra configuration
+- **Test/Staging/Prod**: Strict validation, rejects unknown configuration
 
 ### Logging Behavior
 
@@ -179,7 +186,7 @@ The backend performs different levels of configuration validation based on envir
 
 ### Local Development
 ```bash
-ENVIRONMENT=development
+ENVIRONMENT=dev
 DEBUG=true
 DATABASE_BACKEND=database  # or 'file' for SQLite
 TABLE_PREFIX=dev_
@@ -189,7 +196,7 @@ SEED_DATA_SIZE=medium
 
 ### Testing Environment
 ```bash
-ENVIRONMENT=testing
+ENVIRONMENT=test
 DEBUG=false
 DATABASE_BACKEND=memory  # or 'database' for persistent tests
 TABLE_PREFIX=test_
@@ -200,7 +207,7 @@ CLEAR_BEFORE_SEED=true
 
 ### Staging Environment
 ```bash
-ENVIRONMENT=testing  # Use testing for staging-like behavior
+ENVIRONMENT=staging
 DEBUG=false
 DATABASE_BACKEND=database
 TABLE_PREFIX=staging_
@@ -209,7 +216,7 @@ ENABLE_DATABASE_SEEDING=false
 
 ### Production Environment
 ```bash
-ENVIRONMENT=production
+ENVIRONMENT=prod
 DEBUG=false
 DATABASE_BACKEND=database
 TABLE_PREFIX=  # Empty for production
@@ -218,14 +225,20 @@ ENABLE_DATABASE_SEEDING=false
 
 ## Environment Migration Guidelines
 
-### Development → Testing
-1. Change `ENVIRONMENT=testing`
+### Dev → Test
+1. Change `ENVIRONMENT=test`
 2. Set `DEBUG=false`
 3. Ensure `TABLE_PREFIX` provides isolation
 4. Consider using `memory` backend for faster tests
 
-### Testing → Production
-1. Change `ENVIRONMENT=production`
+### Test → Staging
+1. Change `ENVIRONMENT=staging`
+2. Set `DEBUG=false`
+3. Use `database` backend for persistent data
+4. Set appropriate `TABLE_PREFIX` for isolation
+
+### Staging → Production
+1. Change `ENVIRONMENT=prod`
 2. Ensure `DEBUG=false`
 3. Remove or empty `TABLE_PREFIX`
 4. Set `ENABLE_DATABASE_SEEDING=false`
@@ -237,11 +250,11 @@ ENABLE_DATABASE_SEEDING=false
 
 #### "Database seeding is only allowed in development/testing environments"
 - **Cause**: Trying to seed in production environment
-- **Solution**: Change `ENVIRONMENT` to `development` or `testing`
+- **Solution**: Change `ENVIRONMENT` to `dev`, `test`, or `staging`
 
 #### "Extra fields forbidden"
-- **Cause**: Unknown configuration in testing/production environment
-- **Solution**: Remove unknown config or switch to development environment
+- **Cause**: Unknown configuration in test/staging/prod environment
+- **Solution**: Remove unknown config or switch to dev environment
 
 #### Connection timeouts
 - **Cause**: Database connection issues, especially on WSL2 or slow networks
@@ -264,7 +277,7 @@ To verify your environment configuration:
 
 ### Production Security Checklist
 
-- [ ] `ENVIRONMENT=production`
+- [ ] `ENVIRONMENT=prod`
 - [ ] `DEBUG=false`
 - [ ] `ENABLE_DATABASE_SEEDING=false`
 - [ ] `TABLE_PREFIX=""` (empty)

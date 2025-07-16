@@ -6,7 +6,7 @@ import logging
 import random
 from typing import Dict, Any, List
 
-from src.config import settings
+from src.config import settings, Environment
 from src.database.factory import get_repositories, RepositoryContainer
 from src.database.connection import get_session_context
 from src.database.models import Base, Project, Document, FileTreeItem
@@ -33,8 +33,8 @@ class DatabaseSeeder:
         Returns:
             Dictionary with seeding results and statistics
         """
-        if settings.ENVIRONMENT.lower() not in ["development", "testing"]:
-            logger.warning("Database seeding is only allowed in development/testing environments")
+        if settings.ENVIRONMENT not in [Environment.DEV, Environment.TEST, Environment.STAGING]:
+            logger.warning("Database seeding is only allowed in dev/test/staging environments")
             return {"error": "Seeding not allowed in production"}
         
         logger.info(f"Starting database seeding with size: {data_size}")
@@ -484,8 +484,8 @@ async def seed_development_database(force: bool = False) -> Dict[str, Any]:
     Returns:
         Seeding results and statistics
     """
-    if settings.ENVIRONMENT.lower() not in ["development", "testing"]:
-        return {"error": "Seeding only allowed in development/testing"}
+    if settings.ENVIRONMENT not in [Environment.DEV, Environment.TEST, Environment.STAGING]:
+        return {"error": "Seeding only allowed in dev/test/staging"}
     
     logger.info("Initializing database seeding for development environment")
     
@@ -556,8 +556,8 @@ def should_seed_database() -> bool:
         True if seeding should occur, False otherwise
     """
     # Never seed in production for safety
-    if settings.ENVIRONMENT.lower() not in ["development", "testing"]:
-        logger.info("Skipping seeding: not in development/testing environment")
+    if settings.ENVIRONMENT not in [Environment.DEV, Environment.TEST, Environment.STAGING]:
+        logger.info("Skipping seeding: not in dev/test/staging environment")
         return False
     
     # Check if seeding is explicitly disabled
