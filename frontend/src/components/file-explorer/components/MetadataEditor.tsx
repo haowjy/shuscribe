@@ -53,7 +53,7 @@ export function MetadataEditor({ item, isOpen, onClose, onSave }: MetadataEditor
     if (item) {
       setMetadata({
         title: item.name,
-        path: item.path,
+        path: `/${item.name}`, // TODO: Use getItemPath() from FileTreeService for proper hierarchical path
         tags: item.tags || [],
         description: '', // TODO: Add description field to TreeItem
         status: 'unlocked', // TODO: Map from item.is_locked when available

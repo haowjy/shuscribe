@@ -474,7 +474,7 @@ export function EditorPane({
             key={activeTab.id}
             documentId={activeTab.id}
             initialContent={activeTab.content}
-            onContentChange={handleContentChange}
+            onChange={handleContentChange}
             placeholder={activeTab.isTemp ? "Start writing..." : `Edit ${activeTab.title}`}
             enableAutoSave={true}
             enableDrafts={true}

@@ -51,7 +51,7 @@ export function TagDisplay({
                 style={tag.color ? { backgroundColor: tag.color, color: '#fff' } : undefined}
                 onClick={() => tag.name && onTagClick?.(tag.name)}
               >
-                {tag.icon && <DynamicIcon name={tag.icon} className="w-3 h-3" />}
+                {tag.icon && <DynamicIcon name={tag.icon as any} className="w-3 h-3" />}
                 {/* Only show icon, not name to save space */}
                 {!tag.icon && tag.name && <span>{tag.name.charAt(0).toUpperCase()}</span>}
                 {!tag.icon && !tag.name && <span>?</span>}

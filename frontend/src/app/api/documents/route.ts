@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 
+// ProseMirror content type definitions
+interface ProseMirrorTextNode {
+  type: 'text';
+  text: string;
+}
+
+interface ProseMirrorNode {
+  type: string;
+  content?: ProseMirrorNode[];
+  text?: string;
+}
+
+interface ProseMirrorContent {
+  type: 'doc';
+  content: ProseMirrorNode[];
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -43,21 +60,29 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to count words in ProseMirror content
-function countWords(content: unknown): number {
-  if (!content || !content.content) return 0;
+function countWords(content: ProseMirrorContent | unknown): number {
+  // Type guard to ensure we have valid ProseMirror content
+  if (!content || typeof content !== 'object' || !('content' in content)) {
+    return 0;
+  }
+  
+  const proseMirrorContent = content as ProseMirrorContent;
+  if (!Array.isArray(proseMirrorContent.content)) {
+    return 0;
+  }
   
   let wordCount = 0;
   
-  function countNode(node: Record<string, unknown>) {
-    if (node.type === 'text' && node.text) {
+  function countNode(node: ProseMirrorNode): void {
+    if (node.type === 'text' && typeof node.text === 'string') {
       wordCount += node.text.split(/\s+/).filter(Boolean).length;
     }
     
-    if (node.content) {
+    if (node.content && Array.isArray(node.content)) {
       node.content.forEach(countNode);
     }
   }
   
-  content.content.forEach(countNode);
+  proseMirrorContent.content.forEach(countNode);
   return wordCount;
 }

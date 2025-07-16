@@ -131,6 +131,34 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // File Tree CRUD operations
+  async createFolder(request: { project_id: string; name: string; parent_id?: string; path: string; type: 'folder'; icon?: string; tags?: string[] }): Promise<ApiResponse<any>> {
+    return this.request<any>(`/projects/${request.project_id}/file-tree/folders`, {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async createFile(request: { project_id: string; name: string; parent_id?: string; path: string; type: 'file'; document_id: string; icon?: string; tags?: string[] }): Promise<ApiResponse<any>> {
+    return this.request<any>(`/projects/${request.project_id}/file-tree/files`, {
+      method: 'POST', 
+      body: JSON.stringify(request),
+    });
+  }
+
+  async updateFileTreeItem(itemId: string, updates: { name?: string; parent_id?: string; path?: string; icon?: string; tags?: string[] }): Promise<ApiResponse<any>> {
+    return this.request<any>(`/file-tree-items/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteFileTreeItem(itemId: string): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/file-tree-items/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Export singleton instance

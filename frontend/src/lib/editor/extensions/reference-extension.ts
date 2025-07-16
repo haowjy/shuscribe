@@ -43,7 +43,7 @@ export const ReferenceExtension = Mention.extend<ReferenceExtensionOptions>({
         class: 'reference-link',
         'data-type': 'reference',
       },
-      renderText({ node }) {
+      renderText({ node }: { node: any }) {
         return `@${node.attrs.label || node.attrs.id}`;
       },
       suggestion: {
@@ -59,10 +59,10 @@ export const ReferenceExtension = Mention.extend<ReferenceExtensionOptions>({
         
         render: () => {
           let component: ReactRenderer<ReferenceListRef>;
-          let popup: ReturnType<typeof tippy> | undefined;
+          let popup: any;
 
           return {
-            onStart: (props) => {
+            onStart: (props: any) => {
               component = new ReactRenderer(ReferenceList, {
                 props,
                 editor: props.editor,
@@ -72,7 +72,7 @@ export const ReferenceExtension = Mention.extend<ReferenceExtensionOptions>({
                 return;
               }
 
-              popup = tippy(document.body, {
+              popup = tippy([document.body], {
                 getReferenceClientRect: props.clientRect,
                 appendTo: () => document.body,
                 content: component.element,
@@ -94,7 +94,7 @@ export const ReferenceExtension = Mention.extend<ReferenceExtensionOptions>({
               });
             },
 
-            onUpdate(props) {
+            onUpdate(props: any) {
               component?.updateProps(props);
 
               if (!props.clientRect) {
@@ -112,7 +112,7 @@ export const ReferenceExtension = Mention.extend<ReferenceExtensionOptions>({
               }
             },
 
-            onKeyDown(props) {
+            onKeyDown(props: any) {
               if (props.event.key === 'Escape') {
                 if (Array.isArray(popup)) {
                   popup[0]?.hide();
@@ -136,7 +136,7 @@ export const ReferenceExtension = Mention.extend<ReferenceExtensionOptions>({
           };
         },
         
-        command: ({ editor, range, props }) => {
+        command: ({ editor, range, props }: { editor: any; range: any; props: any }) => {
           const item = props as ReferenceItem;
           
           // Insert the reference as a mention node

@@ -87,7 +87,7 @@ export interface ProjectSummary {
   document_count: number;
   created_at: string;
   updated_at: string;
-  tags: string[];
+  tags: Tag[];
   collaborators: ProjectCollaborator[];
 }
 
@@ -116,7 +116,8 @@ export interface ProjectListResponse extends PaginatedResponse<ProjectSummary> {
 // ============================================================================
 
 // Import enhanced file tree types
-export type { TreeItem, FileItem, FolderItem } from '@/data/file-tree';
+import type { TreeItem, FileItem, FolderItem, Tag } from '@/data/file-tree';
+export type { TreeItem, FileItem, FolderItem, Tag };
 
 // API response structure for file tree
 export interface FileTreeResponse {

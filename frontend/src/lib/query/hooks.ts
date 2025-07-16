@@ -225,7 +225,7 @@ export function useCreateFolder() {
         throw new Error('Folder name is required');
       }
       
-      if (request.document_id) {
+      if ('document_id' in request && (request as any).document_id) {
         throw new Error('Folders cannot have a document_id');
       }
 

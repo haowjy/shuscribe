@@ -1,38 +1,34 @@
-// Utility functions for converting search index to autocomplete format
+/**
+ * Utility functions for converting search index to autocomplete format
+ * 
+ * NOTE: This was simplified from rich semantic types (character, location, scene, chapter, note)
+ * to basic file/folder types for MVP. Rich types can be restored when backend supports
+ * semantic classification of story elements.
+ * 
+ * TODO: Restore rich reference types for storytelling features:
+ * - character, location, scene, chapter, note types
+ * - Path-based intelligent type detection  
+ * - Rich descriptions for story elements
+ */
 
 import { SearchItem } from './index';
-import { ReferenceItem } from '@/components/editor/reference-autocomplete';
+import { ReferenceItem } from '@/data/reference-items';
 
 // Convert search items to reference items for autocomplete
 export function convertSearchToReferenceItems(searchItems: SearchItem[]): ReferenceItem[] {
   return searchItems.map(item => {
     // Determine type based on search item properties
-    let type: ReferenceItem['type'] = 'document';
+    let type: ReferenceItem['type'] = 'file';
     
-    if (item.type === 'tag') {
-      type = 'note'; // Tags are treated as notes
-    } else if (item.path) {
-      // Infer type from path structure
-      const pathLower = item.path.toLowerCase();
-      if (pathLower.includes('character') || pathLower.includes('char')) {
-        type = 'character';
-      } else if (pathLower.includes('location') || pathLower.includes('loc')) {
-        type = 'location';
-      } else if (pathLower.includes('chapter') || pathLower.includes('ch')) {
-        type = 'chapter';
-      } else if (pathLower.includes('scene')) {
-        type = 'scene';
-      } else if (pathLower.includes('note')) {
-        type = 'note';
-      }
-    }
+    // For now, just use 'file' since ReferenceItem only supports 'file' | 'folder'
+    // SearchItem only has 'file' | 'tag' types, so default to 'file'
+    type = 'file';
     
     return {
       id: item.id,
-      name: item.title.replace(/\s*\(\d+\s+documents?\)$/, ''), // Remove document count from tags
-      type,
+      label: item.title.replace(/\s*\(\d+\s+documents?\)$/, ''), // Remove document count from tags
+      type: type as 'file' | 'folder',
       path: item.path,
-      description: item.type === 'tag' ? `Tag found in ${item.title.match(/\((\d+)\s+documents?\)/)?.[1] || '0'} documents` : undefined,
       tags: item.tags
     };
   });
@@ -40,25 +36,18 @@ export function convertSearchToReferenceItems(searchItems: SearchItem[]): Refere
 
 // Create reference string from selected item
 export function createReferenceString(item: ReferenceItem): string {
-  // Use the path if available, otherwise construct from type and name
+  // Use the path if available, otherwise construct from type and label
   if (item.path && item.path.startsWith('@')) {
     return item.path.substring(1); // Remove @ prefix
   }
   
   // Construct reference path based on type
-  const baseName = item.name.toLowerCase().replace(/\s+/g, '-');
+  const baseName = item.label.toLowerCase().replace(/\s+/g, '-');
   
   switch (item.type) {
-    case 'character':
-      return `character/${baseName}`;
-    case 'location':
-      return `location/${baseName}`;
-    case 'chapter':
-      return `chapter/${baseName}`;
-    case 'scene':
-      return `scene/${baseName}`;
-    case 'note':
-      return `note/${baseName}`;
+    case 'folder':
+      return `folder/${baseName}`;
+    case 'file':
     default:
       return baseName;
   }
@@ -66,12 +55,8 @@ export function createReferenceString(item: ReferenceItem): string {
 
 // Extract reference type from reference string
 export function getReferenceType(reference: string): ReferenceItem['type'] {
-  if (reference.startsWith('character/')) return 'character';
-  if (reference.startsWith('location/')) return 'location';
-  if (reference.startsWith('chapter/')) return 'chapter';
-  if (reference.startsWith('scene/')) return 'scene';
-  if (reference.startsWith('note/')) return 'note';
-  return 'document';
+  if (reference.startsWith('folder/')) return 'folder';
+  return 'file';
 }
 
 // Format reference name for display
@@ -89,59 +74,38 @@ export function generateMockReferenceItems(): ReferenceItem[] {
   return [
     {
       id: 'char-1',
-      name: 'Aria Blackwood',
-      type: 'character',
+      label: 'Aria Blackwood',
+      type: 'file',
       path: 'characters/aria-blackwood',
-      description: 'Main protagonist, skilled mage',
       tags: ['main-character', 'mage', 'protagonist']
     },
     {
       id: 'char-2',
-      name: 'Marcus Stone',
-      type: 'character',
+      label: 'Marcus Stone',
+      type: 'file',
       path: 'characters/marcus-stone',
-      description: 'Aria\'s mentor and former knight',
       tags: ['mentor', 'knight', 'supporting']
     },
     {
       id: 'loc-1',
-      name: 'The Crystal Tower',
-      type: 'location',
+      label: 'The Crystal Tower',
+      type: 'file',
       path: 'locations/crystal-tower',
-      description: 'Ancient tower housing magical artifacts',
       tags: ['magical', 'tower', 'important']
     },
     {
-      id: 'loc-2',
-      name: 'Whisperwood Forest',
-      type: 'location',
-      path: 'locations/whisperwood-forest',
-      description: 'Mystical forest where spirits dwell',
-      tags: ['forest', 'spirits', 'mysterious']
+      id: 'characters',
+      label: 'Characters',
+      type: 'folder',
+      path: 'characters/',
+      tags: ['folder']
     },
     {
-      id: 'ch-1',
-      name: 'The Awakening',
-      type: 'chapter',
-      path: 'chapters/01-the-awakening',
-      description: 'First chapter where Aria discovers her powers',
-      tags: ['opening', 'discovery', 'powers']
-    },
-    {
-      id: 'scene-1',
-      name: 'Battle at the Tower',
-      type: 'scene',
-      path: 'scenes/battle-at-tower',
-      description: 'Climactic battle sequence',
-      tags: ['action', 'battle', 'climax']
-    },
-    {
-      id: 'note-1',
-      name: 'Magic System',
-      type: 'note',
-      path: 'notes/magic-system',
-      description: 'Notes on how magic works in this world',
-      tags: ['worldbuilding', 'magic', 'reference']
+      id: 'locations',
+      label: 'Locations',
+      type: 'folder',
+      path: 'locations/',
+      tags: ['folder']
     }
   ];
 }

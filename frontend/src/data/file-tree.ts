@@ -3,6 +3,7 @@ export interface Tag {
   name: string;
   color?: string;
   icon?: string;
+  category?: string;
 }
 
 export interface BaseFileItem {

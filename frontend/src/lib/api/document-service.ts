@@ -4,7 +4,7 @@
  */
 
 import { Document, UpdateDocumentRequest } from '@/types/project';
-import { EditorDocument } from '@/lib/editor/content-utils';
+import { EditorDocument } from '@/lib/editor/editor-types';
 import { documentCache } from '@/lib/storage/cache-manager';
 import { apiClient } from './client';
 
@@ -110,7 +110,7 @@ export class DocumentService {
         }
 
         return {
-          document,
+          document: document as unknown as Document,
           source: 'api',
           fromCache: false
         };
@@ -193,7 +193,7 @@ export class DocumentService {
       };
 
       const apiStartTime = performance.now();
-      const response = await apiClient.updateDocument(documentId, updates);
+      const response = await apiClient.updateDocument(documentId, updates as any);
       const apiTime = performance.now() - apiStartTime;
       
       if (response.error) {
@@ -222,7 +222,7 @@ export class DocumentService {
 
       return {
         success: true,
-        document: savedDocument
+        document: savedDocument as unknown as Document
       };
 
     } catch (error) {

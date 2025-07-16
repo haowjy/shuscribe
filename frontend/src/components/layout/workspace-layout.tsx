@@ -400,15 +400,17 @@ export function WorkspaceLayout({ projectId }: WorkspaceLayoutProps) {
   }, [updatePanelSizes]);
 
   // Handle panel collapse/expand events from the resizable panels
-  const handleFileExplorerCollapse = useCallback((collapsed: boolean) => {
+  const handleFileExplorerCollapse = useCallback(() => {
+    const collapsed = !isFileExplorerCollapsed;
     setIsFileExplorerCollapsed(collapsed);
     updateCollapsedStates({ isFileExplorerCollapsed: collapsed });
-  }, [updateCollapsedStates]);
+  }, [isFileExplorerCollapsed, updateCollapsedStates]);
 
-  const handleAiPanelCollapse = useCallback((collapsed: boolean) => {
+  const handleAiPanelCollapse = useCallback(() => {
+    const collapsed = !isAiPanelCollapsed;
     setIsAiPanelCollapsed(collapsed);
     updateCollapsedStates({ isAiPanelCollapsed: collapsed });
-  }, [updateCollapsedStates]);
+  }, [isAiPanelCollapsed, updateCollapsedStates]);
 
 
   return (

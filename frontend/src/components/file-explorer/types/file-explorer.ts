@@ -25,7 +25,7 @@ export interface TagDisplayProps {
 export interface FileSearchState {
   query: string;
   tagFilters: string[];
-  statusFilter: 'all' | 'published' | 'draft';
+  statusFilter: 'all' | 'files' | 'folders';
   contentTypeFilter: string[];
 }
 

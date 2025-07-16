@@ -41,7 +41,7 @@ function useDebounce<T extends (...args: any[]) => void>(
   callback: T,
   delay: number
 ): T {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   return useCallback((...args: Parameters<T>) => {
     if (timeoutRef.current) {
@@ -101,7 +101,6 @@ const DEFAULT_TOOLBAR_OPTIONS: ToolbarOptions = {
 
 interface TiptapEditorProps extends BaseEditorProps {
   content?: EditorDocument;
-  onContentChange?: (content: EditorDocument) => void;
   isSaving?: boolean;
   lastSaved?: string;
   onReferenceClick?: (referenceId: string, referenceLabel: string) => void;
@@ -111,7 +110,6 @@ interface TiptapEditorProps extends BaseEditorProps {
 export function TiptapEditor({
   // Content props
   content,
-  onContentChange,
   initialContent,
   
   // Editor config
@@ -153,7 +151,7 @@ export function TiptapEditor({
   const lastAutoSaveHashRef = useRef<string>('');
   
   // Get suggestion items for @ references - stable reference for extensions
-  const stableSuggestionItems = useRef<(props: { query: string }) => any[]>();
+  const stableSuggestionItems = useRef<(props: { query: string }) => any[] | null>(null);
   const { getSuggestionItems } = useSuggestionItems(fileTree);
   
   // Update stable reference when getSuggestionItems changes
@@ -172,7 +170,6 @@ export function TiptapEditor({
       
       // Call update handlers
       onUpdate?.(newContent);
-      onContentChange?.(newContent);
       onChange?.(newContent);
       
       console.log('📝 [TiptapEditor] Content changed for document:', documentId);
@@ -214,7 +211,7 @@ export function TiptapEditor({
         defaultAlignment: 'left',
       }),
       ReferenceExtension.configure({
-        suggestion: {
+        suggestions: {
           items: (props: { query: string }) => {
             // Use stable reference to prevent extension recreation
             return stableSuggestionItems.current?.(props) || [];
@@ -362,8 +359,7 @@ export function TiptapEditor({
     save: handleSave,
   }), [editor, handleSave]);
   
-  // Expose editor instance to parent (useful for imperative operations)
-  React.useImperativeHandle(React.forwardRef(function EditorRef() { return null; }).ref, () => editorInstance, [editorInstance]);
+  // Note: EditorInstance is available through the returned editorInstance object
   
   if (!editor) {
     return (

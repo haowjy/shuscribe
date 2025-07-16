@@ -25,6 +25,9 @@ interface RichEditorProps extends Omit<BaseEditorProps, 'variant'> {
   enableTables?: boolean;
   onReferenceClick?: (referenceId: string, referenceLabel: string) => void;
   fileTree?: TreeItem[]; // File tree for @ references
+  // Editor state props
+  isSaving?: boolean;
+  lastSaved?: string;
 }
 
 export function RichEditor({

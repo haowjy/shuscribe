@@ -28,7 +28,7 @@ export function transformFileTreeToReferences(
       label: item.name.replace(/\.md$/, ''), // Remove .md extension for display
       type: item.type,
       path: currentPath,
-      tags: item.tags,
+      tags: item.tags?.map(tag => tag.name),
       icon: item.icon,
     });
 

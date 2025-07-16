@@ -259,7 +259,7 @@ export default function DashboardPage() {
                                   borderColor: tag.color 
                                 } : undefined}
                               >
-                                {tag.icon && <DynamicIcon name={tag.icon} className="w-3 h-3" />}
+                                {tag.icon && <DynamicIcon name={tag.icon as any} className="w-3 h-3" />}
                                 {tag.name}
                               </Badge>
                             )

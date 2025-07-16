@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
-import { ProjectData, Document, CreateDocumentRequest, UpdateDocumentRequest } from '@/types/project';
+import { ProjectData, Document } from '@/types/project';
+import { CreateDocumentRequest, UpdateDocumentRequest } from '@/types/api';
 import { 
   DocumentStorage, 
-  DraftManager,
-  DocumentState 
+  DraftManager
 } from '@/lib/editor/storage-utils';
+import { DocumentState, EditorDocument } from '@/lib/editor/editor-types';
 import { 
-  EditorDocument, 
   createEmptyDocument, 
   sanitizeContent 
 } from '@/lib/editor/content-utils';
@@ -172,8 +172,8 @@ export function useProjectDataWithStorage(projectId: string) {
       const documentsMap = new Map<string, Document>();
       
       // Add backend documents to the map first (if any)
-      if (projectData.documents) {
-        projectData.documents.forEach(doc => {
+      if ('documents' in projectData && projectData.documents) {
+        (projectData.documents as Document[]).forEach(doc => {
           documentsMap.set(doc.id, doc);
         });
       }
@@ -181,7 +181,7 @@ export function useProjectDataWithStorage(projectId: string) {
       // If we have local data, overlay it on top of backend data
       if (hasAnyLocalData) {
         const projectDocs = Object.values(allLocalDocs).filter(
-          doc => doc.id.startsWith(projectId) || doc.projectId === projectId
+          doc => doc.id.startsWith(projectId)
         );
         
         // Overlay local documents (they take precedence over backend data for same IDs)
@@ -196,9 +196,6 @@ export function useProjectDataWithStorage(projectId: string) {
             updatedAt: new Date(localDoc.lastModified).toISOString(),
             tags: [],
             wordCount: 0,
-            hasLocalChanges: localDoc.isDirty,
-            hasDraft: DraftManager.hasDraft(localDoc.id),
-            lastLocalModified: localDoc.lastModified,
           });
         });
       }
@@ -315,7 +312,7 @@ export function useSaveDocument() {
       // Update project data if API save succeeded
       if (apiSave) {
         queryClient.invalidateQueries({
-          queryKey: enhancedQueryKeys.projectData(apiSave.projectId),
+          queryKey: enhancedQueryKeys.projectData(apiSave.project_id),
         });
       }
     },
@@ -391,7 +388,7 @@ export function useCreateDocumentWithStorage() {
       // Invalidate project data to show new document
       if (apiDocument) {
         queryClient.invalidateQueries({
-          queryKey: enhancedQueryKeys.projectData(apiDocument.projectId),
+          queryKey: enhancedQueryKeys.projectData(apiDocument.project_id),
         });
       }
     },
@@ -418,7 +415,7 @@ export function useSyncLocalChanges() {
             content: doc.content,
           };
 
-          const response = await apiClient.updateDocument(doc.id, updates);
+          const response = await apiClient.updateDocument(doc.id, updates as any);
           if (!response.error) {
             // Mark as synced
             doc.isDirty = false;
