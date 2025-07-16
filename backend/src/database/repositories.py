@@ -26,6 +26,19 @@ logger = logging.getLogger(__name__)
 class DatabaseProjectRepository(ProjectRepository):
     """Database-backed project repository using SQLAlchemy"""
     
+    def _user_has_access_to_project(self, project: Project, user_id: str) -> bool:
+        """Check if user has access to project (owner or collaborator)"""
+        if project.owner_id == user_id:
+            return True
+        
+        # Check collaborators JSON field
+        if project.collaborators:
+            for collaborator in project.collaborators:
+                if collaborator.get("user_id") == user_id:
+                    return True
+        
+        return False
+    
     async def get_by_id(self, project_id: str) -> Optional[Project]:
         async with get_session_context() as session:
             result = await session.execute(
@@ -44,6 +57,9 @@ class DatabaseProjectRepository(ProjectRepository):
                 document_count=project_data.get("document_count", 0),
                 collaborators=project_data.get("collaborators", []),
                 settings=project_data.get("settings", {}),
+                owner_id=project_data.get("owner_id"),
+                created_by=project_data.get("created_by"),
+                updated_by=project_data.get("updated_by"),
             )
             session.add(project)
             await session.flush()  # Get the ID - no need to refresh for seeding
@@ -78,6 +94,37 @@ class DatabaseProjectRepository(ProjectRepository):
                 .options(selectinload(Project.tags))
             )
             return list(result.scalars().all())
+    
+    async def list_by_user(self, user_id: str) -> List[Project]:
+        async with get_session_context() as session:
+            # First get all projects - we need to check JSON collaborators field
+            result = await session.execute(
+                select(Project).order_by(Project.updated_at.desc())
+                .options(selectinload(Project.tags))
+            )
+            all_projects = result.scalars().all()
+            
+            # Filter by access (owner or collaborator)
+            accessible_projects = [
+                project for project in all_projects 
+                if self._user_has_access_to_project(project, user_id)
+            ]
+            
+            return accessible_projects
+    
+    async def get_by_user_and_id(self, user_id: str, project_id: str) -> Optional[Project]:
+        async with get_session_context() as session:
+            result = await session.execute(
+                select(Project).where(Project.id == project_id)
+                .options(selectinload(Project.tags))
+            )
+            project = result.scalar_one_or_none()
+            
+            # Check if user has access to this project
+            if project and self._user_has_access_to_project(project, user_id):
+                return project
+            
+            return None
 
 
 class DatabaseDocumentRepository(DocumentRepository):
@@ -286,6 +333,19 @@ class MemoryProjectRepository(ProjectRepository):
     def __init__(self):
         self._projects: Dict[str, Project] = {}
     
+    def _user_has_access_to_project(self, project: Project, user_id: str) -> bool:
+        """Check if user has access to project (owner or collaborator)"""
+        if project.owner_id == user_id:
+            return True
+        
+        # Check collaborators JSON field
+        if project.collaborators:
+            for collaborator in project.collaborators:
+                if collaborator.get("user_id") == user_id:
+                    return True
+        
+        return False
+    
     async def get_by_id(self, project_id: str) -> Optional[Project]:
         return self._projects.get(project_id)
     
@@ -299,6 +359,9 @@ class MemoryProjectRepository(ProjectRepository):
             document_count=project_data.get("document_count", 0),
             collaborators=project_data.get("collaborators", []),
             settings=project_data.get("settings", {}),
+            owner_id=project_data.get("owner_id"),
+            created_by=project_data.get("created_by"),
+            updated_by=project_data.get("updated_by"),
             created_at=datetime.now(UTC).replace(tzinfo=None),
             updated_at=datetime.now(UTC).replace(tzinfo=None),
         )
@@ -327,6 +390,17 @@ class MemoryProjectRepository(ProjectRepository):
         # Return sorted by updated_at descending
         projects = list(self._projects.values())
         return sorted(projects, key=lambda p: p.updated_at, reverse=True)
+    
+    async def list_by_user(self, user_id: str) -> List[Project]:
+        # Filter by access (owner or collaborator) and return sorted by updated_at descending
+        projects = [p for p in self._projects.values() if self._user_has_access_to_project(p, user_id)]
+        return sorted(projects, key=lambda p: p.updated_at, reverse=True)
+    
+    async def get_by_user_and_id(self, user_id: str, project_id: str) -> Optional[Project]:
+        project = self._projects.get(project_id)
+        if project and self._user_has_access_to_project(project, user_id):
+            return project
+        return None
 
 
 class MemoryDocumentRepository(DocumentRepository):

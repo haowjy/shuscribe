@@ -14,7 +14,7 @@ class MockDataFactory:
     """Factory for generating realistic mock data for development and testing"""
     
     @staticmethod
-    def generate_project(project_id: str | None = None, genre: str = "fantasy") -> Dict[str, Any]:
+    def generate_project(project_id: str | None = None, genre: str = "fantasy", user_id: str | None = None) -> Dict[str, Any]:
         """Generate a realistic project with genre-specific details"""
         if project_id is None:
             project_id = str(uuid.uuid4())
@@ -74,6 +74,10 @@ class MockDataFactory:
         document_count = fake.random_int(min=8, max=45)
         target_word_count = fake.random_int(min=50000, max=120000)
         
+        # Use provided user_id or generate a test user ID
+        if user_id is None:
+            user_id = f"test_user_{fake.uuid4()[:8]}"
+        
         return {
             "id": project_id,
             "title": fake.random_element(config["titles"]),
@@ -81,9 +85,12 @@ class MockDataFactory:
             "word_count": word_count,
             "document_count": document_count,
             "tag_names": fake.random_elements(config["tags"], length=fake.random_int(min=2, max=4), unique=True),
+            "owner_id": user_id,
+            "created_by": user_id,
+            "updated_by": user_id,
             "collaborators": [
                 {
-                    "user_id": f"user_{fake.uuid4()[:8]}",
+                    "user_id": user_id,
                     "role": "owner",
                     "name": fake.name(),
                     "avatar": None

@@ -11,6 +11,8 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from src.config import settings
 
+# Get table prefix once at module level
+TABLE_PREFIX = settings.table_prefix
 
 class Base(DeclarativeBase):
     """Base class for all database models"""
@@ -19,30 +21,30 @@ class Base(DeclarativeBase):
 
 # Association tables for many-to-many relationships
 project_tags = Table(
-    f"{settings.table_prefix}project_tags",
+    f"{TABLE_PREFIX}project_tags",
     Base.metadata,
-    Column("project_id", String(36), ForeignKey(f"{settings.table_prefix}projects.id"), primary_key=True),
-    Column("tag_id", String(36), ForeignKey(f"{settings.table_prefix}tags.id"), primary_key=True)
+    Column("project_id", String(36), ForeignKey(f"{TABLE_PREFIX}projects.id"), primary_key=True),
+    Column("tag_id", String(36), ForeignKey(f"{TABLE_PREFIX}tags.id"), primary_key=True)
 )
 
 document_tags = Table(
-    f"{settings.table_prefix}document_tags",
+    f"{TABLE_PREFIX}document_tags",
     Base.metadata,
-    Column("document_id", String(36), ForeignKey(f"{settings.table_prefix}documents.id"), primary_key=True),
-    Column("tag_id", String(36), ForeignKey(f"{settings.table_prefix}tags.id"), primary_key=True)
+    Column("document_id", String(36), ForeignKey(f"{TABLE_PREFIX}documents.id"), primary_key=True),
+    Column("tag_id", String(36), ForeignKey(f"{TABLE_PREFIX}tags.id"), primary_key=True)
 )
 
 file_tree_item_tags = Table(
-    f"{settings.table_prefix}file_tree_item_tags",
+    f"{TABLE_PREFIX}file_tree_item_tags",
     Base.metadata,
-    Column("file_tree_item_id", String(36), ForeignKey(f"{settings.table_prefix}file_tree_items.id"), primary_key=True),
-    Column("tag_id", String(36), ForeignKey(f"{settings.table_prefix}tags.id"), primary_key=True)
+    Column("file_tree_item_id", String(36), ForeignKey(f"{TABLE_PREFIX}file_tree_items.id"), primary_key=True),
+    Column("tag_id", String(36), ForeignKey(f"{TABLE_PREFIX}tags.id"), primary_key=True)
 )
 
 
 class Project(Base):
     """Project model matching frontend ProjectDetails interface"""
-    __tablename__ = f"{settings.table_prefix}projects"
+    __tablename__ = f"{TABLE_PREFIX}projects"
     
     # Primary key
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -50,6 +52,11 @@ class Project(Base):
     # Basic project info
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    
+    # User ownership
+    owner_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # Project owner
+    created_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # Creator tracking
+    updated_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # Last modifier tracking
     
     # Metrics
     word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -63,6 +70,14 @@ class Project(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None))
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), onupdate=lambda: datetime.now(UTC).replace(tzinfo=None))
     
+    # Indexes for performance
+    __table_args__ = (
+        Index(f"ix_{TABLE_PREFIX}projects_owner_id", "owner_id"),
+        Index(f"ix_{TABLE_PREFIX}projects_created_by", "created_by"),
+        Index(f"ix_{TABLE_PREFIX}projects_updated_by", "updated_by"),
+        Index(f"ix_{TABLE_PREFIX}projects_owner_updated", "owner_id", "updated_at"),
+    )
+    
     # Relationships
     documents: Mapped[List["Document"]] = relationship("Document", back_populates="project", cascade="all, delete-orphan")
     file_tree_items: Mapped[List["FileTreeItem"]] = relationship("FileTreeItem", back_populates="project", cascade="all, delete-orphan")
@@ -71,17 +86,21 @@ class Project(Base):
 
 class Document(Base):
     """Document model matching frontend Document interface"""
-    __tablename__ = f"{settings.table_prefix}documents"
+    __tablename__ = f"{TABLE_PREFIX}documents"
     
     # Primary key
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
     # Foreign key to project
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey(f"{settings.table_prefix}projects.id"), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey(f"{TABLE_PREFIX}projects.id"), nullable=False)
     
     # Document info
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     path: Mapped[str] = mapped_column(String(500), nullable=False)
+    
+    # User tracking
+    created_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # Document creator
+    updated_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # Last modifier
     
     # ProseMirror content as JSON
     content: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
@@ -95,11 +114,18 @@ class Document(Base):
     locked_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
     # File tree reference (optional)
-    file_tree_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey(f"{settings.table_prefix}file_tree_items.id"), nullable=True)
+    file_tree_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey(f"{TABLE_PREFIX}file_tree_items.id"), nullable=True)
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None))
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), onupdate=lambda: datetime.now(UTC).replace(tzinfo=None))
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index(f"ix_{TABLE_PREFIX}documents_created_by", "created_by"),
+        Index(f"ix_{TABLE_PREFIX}documents_updated_by", "updated_by"),
+        Index(f"ix_{TABLE_PREFIX}documents_project_created_by", "project_id", "created_by"),
+    )
     
     # Relationships
     project: Mapped["Project"] = relationship("Project", back_populates="documents")
@@ -109,19 +135,19 @@ class Document(Base):
 
 class FileTreeItem(Base):
     """File tree item model matching frontend FileTreeItem interface"""
-    __tablename__ = f"{settings.table_prefix}file_tree_items"
+    __tablename__ = f"{TABLE_PREFIX}file_tree_items"
     
     # Primary key
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
     # Foreign key to project
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey(f"{settings.table_prefix}projects.id"), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey(f"{TABLE_PREFIX}projects.id"), nullable=False)
     
     # Tree structure
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False)  # 'file' or 'folder'
     path: Mapped[str] = mapped_column(String(500), nullable=False)
-    parent_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey(f"{settings.table_prefix}file_tree_items.id"), nullable=True)
+    parent_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey(f"{TABLE_PREFIX}file_tree_items.id"), nullable=True)
     
     # Document reference (for files only)
     document_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
@@ -138,16 +164,16 @@ class FileTreeItem(Base):
     __table_args__ = (
         CheckConstraint(
             "(type = 'file' AND document_id IS NOT NULL) OR (type = 'folder' AND document_id IS NULL)",
-            name=f"ck_{settings.table_prefix}file_tree_items_type_document_consistency"
+            name=f"ck_{TABLE_PREFIX}file_tree_items_type_document_consistency"
         ),
         CheckConstraint(
             "type IN ('file', 'folder')",
-            name=f"ck_{settings.table_prefix}file_tree_items_valid_type"
+            name=f"ck_{TABLE_PREFIX}file_tree_items_valid_type"
         ),
         # Indexes for performance
-        Index(f"ix_{settings.table_prefix}file_tree_items_project_type", "project_id", "type"),
-        Index(f"ix_{settings.table_prefix}file_tree_items_parent", "parent_id"),
-        Index(f"ix_{settings.table_prefix}file_tree_items_document", "document_id"),
+        Index(f"ix_{TABLE_PREFIX}file_tree_items_project_type", "project_id", "type"),
+        Index(f"ix_{TABLE_PREFIX}file_tree_items_parent", "parent_id"),
+        Index(f"ix_{TABLE_PREFIX}file_tree_items_document", "document_id"),
     )
     
     # Relationships
@@ -160,7 +186,7 @@ class FileTreeItem(Base):
 
 class Tag(Base):
     """Tag model for multi-level tags with global/private scoping"""
-    __tablename__ = f"{settings.table_prefix}tags"
+    __tablename__ = f"{TABLE_PREFIX}tags"
     
     # Primary key
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -175,7 +201,7 @@ class Tag(Base):
     # Scope and ownership
     is_global: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     user_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # null for global tags
-    project_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey(f"{settings.table_prefix}projects.id"), nullable=True)  # null for global tags
+    project_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey(f"{TABLE_PREFIX}projects.id"), nullable=True)  # null for global tags
     
     # Metadata
     usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -189,14 +215,14 @@ class Tag(Base):
     # Constraints
     __table_args__ = (
         # Performance indexes for global/private tag lookups
-        Index(f"ix_{settings.table_prefix}tags_global", "is_global"),
-        Index(f"ix_{settings.table_prefix}tags_user", "user_id"),
-        Index(f"ix_{settings.table_prefix}tags_global_name", "is_global", "name"),
-        Index(f"ix_{settings.table_prefix}tags_user_name", "user_id", "name"),
-        Index(f"ix_{settings.table_prefix}tags_category", "category"),
-        Index(f"ix_{settings.table_prefix}tags_system", "is_system"),
-        Index(f"ix_{settings.table_prefix}tags_archived", "is_archived"),
-        Index(f"ix_{settings.table_prefix}tags_project", "project_id"),
+        Index(f"ix_{TABLE_PREFIX}tags_global", "is_global"),
+        Index(f"ix_{TABLE_PREFIX}tags_user", "user_id"),
+        Index(f"ix_{TABLE_PREFIX}tags_global_name", "is_global", "name"),
+        Index(f"ix_{TABLE_PREFIX}tags_user_name", "user_id", "name"),
+        Index(f"ix_{TABLE_PREFIX}tags_category", "category"),
+        Index(f"ix_{TABLE_PREFIX}tags_system", "is_system"),
+        Index(f"ix_{TABLE_PREFIX}tags_archived", "is_archived"),
+        Index(f"ix_{TABLE_PREFIX}tags_project", "project_id"),
     )
     
     # Relationships

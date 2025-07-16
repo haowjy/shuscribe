@@ -339,7 +339,13 @@ async def list_projects(
     """
     try:
         repos = get_repositories()
-        all_projects = await repos.project.list_all()
+        
+        # Use conditional user filtering based on environment
+        from src.config import settings
+        if settings.should_filter_by_user:
+            all_projects = await repos.project.list_by_user(user_id)
+        else:
+            all_projects = await repos.project.list_all()
         
         # Apply sorting
         if sort == "title":
@@ -396,7 +402,13 @@ async def get_project(
     """
     try:
         repos = get_repositories()
-        project = await repos.project.get_by_id(project_id)
+        
+        # Use conditional user filtering based on environment
+        from src.config import settings
+        if settings.should_filter_by_user:
+            project = await repos.project.get_by_user_and_id(user_id, project_id)
+        else:
+            project = await repos.project.get_by_id(project_id)
         
         if not project:
             raise HTTPException(
@@ -434,8 +446,13 @@ async def get_project_file_tree(
     try:
         repos = get_repositories()
         
-        # Verify project exists
-        project = await repos.project.get_by_id(project_id)
+        # Verify project exists with user filtering
+        from src.config import settings
+        if settings.should_filter_by_user:
+            project = await repos.project.get_by_user_and_id(user_id, project_id)
+        else:
+            project = await repos.project.get_by_id(project_id)
+        
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -508,6 +525,8 @@ async def create_project(
             "settings": request.settings.model_dump() if request.settings else {},
             "word_count": 0,
             "document_count": 0,
+            "owner_id": user_id,
+            "created_by": user_id,
         }
         
         project = await repos.project.create(project_data)
@@ -538,8 +557,13 @@ async def update_project(
     try:
         repos = get_repositories()
         
-        # Check if project exists
-        existing_project = await repos.project.get_by_id(project_id)
+        # Check if project exists with user filtering
+        from src.config import settings
+        if settings.should_filter_by_user:
+            existing_project = await repos.project.get_by_user_and_id(user_id, project_id)
+        else:
+            existing_project = await repos.project.get_by_id(project_id)
+        
         if not existing_project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -594,8 +618,13 @@ async def delete_project(
     try:
         repos = get_repositories()
         
-        # Check if project exists
-        existing_project = await repos.project.get_by_id(project_id)
+        # Check if project exists with user filtering
+        from src.config import settings
+        if settings.should_filter_by_user:
+            existing_project = await repos.project.get_by_user_and_id(user_id, project_id)
+        else:
+            existing_project = await repos.project.get_by_id(project_id)
+        
         if not existing_project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

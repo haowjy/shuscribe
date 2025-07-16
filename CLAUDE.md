@@ -7,6 +7,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 * context7: when the user requests code examples, setup or configuration steps, or library/API documentation
 * Use `uv run python` for running Python commands in the backend
 
+## Key Development Notes
+
+### Critical Rules
+
+- **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
+- **Cross-References**: Update all CLAUDE.md and other documentation files when making changes that affect the documentation
+- **Never directly edit `pyproject.toml` or `package.json`**: ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend)
+
 ## Project Overview
 
 ShuScribe is a **frontend-centric** Universe Content Management Platform built with Next.js 15 + React 19 (frontend) and FastAPI (backend), evolving from simple fiction writing tools to comprehensive universe management for creators at all scales.
@@ -182,17 +190,6 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 1. Copy `.env.local.example` to `.env.local`
 2. Configure Supabase environment variables
 3. In Supabase dashboard: Enable auth providers, add redirect URLs
-
-## Key Development Notes
-
-### Critical Rules
-
-- **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
-- **File Storage**: Backend file repositories MUST use `backend/temp/` directory (gitignored)
-- **API Documentation**: ALWAYS update `/_docs/core/api-reference.md` when modifying API endpoints
-- **Environment Configuration**: ALWAYS verify environment behavior against [`/_docs/development/environment-configuration.md`](_docs/development/environment-configuration.md) when making changes
-- **Cross-References**: Update all CLAUDE.md files when making documentation changes
-- **Never directly edit `pyproject.toml` or `package.json`**: ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend)
 
 ### @-Reference System (Core Feature)
 

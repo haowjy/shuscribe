@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
         
         # Create tables if needed (no migrations approach)
         if settings.DATABASE_BACKEND != "memory":
-            await create_tables()
+            await create_tables(drop_existing=settings.CLEAR_BEFORE_SEED)
             logging.info("Database tables created")
         
         # Initialize repositories

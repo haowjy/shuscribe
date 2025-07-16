@@ -14,6 +14,9 @@ from src.database.seed import MockDataFactory, ProjectTemplates
 
 logger = logging.getLogger(__name__)
 
+# Test user ID for seeded projects
+TEST_USER_ID = "8e9a29cc-79b0-4b8b-b96a-8879bda6a598"
+
 
 class DatabaseSeeder:
     """Service for seeding the database with mock data in development"""
@@ -183,8 +186,8 @@ class DatabaseSeeder:
     
     async def _create_project_from_template(self, template: Dict[str, Any], global_tags: List = None) -> Dict[str, Any]:
         """Create a complete project with structure from template"""
-        # Generate project data
-        project_data = self.factory.generate_project(genre=template["genre"])
+        # Generate project data with test user ID
+        project_data = self.factory.generate_project(genre=template["genre"], user_id=TEST_USER_ID)
         
         project = await self.repositories.project.create(project_data)
         

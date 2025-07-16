@@ -59,7 +59,10 @@ class Settings(BaseSettings):
     # Database Seeding (Development Only)
     ENABLE_DATABASE_SEEDING: bool = False  # Enable/disable seeding on startup
     SEED_DATA_SIZE: str = "medium"        # "small", "medium", or "large"
-    CLEAR_BEFORE_SEED: bool = True        # Clear existing test data before seeding
+    CLEAR_BEFORE_SEED: bool = False        # Clear existing test data before seeding
+    
+    # User Authorization
+    ENABLE_USER_FILTERING: bool = False     # Enable user-based filtering for projects/data
     
     # CORS
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3001"]
@@ -159,6 +162,15 @@ class Settings(BaseSettings):
     def is_prod(self) -> bool:
         """Check if environment is production"""
         return self.ENVIRONMENT == Environment.PROD
+    
+    @property
+    def should_filter_by_user(self) -> bool:
+        """Check if user filtering should be enabled based on environment and config"""
+        # For production, always enable user filtering for security
+        if self.is_prod:
+            return True
+        # For non-production environments, respect the config setting
+        return self.ENABLE_USER_FILTERING
     
     model_config = SettingsConfigDict(
         env_file=".env",
