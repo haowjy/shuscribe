@@ -17,7 +17,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # PostgreSQL Database
+  # PostgreSQL Database (Optional - only needed if SKIP_DATABASE=false)
   postgres:
     image: postgres:16-alpine
     container_name: shuscribe-postgres
@@ -35,6 +35,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    profiles:
+      - database  # Optional service - run with: docker-compose --profile database up
 
 volumes:
   postgres_data:

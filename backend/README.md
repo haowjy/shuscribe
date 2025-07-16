@@ -2,40 +2,45 @@
 
 # ShuScribe Backend API
 
-This directory contains the FastAPI backend application for ShuScribe, an intelligent platform that automatically generates a personal, spoiler-free wiki for any serialized fiction narrative.
+This directory contains the FastAPI backend application for ShuScribe, a **Universe Content Management Platform** built for writers and creators to manage complex fictional universes at any scale.
 
 ## 🌟 Overview
 
-The ShuScribe Backend is the secure core of the application. It provides the API endpoints for the frontend and handles all server-side logic, including:
+The ShuScribe Backend provides the API endpoints and server-side logic for a comprehensive content management platform, including:
 
--   Securely managing user accounts and user-provided LLM API keys (BYOK - Bring Your Own Key model).
--   Orchestrating the story processing pipeline to generate wiki content.
--   Storing all persistent data (users, stories, chapters, wiki articles, progress) in a PostgreSQL database.
--   Securely interacting with external LLM services via a **self-hosted Portkey Gateway** using the user's API keys.
+-   **Project Management**: Create and manage writing projects with hierarchical organization
+-   **Document System**: Full-featured document management with ProseMirror content
+-   **File Tree Management**: VS Code-like file explorer with folder/file organization
+-   **Tag System**: Advanced tagging with many-to-many relationships and categorization
+-   **Authentication**: Secure user authentication via Supabase Auth
+-   **Repository Pattern**: Clean architecture with SQLAlchemy ORM and repository interfaces
 
-It's built with a focus on security, scalability, and maintainability, separating concerns into distinct layers (API, Services, Repositories, Models).
+Built with a **frontend-first philosophy** where the backend implements APIs to match frontend TypeScript interfaces, ensuring seamless integration and type safety.
 
 ## ✨ Key Features
 
--   **User Account Management**: Manages user registration, authentication, and profiles.
--   **BYOK API Key Management**: Secure storage (encrypted) and on-the-fly decryption of user-provided LLM API keys.
--   **Content Ingestion**: Provides API endpoints for uploading story content (text/files).
--   **Asynchronous Processing**: Queues and executes computationally intensive LLM-based processing tasks in the background.
--   **Self-hosted LLM Gateway Integration**: Routes requests to various LLM providers (OpenAI, Anthropic, Google, etc.) through your own Portkey Gateway instance.
--   **PostgreSQL Database Integration**: Uses SQLAlchemy ORM for robust data management of all application data.
--   **Wiki & Progress API**: Delivers generated wiki content and manages user reading progress.
--   **Health & Status Checks**: Endpoints for monitoring API health.
+-   **Project Management**: Create, update, and organize writing projects with metadata and settings
+-   **Document Management**: Full CRUD operations for documents with ProseMirror content support
+-   **File Tree System**: Hierarchical file/folder organization with drag-and-drop support
+-   **Advanced Tag System**: Many-to-many tagging with categories, colors, icons, and usage analytics
+-   **Supabase Authentication**: Secure JWT-based authentication with user session management
+-   **Repository Pattern**: Clean separation of concerns with interfaces and implementations
+-   **Database Seeding**: Automated development data generation with configurable templates
+-   **PostgreSQL Integration**: Full async SQLAlchemy ORM with proper relationships and constraints
+-   **Health & Monitoring**: Comprehensive health checks and application monitoring
+-   **Self-hosted LLM Gateway**: Future AI integration via Portkey Gateway (planned)
 
 ## 🚀 Getting Started
 
-These instructions assume you have already followed the **main `shuscribe/README.md`** for the overall monorepo setup, including starting the `docker-compose` services (PostgreSQL and Portkey Gateway).
+These instructions assume you have already followed the **main `shuscribe/README.md`** for the overall monorepo setup, including starting the `docker-compose` services (PostgreSQL).
 
 ### Prerequisites
 
 -   **Python 3.12+**
 -   **uv** (Python package manager, installed globally as per main README)
--   **Cryptography Key**: A 32-character (or longer) random string for symmetric encryption of user API keys. Generate one using: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
--   **`asyncpg`**: The asynchronous PostgreSQL driver. This will be installed via `uv sync`.
+-   **PostgreSQL Database**: Running via Docker Compose from project root
+-   **Supabase Project**: For authentication (see main README for setup)
+-   **Encryption Key**: Generate using: `uv run python -c "import secrets; print(secrets.token_urlsafe(32))"`
 
 ### 1. Navigate to the Backend Directory
 
@@ -54,12 +59,18 @@ cp .env.example .env
 Now, **edit the `.env` file** in this `backend/` directory. It should look like the `backend/.env.example` shown above.
 
 **Important Notes for `.env`:**
--   **`SECRET_KEY`**: Generate a strong, unique key for authentication.
--   **`ENCRYPTION_KEY`**: Set this to your unique 32-byte key generated from prerequisites.
--   **`ALLOWED_ORIGINS`**: Crucially, define this as a JSON array string, wrapped in single quotes, e.g., `'["http://localhost:3000", "http://127.0.0.1:3000"]'`
--   **`DATABASE_URL`**: Ensure it starts with `postgresql+asyncpg://` to use the correct asynchronous driver.
--   **`PORTKEY_BASE_URL`**: This should point to your running self-hosted Portkey Gateway (e.g., `http://localhost:8787/v1`).
--   There is **no `PORTKEY_API_KEY`** needed for a self-hosted gateway.
+-   **`SECRET_KEY`**: Generate a strong, unique key for JWT authentication
+-   **`ENCRYPTION_KEY`**: Set this to your unique 32-byte key generated from prerequisites
+-   **`DATABASE_URL`**: PostgreSQL connection string with `postgresql+asyncpg://` driver
+-   **`SUPABASE_URL`**: Your Supabase project URL for authentication
+-   **`SUPABASE_ANON_KEY`**: Supabase anonymous key for client authentication
+-   **`ALLOWED_ORIGINS`**: CORS origins as JSON array, e.g., `'["http://localhost:3001"]'`
+
+**Database Seeding Configuration:**
+-   **`ENABLE_DATABASE_SEEDING`**: Set to `true` to enable automatic seeding on startup
+-   **`SEED_DATA_SIZE`**: Control dataset size: `small`, `medium`, or `large`
+-   **`CLEAR_BEFORE_SEED`**: Set to `true` to force-clear and reseed existing data
+-   **`TABLE_PREFIX`**: Prefix for all database tables (default: `test_` for development)
 
 ### 3. Install Python Dependencies
 
@@ -69,24 +80,24 @@ Use `uv` to install all required packages:
 uv sync
 ```
 
-### 4. Apply Database Migrations (using Alembic)
+### 4. Database Setup
 
-Ensure your PostgreSQL container is running (via `docker-compose up -d` from the monorepo root) before running migrations.
+The backend uses a **no-migrations approach** with automatic table creation. Ensure your PostgreSQL container is running (via `docker-compose up -d` from the monorepo root).
 
+**Automatic Setup on First Run:**
+- Tables are created automatically when the server starts
+- Database seeding runs automatically if configured in `.env`
+
+**Manual Database Seeding:**
 ```bash
-uv run alembic upgrade head
+# Seed with sample data
+uv run python scripts/seed_database.py --clear --size medium
+
+# Check if database has data
+uv run python scripts/seed_database.py --check-only
 ```
 
-### 5. Make sure the Portkey Gateway is running
-
-```bash
-docker run -d \
-  --name portkey-gateway \
-  -p 8787:8787 \
-  portkeyai/gateway:latest
-```
-
-### 6. Run the FastAPI Application
+### 5. Run the FastAPI Application
 
 Once dependencies are installed and core Docker services are running:
 
@@ -95,6 +106,8 @@ uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The `--reload` flag enables hot-reloading for development.
+
+> **Note**: `uv run` automatically activates the virtual environment and runs the command with the correct Python interpreter and dependencies. No need to manually activate the virtual environment!
 
 ### 7. Access the API
 
@@ -110,85 +123,113 @@ You can also monitor requests going through your self-hosted Portkey Gateway via
 
 ## 📁 Project Structure
 
-The `src/` directory within `backend/` follows a clear, layered architecture:
+The `src/` directory follows a clean, layered architecture with repository pattern:
 
 ```
 src/
-├── main.py                 # FastAPI application entry point
-├── config.py               # Application-wide settings
+├── main.py                 # FastAPI application entry point with automatic seeding
+├── config.py               # Application-wide settings and environment variables
 │
 ├── api/                    # API layer (handles requests/responses)
-│   ├── dependencies.py     # Common API dependencies (e.g., DB session, auth)
+│   ├── dependencies.py     # Common API dependencies (auth, database sessions)
 │   └── v1/                 # API versioning
 │       ├── router.py       # Main router for API v1
-│       └── endpoints/      # Individual API endpoint definitions (users, stories, wiki, health)
+│       └── endpoints/      # API endpoint definitions
+│           ├── projects.py # Project management endpoints
+│           ├── documents.py# Document CRUD operations
+│           ├── tags.py     # Tag management and assignment
+│           └── health.py   # Health check endpoints
 │
 ├── schemas/                # Pydantic schemas (data validation, API contracts)
+│   ├── base.py             # Base response schemas
+│   ├── requests/           # Request body schemas
+│   └── responses/          # Response schemas
 │
 ├── database/               # Database interaction layer
-│   ├── connection.py       # SQLAlchemy engine and session setup
-│   ├── models.py           # SQLAlchemy ORM models (table definitions)
-│   ├── base.py             # Base for SQLAlchemy models (for Alembic)
-│   └── repositories/       # Data Access Layer (Repository Pattern)
+│   ├── connection.py       # Async SQLAlchemy engine and session management
+│   ├── models.py           # SQLAlchemy ORM models with relationships
+│   ├── factory.py          # Repository factory and dependency injection
+│   ├── seeder.py           # Database seeding with template-based data generation
+│   ├── seed.py             # Mock data factory and project templates
+│   ├── interfaces/         # Repository interfaces for clean architecture
+│   └── repositories.py     # Repository implementations (database layer)
 │
 ├── services/               # Business logic layer
-│   ├── story_service.py    # Logic for story processing orchestration
-│   ├── wiki_service.py     # Logic for wiki content generation/management
-│   ├── user_service.py     # Logic for user accounts and API keys
-│   └── llm/                # LLM interaction module (Self-hosted Portkey integration)
+│   └── auth/               # Authentication services
+│       └── supabase_auth.py# Supabase JWT validation
 │
 ├── core/                   # Core application functionalities
 │   ├── exceptions.py       # Custom exception classes
 │   ├── security.py         # Authentication and authorization
-│   ├── middleware.py       # FastAPI middleware (e.g., CORS, Rate Limiting)
-│   ├── constants.py        # Application-wide constants and enums
-│   └── events.py           # Application event handling
+│   ├── middleware.py       # FastAPI middleware (CORS, error handling)
+│   ├── logging.py          # Application logging configuration
+│   └── constants.py        # Application-wide constants
 │
-├── background/             # For background task processing (e.g., Celery/RQ - Future)
-│
-└── utils/                  # General utility functions (logging, encryption, text processing)
+└── utils/                  # General utility functions
+    ├── encryption.py       # Encryption utilities
+    └── text_processing.py  # Text and content processing
 ```
 
-## 🧑‍💻 Development Workflow (Backend Specific)
+## 🧑‍💻 Development Workflow
 
 Assuming you are in the `backend/` directory:
 
+**Core Development:**
 -   **Install/update dependencies**: `uv sync`
 -   **Run backend locally**: `uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000`
 -   **Run tests**: `uv run pytest`
--   **Create new database migration**: `uv run alembic revision --autogenerate -m "Your descriptive message"` (after changes to `src/database/models.py`)
--   **Apply database migrations**: `uv run alembic upgrade head`
 -   **Add new dependency**: `uv add package-name`
 -   **Add development dependency**: `uv add --dev package-name`
--   **Type checking**: `uv run mypy src/`
--   **Lint/Format code**: `uv run black .` `uv run isort .`
+
+**Database Management:**
+-   **Seed database**: `uv run python scripts/seed_database.py --clear --size medium`
+-   **Check database status**: `uv run python scripts/seed_database.py --check-only`
+-   **Force reseed**: `uv run python scripts/seed_database.py --force --clear`
+
+**Code Quality:**
+-   **Format code**: `uv run black . && uv run isort .`
+-   **Type checking**: `uv run mypy src/` (when configured)
+-   **Lint code**: Check with your preferred linter
+
+**Note**: This project uses a **no-migrations approach** with automatic table creation and seeding.
 
 ## 📡 API Endpoints
 
-All API endpoints are prefixed with `/api/v1`.
+All API endpoints are prefixed with `/api/v1`. View complete documentation at `http://localhost:8000/docs`.
 
 ### Core
 -   `GET /` - Root API endpoint
 -   `GET /health` - Global application health check
 -   `GET /api/v1/health/ping` - API v1 health ping
 
-### LLM Catalog & Configuration (UPDATED)
--   `GET /api/v1/llm/families` - Get all abstract AI model families and their inherent capabilities.
--   `GET /api/v1/llm/providers` - Get all LLM providers and their specific hosted model instances.
--   `GET /api/v1/llm/providers/{provider_id}/models` - Get hosted model instances for a specific LLM provider.
+### Projects
+-   `GET /api/v1/projects` - List all projects for authenticated user
+-   `POST /api/v1/projects` - Create a new project
+-   `GET /api/v1/projects/{project_id}` - Get project details
+-   `PUT /api/v1/projects/{project_id}` - Update project
+-   `DELETE /api/v1/projects/{project_id}` - Delete project
 
-### Stories
--   `POST /api/v1/stories` - Upload a new story
--   `GET /api/v1/stories/{story_id}` - Get story details
--   `GET /api/v1/stories/{story_id}/chapters` - Get story chapters
+### Documents
+-   `GET /api/v1/projects/{project_id}/documents` - List documents in project
+-   `POST /api/v1/documents` - Create a new document
+-   `GET /api/v1/documents/{document_id}` - Get document with content
+-   `PUT /api/v1/documents/{document_id}` - Update document
+-   `DELETE /api/v1/documents/{document_id}` - Delete document
 
-### Wiki
--   `GET /api/v1/stories/{story_id}/wiki` - Get all wiki articles for a story
--   `GET /api/v1/stories/{story_id}/wiki/{slug}` - Get a specific wiki article by slug
+### File Tree
+-   `GET /api/v1/projects/{project_id}/file-tree` - Get complete file tree structure
+-   `POST /api/v1/file-tree/folders` - Create new folder
+-   `POST /api/v1/file-tree/files` - Create new file
+-   `PUT /api/v1/file-tree/{item_id}` - Update file tree item
+-   `DELETE /api/v1/file-tree/{item_id}` - Delete file tree item
 
-### Progress
--   `POST /api/v1/progress` - Update reading progress for a user on a story
--   `GET /api/v1/progress/{story_id}` - Get current reading progress for a user on a story
+### Tags
+-   `GET /api/v1/projects/{project_id}/tags` - List all tags in project
+-   `POST /api/v1/tags` - Create new tag
+-   `PUT /api/v1/tags/{tag_id}` - Update tag
+-   `DELETE /api/v1/tags/{tag_id}` - Delete tag
+-   `POST /api/v1/tags/assign` - Assign tags to items
+-   `DELETE /api/v1/tags/unassign` - Remove tag assignments
 
 ## 🚨 Production Considerations
 
@@ -200,42 +241,50 @@ When preparing the backend for production:
 4.  **Monitoring & Logging**: Implement robust application monitoring, logging aggregation, and alerting.
 5.  **Security Best Practices**: Review for common vulnerabilities (e.g., input validation, secure headers).
 
-## ⚡ Next Steps (Backend Focused)
+## ⚡ Next Steps
 
-Current immediate backend development tasks include:
+Current development priorities:
 
-1.  **Implement Authentication**: Integrate with Supabase for user authentication and authorization.
-2.  **User API Key Endpoints**: Create endpoints for users to manage their BYOK LLM keys.
-3.  **Story Upload Logic**: Develop the full logic for story content ingestion via the API.
-4.  **Background Processing Integration**: Set up a background task queue (e.g., Celery/RQ) to offload LLM processing.
-5.  **LLM Pipeline Development**: Implement the full wiki generation and entity extraction logic within the `services/llm/pipeline.py` and `services/llm/processors/`.
-6.  **Comprehensive Testing**: Write unit and integration tests for all backend services and endpoints.
+1.  **Frontend Integration**: Complete integration between frontend and backend tag system
+2.  **AI Agent System**: Implement LLM-powered content generation and analysis
+3.  **User Permissions**: Add role-based access control for collaborative projects
+4.  **Publishing System**: Build export functionality for various publishing formats
+5.  **Performance Optimization**: Add caching, query optimization, and background processing
+6.  **Comprehensive Testing**: Expand unit and integration test coverage
 
-## 🆘 Troubleshooting (Backend Specific)
+## 🆘 Troubleshooting
 
 ### Common Issues
 
 **Database connection errors:**
--   Ensure the PostgreSQL container is running via `docker-compose ps` from the monorepo root.
--   Verify your `DATABASE_URL` in `backend/.env` is correct.
+-   Ensure PostgreSQL container is running: `docker-compose ps` from project root
+-   Verify `DATABASE_URL` in `backend/.env` uses `postgresql+asyncpg://`
+-   Check database credentials and connection string format
 
-**Backend import errors / VS Code not recognizing dependencies:**
--   Ensure you are in the `backend/` directory (`cd backend`).
--   Run `uv sync` to ensure all dependencies are installed.
--   Verify your VS Code Python interpreter is set to the `.venv` inside this `backend/` directory (see main `shuscribe/README.md` for VS Code setup).
+**Database seeding issues:**
+-   Verify seeding configuration in `.env`: `ENABLE_DATABASE_SEEDING=true`
+-   Check if database is empty: `uv run python scripts/seed_database.py --check-only`
+-   Force reseed: `uv run python scripts/seed_database.py --force --clear`
+
+**Backend import errors:**
+-   Ensure you're in the `backend/` directory
+-   Run `uv sync` to install all dependencies
+-   Check Python interpreter points to `backend/.venv/bin/python`
+-   Try `uv sync --reinstall` if issues persist
 
 **FastAPI application not starting:**
--   Check the console output for error messages.
--   Verify your `.env` file is correctly configured (especially `SECRET_KEY`, `ENCRYPTION_KEY`, `PORTKEY_BASE_URL`).
--   Ensure the Portkey Gateway and PostgreSQL database containers are running (`docker-compose ps`).
+-   Check console output for detailed error messages
+-   Verify `.env` configuration (especially `SECRET_KEY`, `SUPABASE_URL`)
+-   Ensure PostgreSQL container is running
+-   Check for port conflicts on 8000
 
-**LLM requests failing:**
--   Ensure your `PORTKEY_BASE_URL` in `backend/.env` is correct and the Portkey Gateway is running (`http://localhost:8787/health` should respond).
--   Check the Portkey Gateway console (`http://localhost:8787/public/`) for detailed LLM request logs and errors.
--   Verify the user's provided LLM API key (e.g., OpenAI, Anthropic) is valid.
+**Authentication issues:**
+-   Verify Supabase configuration in `.env`
+-   Check `SUPABASE_URL` and `SUPABASE_ANON_KEY` are correct
+-   Ensure frontend and backend Supabase configurations match
 
 ### Getting Help
 
--   Review the full Backend API documentation at `http://localhost:8000/docs`.
--   Consult the main `shuscribe/README.md` for overall project setup and Docker troubleshooting.
--   Check the project's [Issues](https://github.com/haowjy/shuscribe/issues) page.
+-   Review API documentation at `http://localhost:8000/docs`
+-   Check main project README for Docker and environment setup
+-   Consult specialized guides in `/frontend/CLAUDE-frontend.md` and `/backend/CLAUDE-backend.md`

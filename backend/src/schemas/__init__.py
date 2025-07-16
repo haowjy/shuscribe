@@ -5,68 +5,76 @@ All Pydantic models organized by domain for clean separation of concerns.
 """
 
 # Re-export all models for convenient importing
-from src.schemas.db.user import User, UserAPIKey, UserCreate, UserUpdate, UserAPIKeyCreate, SubscriptionTier
-from src.schemas.db.workspace import Workspace, Arc, WorkspaceCreate, WorkspaceUpdate
-from src.schemas.db.story import (
-    Chapter, ChapterCreate, ChapterUpdate, ChapterStatus,
-    StoryMetadata, StoryMetadataCreate, StoryMetadataUpdate,
-    FullStoryBase
-)
-from src.schemas.db.wiki import (
-    WikiArticle, WikiArticleCreate, WikiArticleUpdate, WikiArticleType,
-    ChapterVersion, ChapterVersionCreate, ChapterVersionUpdate,
-    CurrentVersion, CurrentVersionCreate, CurrentVersionUpdate,
-    ArticleConnection, ArticleConnectionCreate,
-    WikiPage, WikiPageCreate, WikiPageUpdate,
-    WikiArchive, WikiArchiveMetadata,
-    WikiPageArticleLink, WikiPageArticleLinkCreate, WikiPageArticleLinkUpdate
-)
+# Note: Only importing existing models, others are commented out until created
+# from src.schemas.db.user import User, UserAPIKey, UserCreate, UserUpdate, UserAPIKeyCreate, SubscriptionTier
+# from src.schemas.db.workspace import Workspace, Arc, WorkspaceCreate, WorkspaceUpdate
+# from src.schemas.db.story import (
+#     Chapter, ChapterCreate, ChapterUpdate, ChapterStatus,
+#     StoryMetadata, StoryMetadataCreate, StoryMetadataUpdate,
+#     FullStoryBase
+# )
+# from src.schemas.db.wiki import (
+#     WikiArticle, WikiArticleCreate, WikiArticleUpdate, WikiArticleType,
+#     ChapterVersion, ChapterVersionCreate, ChapterVersionUpdate,
+#     CurrentVersion, CurrentVersionCreate, CurrentVersionUpdate,
+#     ArticleConnection, ArticleConnectionCreate,
+#     WikiPage, WikiPageCreate, WikiPageUpdate,
+#     WikiArchive, WikiArchiveMetadata,
+#     WikiPageArticleLink, WikiPageArticleLinkCreate, WikiPageArticleLinkUpdate
+# )
+from src.schemas.db.writing import AuthorNote, ResearchItem, CharacterProfile
 
 
 __all__ = [
-    # User domain
-    "User",
-    "UserAPIKey", 
-    "UserCreate",
-    "UserUpdate",
-    "UserAPIKeyCreate",
-    "SubscriptionTier",
+    # Writing domain - only available models
+    "AuthorNote",
+    "ResearchItem",
+    "CharacterProfile",
     
-    # Workspace domain
-    "Workspace",
-    "Arc",
-    "WorkspaceCreate",
-    "WorkspaceUpdate",
+    # Other domains commented out until models are created
+    # # User domain
+    # "User",
+    # "UserAPIKey", 
+    # "UserCreate",
+    # "UserUpdate",
+    # "UserAPIKeyCreate",
+    # "SubscriptionTier",
     
-    # Story domain
-    "Chapter",
-    "ChapterCreate",
-    "ChapterUpdate",
-    "ChapterStatus",
-    "StoryMetadata",
-    "StoryMetadataCreate",
-    "StoryMetadataUpdate",
-    "FullStoryBase",
+    # # Workspace domain
+    # "Workspace",
+    # "Arc",
+    # "WorkspaceCreate",
+    # "WorkspaceUpdate",
     
-    # Wiki domain
-    "WikiArticle",
-    "WikiArticleCreate", 
-    "WikiArticleUpdate",
-    "WikiArticleType",
-    "ChapterVersion",
-    "ChapterVersionCreate",
-    "ChapterVersionUpdate",
-    "CurrentVersion",
-    "CurrentVersionCreate",
-    "CurrentVersionUpdate",
-    "ArticleConnection",
-    "ArticleConnectionCreate",
-    "WikiPage",
-    "WikiPageCreate",
-    "WikiPageUpdate",
-    "WikiArchive",
-    "WikiArchiveMetadata",
-    "WikiPageArticleLink",
-    "WikiPageArticleLinkCreate",
-    "WikiPageArticleLinkUpdate",
+    # # Story domain
+    # "Chapter",
+    # "ChapterCreate",
+    # "ChapterUpdate",
+    # "ChapterStatus",
+    # "StoryMetadata",
+    # "StoryMetadataCreate",
+    # "StoryMetadataUpdate",
+    # "FullStoryBase",
+    
+    # # Wiki domain
+    # "WikiArticle",
+    # "WikiArticleCreate", 
+    # "WikiArticleUpdate",
+    # "WikiArticleType",
+    # "ChapterVersion",
+    # "ChapterVersionCreate",
+    # "ChapterVersionUpdate",
+    # "CurrentVersion",
+    # "CurrentVersionCreate",
+    # "CurrentVersionUpdate",
+    # "ArticleConnection",
+    # "ArticleConnectionCreate",
+    # "WikiPage",
+    # "WikiPageCreate",
+    # "WikiPageUpdate",
+    # "WikiArchive",
+    # "WikiArchiveMetadata",
+    # "WikiPageArticleLink",
+    # "WikiPageArticleLinkCreate",
+    # "WikiPageArticleLinkUpdate",
 ] 

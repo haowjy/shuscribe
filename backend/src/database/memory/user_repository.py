@@ -1,158 +1,120 @@
-"""Memory-based user repository implementation for testing and development."""
-from typing import List, Optional, Dict, Any
-from uuid import UUID, uuid4
-from datetime import UTC, datetime
+"""
+In-memory user repository implementation for development and testing
+"""
+from typing import Optional, List, Dict, Any
+from datetime import datetime, UTC
 
-from src.database.interfaces.user_repository import IUserRepository
-from src.schemas.db.user import SubscriptionTier, User, UserCreate, UserUpdate, UserAPIKey, UserAPIKeyCreate
+from src.core.constants import PROVIDER_ID
+from src.database.interfaces.user_repository import IUserRepository, User, UserAPIKey
 
 
 class MemoryUserRepository(IUserRepository):
-    """In-memory implementation of user repository for testing."""
+    """
+    In-memory implementation of user repository.
     
+    Used for development and testing. Data is lost when the application restarts.
+    """
+
     def __init__(self):
-        self._users: Dict[UUID, User] = {}
-        self._api_keys: Dict[str, UserAPIKey] = {}  # composite_key -> UserAPIKey
-    
-    # User CRUD
-    async def create_user(self, user_data: UserCreate) -> User:
-        """Create a new user"""
-        user_id = uuid4()
-        now = datetime.now(UTC)
-        
-        user = User(
-            id=user_id,
-            email=user_data.email,
-            display_name=user_data.display_name,
-            subscription_tier=user_data.subscription_tier,
-            preferences=user_data.preferences,
-            created_at=now,
-            updated_at=now
-        )
-        
-        self._users[user_id] = user
-        return user
-    
-    async def get_user(self, user_id: UUID) -> Optional[User]:
-        """Get a user by ID"""
+        self._users: Dict[str, User] = {}
+        self._api_keys: Dict[str, Dict[str, UserAPIKey]] = {}  # user_id -> provider -> UserAPIKey
+
+    async def get_user_by_id(self, user_id: str) -> Optional[User]:
+        """Get user by ID."""
         return self._users.get(user_id)
-    
-    async def update_user(self, user_id: UUID, user_data: UserUpdate) -> User:
-        """Update an existing user"""
-        user = self._users.get(user_id)
-        if not user:
-            raise ValueError(f"User {user_id} not found")
+
+    async def create_or_update_user(self, user_id: str, email: str, metadata: Optional[Dict[str, Any]] = None) -> User:
+        """Create a new user or update existing user data."""
+        existing_user = self._users.get(user_id)
         
-        update_dict = user_data.model_dump(exclude_unset=True)
-        update_dict['updated_at'] = datetime.now(UTC)
-        
-        updated_user = user.model_copy(update=update_dict)
-        self._users[user_id] = updated_user
-        return updated_user
-    
-    async def delete_user(self, user_id: UUID) -> bool:
-        """Delete a user"""
-        if user_id in self._users:
-            # Also delete associated API keys
-            keys_to_delete = [
-                key for key in self._api_keys.keys() 
-                if key.startswith(str(user_id))
-            ]
-            for key in keys_to_delete:
-                del self._api_keys[key]
-            
-            del self._users[user_id]
-            return True
-        return False
-    
-    # Simple User Queries
-    async def get_user_by_email(self, email: str) -> Optional[User]:
-        """Get a user by email address"""
-        for user in self._users.values():
-            if user.email == email:
-                return user
-        return None
-    
-    async def get_users_by_subscription_tier(self, tier: SubscriptionTier) -> List[User]:
-        """Get users filtered by subscription tier"""
-        return [
-            user for user in self._users.values() 
-            if user.subscription_tier == tier
-        ]
-    
-    async def get_users(
-        self, offset: int = 0, limit: int = 100
-    ) -> List[User]:
-        """Get paginated list of users"""
-        all_users = list(self._users.values())
-        # Sort by created_at for consistent pagination
-        all_users.sort(key=lambda u: u.created_at)
-        return all_users[offset:offset + limit]
-    
-    # BYOK API Key Management
+        if existing_user:
+            # Update existing user
+            existing_user.email = email
+            existing_user.metadata = metadata or {}
+            existing_user.updated_at = datetime.now(UTC)
+            return existing_user
+        else:
+            # Create new user
+            user = User(
+                user_id=user_id,
+                email=email,
+                created_at=datetime.now(UTC),
+                metadata=metadata or {}
+            )
+            self._users[user_id] = user
+            return user
+
+    async def get_api_key(self, user_id: str, provider: PROVIDER_ID) -> Optional[UserAPIKey]:
+        """Get encrypted API key for a specific provider."""
+        user_keys = self._api_keys.get(user_id, {})
+        return user_keys.get(provider)
+
     async def store_api_key(
-        self, user_id: UUID, api_key_data: UserAPIKeyCreate, encrypted_key: str
+        self, 
+        user_id: str, 
+        provider: PROVIDER_ID, 
+        encrypted_api_key: str,
+        validation_status: str = "unknown",
+        provider_metadata: Optional[Dict[str, Any]] = None
     ) -> UserAPIKey:
-        """Store an encrypted API key"""
-        now = datetime.now(UTC)
+        """Store or update an encrypted API key for a user."""
+        if user_id not in self._api_keys:
+            self._api_keys[user_id] = {}
         
-        api_key = UserAPIKey(
-            user_id=user_id,
-            provider=api_key_data.provider,
-            encrypted_api_key=encrypted_key,
-            provider_metadata=api_key_data.provider_metadata,
-            validation_status="pending",
-            last_validated_at=None,
-            created_at=now,
-            updated_at=now
-        )
+        existing_key = self._api_keys[user_id].get(provider)
         
-        self._api_keys[api_key.composite_key] = api_key
-        return api_key
-    
-    async def get_api_key(
-        self, user_id: UUID, provider: str
-    ) -> Optional[UserAPIKey]:
-        """Get an API key for a specific user and provider"""
-        composite_key = f"{user_id}::{provider}"
-        return self._api_keys.get(composite_key)
-    
+        if existing_key:
+            # Update existing key
+            existing_key.encrypted_api_key = encrypted_api_key
+            existing_key.validation_status = validation_status
+            existing_key.provider_metadata = provider_metadata or {}
+            existing_key.updated_at = datetime.now(UTC)
+            return existing_key
+        else:
+            # Create new key
+            api_key = UserAPIKey(
+                user_id=user_id,
+                provider=provider,
+                encrypted_api_key=encrypted_api_key,
+                validation_status=validation_status,
+                provider_metadata=provider_metadata or {},
+                created_at=datetime.now(UTC)
+            )
+            self._api_keys[user_id][provider] = api_key
+            return api_key
+
+    async def delete_api_key(self, user_id: str, provider: PROVIDER_ID) -> bool:
+        """Delete an API key for a user."""
+        user_keys = self._api_keys.get(user_id, {})
+        if provider in user_keys:
+            del user_keys[provider]
+            return True
+        return False
+
+    async def list_user_api_keys(self, user_id: str) -> List[UserAPIKey]:
+        """List all API keys for a user."""
+        user_keys = self._api_keys.get(user_id, {})
+        return list(user_keys.values())
+
     async def update_api_key_validation(
-        self, user_id: UUID, provider: str, status: str
-    ) -> UserAPIKey:
-        """Update API key validation status"""
-        composite_key = f"{user_id}::{provider}"
-        api_key = self._api_keys.get(composite_key)
-        if not api_key:
-            raise ValueError(f"API key not found for user {user_id}, provider {provider}")
+        self, 
+        user_id: str, 
+        provider: PROVIDER_ID, 
+        validation_status: str,
+        last_validated_at: Optional[datetime] = None
+    ) -> bool:
+        """Update the validation status of an API key."""
+        user_keys = self._api_keys.get(user_id, {})
+        api_key = user_keys.get(provider)
         
-        updated_api_key = api_key.model_copy(update={
-            'validation_status': status,
-            'last_validated_at': datetime.now(UTC),
-            'updated_at': datetime.now(UTC)
-        })
-        
-        self._api_keys[composite_key] = updated_api_key
-        return updated_api_key
-    
-    async def delete_api_key(self, user_id: UUID, provider: str) -> bool:
-        """Delete an API key"""
-        composite_key = f"{user_id}::{provider}"
-        if composite_key in self._api_keys:
-            del self._api_keys[composite_key]
+        if api_key:
+            api_key.validation_status = validation_status
+            api_key.last_validated_at = last_validated_at or datetime.now(UTC)
+            api_key.updated_at = datetime.now(UTC)
             return True
         return False
     
-    async def get_user_api_keys(self, user_id: UUID) -> List[UserAPIKey]:
-        """Get all API keys for a user"""
-        return [
-            api_key for api_key in self._api_keys.values()
-            if api_key.user_id == user_id
-        ]
-    
-    async def get_validated_api_keys(self, user_id: UUID) -> List[UserAPIKey]:
-        """Get only validated API keys for a user"""
-        return [
-            api_key for api_key in self._api_keys.values()
-            if api_key.user_id == user_id and api_key.validation_status == "valid"
-        ]
+    def clear_all_data(self):
+        """Clear all data (useful for testing)."""
+        self._users.clear()
+        self._api_keys.clear()
