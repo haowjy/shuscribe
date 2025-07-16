@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WorkspaceLayout } from "@/components/layout/workspace-layout";
 
-export default function WorkspacePage() {
+function WorkspaceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project");
@@ -33,4 +33,19 @@ export default function WorkspacePage() {
   }
 
   return <WorkspaceLayout projectId={projectId} />;
+}
+
+export default function WorkspacePage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">Loading workspace...</p>
+        </div>
+      </div>
+    }>
+      <WorkspaceContent />
+    </Suspense>
+  );
 }

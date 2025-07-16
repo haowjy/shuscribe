@@ -35,4 +35,4 @@ RUN mkdir -p temp
 EXPOSE 8000
 
 # Start the application - use uv run with Railway's required PORT binding
-CMD ["uv", "run", "hypercorn", "src.main:app", "--bind", "[::]:$PORT"]
+CMD ["uv", "run", "hypercorn", "src.main:app", "--bind", "::"]
