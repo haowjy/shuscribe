@@ -23,7 +23,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies with cache mount for faster builds
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
     uv sync --frozen --no-cache
 
 # Copy source code
@@ -35,5 +35,5 @@ RUN mkdir -p temp
 # Expose port
 EXPOSE 8000
 
-# Start the application - use Railway's exact hypercorn pattern
-CMD ["hypercorn", "src.main:app", "--bind", "::"]
+# Start the application - use uv run to handle virtual environment
+CMD ["uv", "run", "hypercorn", "src.main:app", "--bind", "::"]
