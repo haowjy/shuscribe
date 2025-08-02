@@ -102,7 +102,7 @@ uv run python scripts/seed_database.py --check-only
 Once dependencies are installed and core Docker services are running:
 
 ```bash
-uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+uv run hypercorn src.main:app --reload --bind "[::]:8000"
 ```
 
 The `--reload` flag enables hot-reloading for development.
@@ -176,7 +176,7 @@ Assuming you are in the `backend/` directory:
 
 **Core Development:**
 -   **Install/update dependencies**: `uv sync`
--   **Run backend locally**: `uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000`
+-   **Run backend locally**: `uv run hypercorn src.main:app --reload --bind "[::]:8000"`
 -   **Run tests**: `uv run pytest`
 -   **Add new dependency**: `uv add package-name`
 -   **Add development dependency**: `uv add --dev package-name`

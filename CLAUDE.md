@@ -57,7 +57,7 @@ pnpm dlx shadcn@latest add [component]    # Add UI components
 ```bash
 cd backend
 uv sync && source .venv/bin/activate     # Setup environment
-uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000  # Dev server
+uv run hypercorn src.main:app --reload --bind "[::]:8000"  # Dev server
 uv run pytest                            # Run tests
 uv run black . && uv run isort .         # Format code
 ```

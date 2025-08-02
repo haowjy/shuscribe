@@ -33,7 +33,7 @@ uv sync
 source .venv/bin/activate
 
 # Start development server
-uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+uv run hypercorn src.main:app --reload --bind "[::]:8000"
 
 # Run tests
 uv run pytest
@@ -77,11 +77,86 @@ backend/
 
 ## Key Architecture Concepts
 
-### Repository Pattern
-- Supports three backends: `memory` (testing), `file` (local development), `database` (production)
-- Access through `RepositoryFactory` in `src/database/factory.py`
-- Repository model schemas are defined in `src/schemas/db/`
-- **CRITICAL**: File backend always uses `backend/temp/` directory (gitignored)
+### Repository Pattern & Dependency Injection
+
+The backend uses a comprehensive dependency injection pattern with interface-based repository design for clean architecture and testability.
+
+#### Architecture Overview
+
+**Interface-Based Design** (`src/database/interfaces/`):
+- Abstract base classes define repository contracts: `ProjectRepository`, `DocumentRepository`, `FileTreeRepository`, `TagRepository`, `IUserRepository`
+- Each interface defines async methods for CRUD operations
+- Type safety ensured through Python ABC (Abstract Base Class) pattern
+
+**Repository Container** (`src/database/factory.py`):
+- `RepositoryContainer` class holds all repository instances
+- Factory function `create_repositories(backend)` creates appropriate implementations
+- Global singleton pattern with `get_repositories()` for consistent access across application
+
+**Implementation Strategies**:
+- **Database Backend**: Uses SQLAlchemy with Supabase PostgreSQL
+  - `DatabaseProjectRepository`, `DatabaseDocumentRepository`, etc.
+  - Async session management via `get_session_context()`
+  - Full relationship support with proper joins and foreign keys
+- **Memory Backend**: Pure Python classes with in-memory dictionaries
+  - `MemoryProjectRepository`, `MemoryDocumentRepository`, etc.
+  - No database connection required - perfect for testing
+  - Complete isolation between test runs
+  - **Note**: Memory repository implementations are not feature-complete compared to database repositories
+
+#### Dependency Injection Flow
+
+**1. Application Startup** (`src/main.py`):
+```python
+# Conditional database initialization
+if settings.DATABASE_BACKEND == "database":
+    init_database()  # Only for PostgreSQL
+    await create_tables()
+
+# Initialize repositories
+init_repositories(backend=settings.DATABASE_BACKEND)
+```
+
+**2. FastAPI Dependency Injection** (`src/api/dependencies.py`):
+```python
+def get_repositories() -> RepositoryContainer:
+    """FastAPI dependency to inject repository container"""
+    return get_repo_container()
+```
+
+**3. Endpoint Usage Pattern**:
+```python
+@router.get("/{project_id}")
+async def get_project(
+    project_id: str,
+    repositories: RepositoryContainer = Depends(get_repositories)
+):
+    project = await repositories.project.get_by_id(project_id)
+    # ... business logic
+```
+
+**Alternative Pattern** (direct access):
+```python
+from src.database.factory import get_repositories
+
+async def some_function():
+    repos = get_repositories()
+    projects = await repos.project.list_all()
+```
+
+#### Backend Configuration
+
+**Three backends supported**:
+- **`memory`**: Custom Python repository classes (no database connection)
+  - Use case: Testing, development with throwaway data
+  - Performance: Fastest, complete isolation
+  - Repository model schemas are defined in `src/schemas/db/`
+  - **Limitation**: Not all repository methods are fully implemented
+- **`file`**: File-based SQLite database (currently legacy)
+  - **CRITICAL**: File backend always uses `backend/temp/` directory (gitignored)
+- **`database`**: Supabase PostgreSQL with full relationship support
+  - Use case: Production, shared development environments
+  - Full async SQLAlchemy ORM with proper relationships
 
 ### Domain Organization
 - **User**: Authentication, profiles, encrypted API keys
@@ -312,6 +387,36 @@ now = datetime.now(UTC)
 - **Type Safety**: SQLAlchemy relationships instead of manual array manipulation
 
 **Migration Required**: Database needs reseeding - existing JSON tag data will be lost.
+
+## Recent Architecture Changes
+
+### Database Initialization Fix (2025-01-19)
+**BREAKING CHANGE**: Fixed database initialization to only occur for database backend, not memory backend.
+
+**What Changed**:
+- **Conditional DB Init**: `src/main.py` now only calls `init_database()` when `DATABASE_BACKEND="database"`
+- **Memory Backend**: Skips all database connection setup when using memory backend
+- **Error Prevention**: Prevents SQLite+PostgreSQL pool parameter conflicts when memory backend falls back to SQLite
+
+**Benefits**:
+- **Clean Separation**: Memory backend uses pure Python classes, database backend uses PostgreSQL
+- **Better Testing**: Memory backend works reliably without database connection errors
+- **Architecture Clarity**: Clear distinction between database-dependent and database-independent backends
+
+**Code Pattern**:
+```python
+# src/main.py - Conditional database initialization
+if settings.DATABASE_BACKEND == "database":
+    # Initialize database connection and create tables for Supabase PostgreSQL
+    init_database()
+    await create_tables(drop_existing=settings.CLEAR_BEFORE_SEED)
+else:
+    # Memory backend uses pure Python repositories, no database connection needed
+    logger.info(f"Using {settings.DATABASE_BACKEND} backend - skipping database initialization")
+
+# Always initialize repositories (factory chooses implementation)
+init_repositories(backend=settings.DATABASE_BACKEND)
+```
 
 ### Backend Documentation Maintenance
 

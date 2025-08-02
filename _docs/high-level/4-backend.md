@@ -39,7 +39,7 @@
 - **Pydantic** for request/response models
 - **Python-dotenv** for environment management
 - **Pytest** for testing
-- **Uvicorn** for development server
+- **Hypercorn** for development server
 
 ---
 

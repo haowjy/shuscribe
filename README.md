@@ -9,17 +9,8 @@ An intelligent platform that automatically generates a personal, spoiler-free wi
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package manager)
 - [Node.js](https://nodejs.org/) (v18 or higher)
+- [pnpm](https://pnpm.io/installation) (package manager for frontend)
 - [Git](https://git-scm.com/)
-
-### One-Command Setup
-
-```bash
-git clone https://github.com/haowjy/shuscribe
-cd shuscribe
-# Ensure you copy .env.example to .env and populate it
-cp .env.example .env
-./scripts/dev-setup.sh
-```
 
 ### Manual Setup
 
@@ -46,7 +37,7 @@ cp .env.example .env
 4.  **Frontend setup:**
     ```bash
     cd frontend
-    npm install
+    pnpm install
     cd ..
     ```
 
@@ -166,7 +157,7 @@ uv sync
 # 3. Choose the interpreter located at `.venv/bin/python` (Linux/macOS) or `.venv/Scripts/python.exe` (Windows) within your backend folder.
 
 # Run backend locally (outside Docker, with hot-reloading)
-uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+uv run hypercorn src.main:app --reload --bind "[::]:8000"
 
 # Run tests
 uv run pytest
@@ -190,19 +181,19 @@ uv add --dev package-name
 cd frontend
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run development server (with hot-reloading)
-npm run dev
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
 
 # Run tests
-npm test
+pnpm test
 
 # Add new dependency
-npm install package-name
+pnpm add package-name
 ```
 
 ### Database Operations
@@ -275,7 +266,7 @@ When running locally:
 -   [x] Core configuration (settings, constants, exceptions)
 -   [x] LLM service integration (Portkey self-hosted)
 -   [x] Base API setup (main, router, health endpoints)
--   [ ] User authentication (Supabase)
+-   [x] User authentication (Supabase)
 -   [ ] Initial API endpoints (user, story upload placeholder)
 
 ### Phase 2: MVP Backend
@@ -359,7 +350,7 @@ cd frontend
 
 # Clear Next.js cache
 rm -rf .next
-npm run build
+pnpm build
 ```
 
 **Portkey Gateway not reachable:**
@@ -373,12 +364,6 @@ docker-compose logs portkey-gateway
 # Verify connectivity
 curl http://localhost:8787/health
 ```
-
-### Getting Help
-
--   Check the [Issues](https://github.com/haowjy/shuscribe/issues) page.
--   Review the Backend API documentation at `http://localhost:8000/docs`.
--   Ensure all services are running with `docker-compose ps` from the project root.
 
 ## 📊 Tech Stack
 

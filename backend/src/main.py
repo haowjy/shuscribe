@@ -33,15 +33,18 @@ async def lifespan(app: FastAPI):
     from src.database.factory import init_repositories
     
     try:
-        # Initialize database connection
+        # Initialize database connection only for database backend
         logging.info(f"Starting initialization with DATABASE_BACKEND={settings.DATABASE_BACKEND}")
-        init_database()
-        logging.info("Database connection initialized")
         
-        # Create tables if needed (no migrations approach)
-        if settings.DATABASE_BACKEND != "memory":
+        if settings.DATABASE_BACKEND == "database":
+            # Initialize database connection and create tables for Supabase PostgreSQL
+            init_database()
+            logging.info("Database connection initialized")
             await create_tables(drop_existing=settings.CLEAR_BEFORE_SEED)
             logging.info("Database tables created")
+        else:
+            # Memory backend uses pure Python repositories, no database connection needed
+            logging.info(f"Using {settings.DATABASE_BACKEND} backend - skipping database initialization")
         
         # Initialize repositories
         init_repositories(backend=settings.DATABASE_BACKEND)

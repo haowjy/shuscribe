@@ -6,4 +6,4 @@ source .env
 
 # Run the development server with hypercorn (matches production)
 # Note: hypercorn supports --reload for development hot-reloading
-uv run hypercorn src.main:app --reload --bind [::]:8000
+uv run hypercorn src.main:app --reload --bind "[::]:8000"

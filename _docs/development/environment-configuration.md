@@ -70,7 +70,7 @@ Controls debugging features across all environments:
 
 Controls the database storage backend:
 
-- **`memory`**: In-memory SQLite database
+- **`memory`**: Custom Python repository classes (no database connection)
   - Use case: Testing, development with throwaway data
   - Data persistence: None (lost on restart)
   - Performance: Fastest
