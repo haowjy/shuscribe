@@ -4,6 +4,31 @@
 
 This document defines the REST API contracts from the frontend perspective, designed to support the current UI workflows and data models. These contracts will be implemented first as MSW mocks, then later as Python backend APIs.
 
+## ⚠️ Breaking Changes (August 2025)
+
+### Path-Based Document Creation
+
+**BREAKING CHANGE**: The `file_tree_parent_id` field has been removed from document creation requests.
+
+**What Changed:**
+- **Removed Field**: `file_tree_parent_id` is no longer accepted in `POST /api/documents`
+- **Auto-Folder Creation**: Parent folders are automatically created from the document path
+- **Enhanced UX**: Users can create complex folder hierarchies with a single API call
+
+**Migration Guide:**
+```json
+// OLD (no longer supported)
+{
+  "path": "/chapters/chapter-1",
+  "file_tree_parent_id": "ft_chapters_folder"  // ❌ REMOVED
+}
+
+// NEW (automatic folder creation)
+{
+  "path": "/chapters/act-1/chapter-1"  // ✅ Auto-creates /chapters and /chapters/act-1
+}
+```
+
 ## Core Principles
 
 - **Frontend-Driven**: Designed based on actual UI needs and workflows
@@ -355,7 +380,9 @@ Response 200:
 }
 ```
 
-### Create Document
+### Create Document (Path-Based with Auto-Folder Creation)
+
+**🆕 Path-Based Creation**: Documents now automatically create missing folder hierarchies from their path. The `file_tree_parent_id` field has been removed.
 
 ```http
 POST /api/documents
@@ -365,7 +392,7 @@ Content-Type: application/json
 {
   "project_id": "prj_123",
   "title": "New Chapter",
-  "path": "/chapters/chapter-1.md",
+  "path": "/chapters/act-1/chapter-1",
   "content": {
     "type": "doc",
     "content": [
@@ -380,8 +407,7 @@ Content-Type: application/json
       }
     ]
   },
-  "tags": ["chapter", "draft"],
-  "file_tree_parent_id": "ft_1"
+  "tags": ["chapter", "draft"]
 }
 
 Response 201:
@@ -389,7 +415,7 @@ Response 201:
   "id": "doc_456",
   "project_id": "prj_123",
   "title": "New Chapter",
-  "path": "/chapters/chapter-1.md",
+  "path": "/chapters/act-1/chapter-1",
   "tags": ["chapter", "draft"],
   "word_count": 10,
   "created_at": "2025-01-01T00:00:00Z",
@@ -397,7 +423,7 @@ Response 201:
   "version": "1.0.0",
   "is_locked": false,
   "locked_by": null,
-  "file_tree_id": "ft_1",
+  "file_tree_id": "ft_auto_created_123",  // Auto-assigned to deepest folder in path
   "content": {
     "type": "doc",
     "content": [

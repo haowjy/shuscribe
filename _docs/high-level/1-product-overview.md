@@ -409,7 +409,7 @@ For detailed information on specific aspects of ShuScribe:
 - [Content Architecture](../core/content-architecture.md) - Multi-content system design
 
 **API & Integration:**
-- [API Reference](../core/api-reference.md) - Complete API documentation
+- [API Reference](../core/complete-api-specification.md) - Complete API documentation
 - [API Contracts](../api/contracts.md) - Frontend-backend interface definitions
 
 This product overview provides the strategic foundation for building ShuScribe from a simple writing tool into the definitive platform for universe content management.

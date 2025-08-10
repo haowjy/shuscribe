@@ -1,354 +1,457 @@
-# ShuScribe Backend MVP Technical Specification
+# ShuScribe Backend Architecture
 
-**Context-Aware Fiction Writing Platform - Backend MVP**
+**Current Backend Implementation Status (2025)**
 
-*Practical technical planning for FastAPI + Supabase + AI Services*
-
----
-
-## Core MVP Features
-
-### What We're Actually Building
-1. **Project data API** - Load complete project data (documents + tags) in single request
-2. **Document CRUD API** - Create, read, update, delete documents via REST
-3. **Reference extraction** - Parse saved documents for @-references and tags
-4. **Auth middleware** - Validate Supabase JWT tokens
-5. **Project management** - Basic project and file tree operations
-6. **Mock AI endpoints** - Placeholder AI chat/context endpoints
-7. **AI wiki generation** - Generate wikis from extracted @-references
-8. **Export services** - Generate Markdown, PDF, EPUB from document content
-9. **Basic publishing API** - Simple public page hosting with wikis
-
-### What We're NOT Building Yet
-- Real AI chat implementation (just mock responses)
-- Real-time collaboration endpoints
-- Interactive reading features (hover context, AI companion)
-- Advanced search/filtering (frontend handles local search)
-- File upload/storage management
-- Advanced caching strategies
-- Complex publishing features (monetization, analytics, community)
-- Performance optimizations
+*FastAPI + SQLAlchemy + Repository Pattern + LLM Integration*
 
 ---
 
-## Technology Stack
+## Implementation Status
 
-- **FastAPI** for REST API
-- **Supabase** for database + auth validation
-- **SQLAlchemy** with dependency injection pattern
-- **Pydantic** for request/response models
-- **Python-dotenv** for environment management
-- **Pytest** for testing
-- **Hypercorn** for development server
+### ✅ **IMPLEMENTED - Core Backend Features**
+1. **FastAPI REST API** - Complete API with projects, documents, tags, file tree, and LLM endpoints
+2. **Repository Pattern** - Interface-based dependency injection with memory, file, and database backends  
+3. **Authentication Middleware** - Supabase JWT validation and user context extraction
+4. **Project Management** - Full CRUD operations with hierarchical file tree support
+5. **Document Management** - ProseMirror JSON content with word count tracking and version control
+6. **Tag System** - Many-to-many relationships with categories, colors, icons, and usage tracking
+7. **LLM Integration** - Self-hosted Portkey Gateway with multiple providers (OpenAI, Anthropic, Google)
+8. **WikiGen Agent System** - AI-powered wiki generation with spoiler prevention
+9. **Database Abstraction** - Supports memory (testing), SQLite (legacy), and PostgreSQL (production)
+10. **Environment Configuration** - Multi-environment support with conditional features
+
+### ❌ **NOT IMPLEMENTED - Frontend-Specific Features**
+- **@-Reference System** - Cross-document reference parsing and linking (frontend-only)
+- **Real-time Collaboration** - WebSocket support for live editing
+- **Interactive AI Panel** - Context-aware AI assistance UI
+- **Advanced Search** - Semantic search across project content
+- **Publishing System** - Public story/wiki hosting
+- **File Uploads** - Image and attachment storage
 
 ---
 
 ## Architecture Overview
 
-### API Structure
-```
-/api/v1/
-├── auth/                   # JWT validation, user info
-├── projects/               # Project CRUD
-│   └── {project_id}/
-│       ├── data/           # Complete project data (documents + tags)
-│       ├── documents/      # Document CRUD operations
-│       ├── wiki/           # Wiki generation and management
-│       └── publish/        # Publishing and export operations
-├── ai/                     # Mock AI endpoints (future)
-└── public/                 # Public story and wiki pages
-    ├── stories/            # Public story pages
-    └── wikis/              # Public wiki pages
-```
+### **Technology Stack**
+- **FastAPI** - REST API with automatic OpenAPI documentation
+- **SQLAlchemy** - ORM with async support and proper relationships
+- **Repository Pattern** - Interface-based dependency injection for clean architecture
+- **Pydantic** - Request/response validation and serialization
+- **Supabase** - PostgreSQL database with auth token validation
+- **Portkey Gateway** - Self-hosted LLM proxy supporting multiple providers
+- **Pytest** - Comprehensive testing with memory backend for isolation
 
-### Dependency Injection Pattern
+### **Backend Service Architecture**
 ```
-FastAPI App
-├── Database Service (Injectable)
-├── Auth Service (Injectable) 
-├── Reference Service (Injectable)
-├── AI Service (Injectable - Mock)
-├── Wiki Generation Service (Injectable)
-├── Export Service (Injectable)
-└── Publishing Service (Injectable)
+ShuScribe Backend
+├── API Layer (FastAPI)
+│   ├── /api/v1/projects/     # Project CRUD + file tree
+│   ├── /api/v1/documents/    # Document CRUD with ProseMirror content
+│   ├── /api/v1/projects/{id}/tags/  # Tag management and assignment
+│   ├── /api/v1/llm/          # LLM chat, key management, providers
+│   └── /api/v1/health/       # Service health and status
+│
+├── Repository Layer (Dependency Injection)
+│   ├── ProjectRepository     # Project operations
+│   ├── DocumentRepository    # Document operations with content processing
+│   ├── FileTreeRepository    # Hierarchical file organization
+│   ├── TagRepository         # Tag operations and relationships
+│   └── UserRepository        # User-scoped operations
+│
+├── Service Layer
+│   ├── LLM Service           # Portkey Gateway integration
+│   ├── Agent System          # WikiGen AI agents
+│   └── Authentication       # Supabase JWT validation
+│
+└── Data Layer
+    ├── Memory Backend        # Pure Python (testing)
+    ├── SQLite Backend        # File-based (legacy)
+    └── PostgreSQL Backend    # Supabase (production)
 ```
-
-**Why Dependency Injection:**
-- Easy to swap database implementations
-- Simple testing with mock services
-- Clean separation of concerns
-- Future-proof for scaling
 
 ---
 
 ## Core Technical Components
 
-### 1. Database Layer with Dependency Injection
+### **1. Repository Pattern with Dependency Injection**
 
-**Database Service Interface:**
-- Abstract base class defining database operations
-- Concrete implementation for Supabase
-- Easy to swap for PostgreSQL, SQLite, etc.
+**Three Backend Implementations:**
+- **Memory Backend**: Pure Python classes for testing (complete isolation)
+- **File Backend**: SQLite-based with local file storage (legacy)
+- **Database Backend**: PostgreSQL with full async SQLAlchemy relationships
 
-**Key Operations:**
-- Projects: CRUD, list user projects
-- Documents: CRUD, list by project, search by path
-- References: Extract, validate, get suggestions
-
-**Models (SQLAlchemy/Pydantic):**
+**Repository Interfaces:**
 ```python
-# Conceptual models - we'll define these properly
-Project: id, user_id, title, created_at, updated_at
-Document: id, project_id, path, title, content, tags, word_count
-DocumentReference: source_id, target_path, position, is_valid
+# Abstract interfaces ensure consistent behavior across backends
+class ProjectRepository(ABC):
+    async def create(self, data: dict) -> Project
+    async def get_by_id(self, project_id: str) -> Project | None
+    async def list_by_user(self, user_id: str) -> List[Project]
+    async def update(self, project_id: str, updates: dict) -> Project | None
+    async def delete(self, project_id: str) -> bool
+
+class DocumentRepository(ABC):
+    async def create(self, data: dict) -> Document
+    async def get_by_id(self, document_id: str) -> Document | None
+    async def get_by_project_id(self, project_id: str) -> List[Document]
+    async def update(self, document_id: str, updates: dict) -> Document | None
+    async def delete(self, document_id: str) -> bool
 ```
 
-### 2. Authentication Middleware
-
-**JWT Validation:**
-- Validate Supabase JWT tokens from frontend
-- Extract user ID from token
-- Protect routes that need authentication
-- Handle token expiry gracefully
-
-**Auth Flow:**
-1. Frontend sends JWT token in Authorization header
-2. Middleware validates token with Supabase
-3. Extract user info and attach to request
-4. Route handlers can access current user
-
-### 3. Project Data API
-
-**Complete Project Loading:**
-- `GET /projects/{id}/data` - Return all documents, metadata, tags in single response
-- Optimized for client-side index building
-- Include document relationships and reference mappings
-- Efficient serialization for fast frontend processing
-
-**Core Endpoints:**
-- `GET /projects/{id}/data` - Complete project data for client-side indexing
-- `GET /documents/{id}` - Get single document (for editing)
-- `POST /projects/{id}/documents` - Create document
-- `PUT /documents/{id}` - Update document content
-- `DELETE /documents/{id}` - Delete document
-
-**Key Features:**
-- Single request loads entire project for client-side search
-- Auto-extract references and tags on document save
-- Update project index when documents change
-- Handle concurrent edits (basic last-write-wins)
-
-### 4. Reference & Tag Processing
-
-**Reference Extraction:**
-- Parse document content for @-references on save
-- Extract different reference types (file, tag)
-- Build reference mappings for project data response
-- Track document relationships and dependencies
-
-**Tag Management:**
-- Extract and manage document tags
-- Build tag-to-document mappings
-- Support multiple tags per document
-- Include in project data for client-side filtering
-
-**Key Endpoints:**
-- `POST /projects/{id}/references/validate` - Validate references (on demand)
-- `GET /documents/{id}/references` - Get document reference data
-
-**Processing Logic:**
-- File references: `@characters/elara` → validate path exists
-- Tag references: `@fire-magic` → build tag-document mappings
-- Reference integrity checking across project
-- Efficient data structure for frontend index building
-
-### 5. Mock AI Services
-
-**Purpose:** Provide API structure for future AI implementation
-
-**Endpoints:**
-- `POST /projects/{id}/ai/chat` - Mock chat responses
-- `GET /documents/{id}/ai/context` - Extract context for AI
-- `POST /documents/{id}/ai/suggestions` - Mock writing suggestions
-
-**Mock Implementation:**
-- Return hardcoded responses based on input
-- Extract document references for context
-- Provide realistic response structure
-- Foundation for real AI integration later
-
----
-
-## Implementation Steps
-
-### Step 1: Project Setup
-- Initialize FastAPI project with proper structure
-- Set up virtual environment and dependencies
-- Configure environment variables for Supabase
-- Set up basic logging and error handling
-- Create development database schema
-
-### Step 2: Database Layer
-- Define SQLAlchemy models for Project, Document, Reference
-- Create database service interface (abstract base class)
-- Implement Supabase database service
-- Set up dependency injection container
-- Create basic CRUD operations
-
-### Step 3: Authentication
-- Create JWT validation middleware
-- Set up Supabase client for token verification
-- Implement user extraction from tokens
-- Add auth decorators/dependencies for routes
-- Test auth flow with frontend
-
-### Step 4: Project Data API
-- Implement complete project data endpoint
-- Optimize response for client-side index building
-- Include all documents, metadata, tags, and relationships
-- Handle efficient serialization for large projects
-- Test frontend integration with local search
-
-### Step 5: Reference & Tag Processing
-- Create reference extraction from document content
-- Build tag management and document relationships
-- Implement reference validation logic
-- Add reference integrity checking
-- Support project data updates when content changes
-
-### Step 6: Mock AI Integration
-- Create placeholder AI service interface
-- Implement mock chat endpoint with hardcoded responses
-- Build context extraction from document references
-- Add suggestion endpoint structure
-- Prepare for future real AI integration
-
-### Step 7: Testing & Polish
-- Set up pytest with database fixtures
-- Add unit tests for core business logic
-- Create integration tests for API endpoints
-- Add proper error handling and validation
-- Configure for deployment
-
----
-
-## Key Technical Challenges
-
-### 1. Efficient Project Data Serialization
-- Optimize complete project data response for large projects
-- Efficient JSON serialization of documents, tags, references
-- Structure data for fast client-side index building
-- Handle projects with hundreds of documents
-
-### 2. Reference & Tag Extraction
-- Parse @-references from ProseMirror JSON content
-- Handle different reference types (file, tag, complex)
-- Extract and manage document tag systems
-- Build efficient relationship mappings
-
-### 3. Database Abstraction
-- Design clean interface that works with different databases
-- Handle Supabase-specific features while keeping abstraction
-- Manage database connections and transactions
-- Structure for easy testing and mocking
-
-### 4. Content Processing Pipeline
-- Parse ProseMirror document structure efficiently
-- Extract text, references, and metadata
-- Handle different document formats and versions
-- Maintain content integrity during operations
-
----
-
-## Database Schema Design
-
-### Core Tables
-```sql
--- Basic schema structure (we'll define properly later)
-users (id, supabase_user_id, email, created_at)
-projects (id, user_id, title, description, created_at, updated_at)
-documents (id, project_id, path, title, content_json, tags[], word_count, updated_at)
-document_references (source_doc_id, target_path, reference_type, position, is_valid)
-```
-
-### Key Relationships
-- User → Projects (one-to-many)
-- Project → Documents (one-to-many, hierarchical paths)
-- Document → References (one-to-many, extracted from content)
-
-### Indexes for Performance
-- Documents: project_id, path (for file tree queries)
-- References: source_doc_id, target_path (for validation)
-- Full-text search on document content (for suggestions)
-
----
-
-## API Design Patterns
-
-### Request/Response Models
-- Pydantic models for all API inputs/outputs
-- Consistent error response format
-- Proper HTTP status codes
-- Request validation with clear error messages
-
-### Error Handling
-- Custom exception classes for business logic errors
-- Global exception handler for consistent responses
-- Proper logging of errors for debugging
-- User-friendly error messages
-
-### Dependency Injection Structure
+**Dependency Injection Flow:**
 ```python
-# Conceptual structure
-@app.get("/documents/{doc_id}")
-async def get_document(
-    doc_id: str,
-    current_user: User = Depends(get_current_user),
-    db: DatabaseService = Depends(get_database),
-    references: ReferenceService = Depends(get_reference_service)
+# Factory creates appropriate backend based on configuration
+repositories = create_repositories(backend=settings.DATABASE_BACKEND)
+
+# FastAPI endpoints use dependency injection
+@router.get("/{project_id}")
+async def get_project(
+    project_id: str,
+    repositories: RepositoryContainer = Depends(get_repositories)
 ):
-    # Route logic here
+    project = await repositories.project.get_by_id(project_id)
+    return ApiResponse.success(project_to_response(project))
 ```
 
+### **2. Data Models & Relationships**
+
+**Core Models (SQLAlchemy):**
+```python
+# Project with hierarchical organization
+class Project(Base):
+    id: str (UUID)
+    title: str
+    description: str
+    owner_id: str (user)
+    word_count: int (calculated)
+    document_count: int (calculated)
+    collaborators: List[Dict] (JSON)
+    settings: Dict (JSON)
+    created_at: datetime
+    updated_at: datetime
+    
+    # Relationships
+    documents: List[Document]
+    file_tree_items: List[FileTreeItem]
+    tags: List[Tag]
+
+# Document with ProseMirror content
+class Document(Base):
+    id: str (UUID)
+    project_id: str (FK)
+    title: str
+    path: str
+    content: Dict (ProseMirror JSON)
+    word_count: int (auto-calculated)
+    version: str
+    is_locked: bool
+    locked_by: str
+    file_tree_id: str (optional FK)
+    created_at: datetime
+    updated_at: datetime
+    
+    # Relationships
+    project: Project
+    file_tree_item: FileTreeItem
+    tags: List[Tag]
+
+# Hierarchical file organization
+class FileTreeItem(Base):
+    id: str (UUID)
+    project_id: str (FK)
+    name: str
+    type: str ("file" | "folder")
+    path: str
+    parent_id: str (self-referential FK)
+    document_id: str (for files)
+    icon: str
+    word_count: int
+    
+    # Relationships
+    project: Project
+    parent: FileTreeItem
+    children: List[FileTreeItem]
+    document: Document
+    tags: List[Tag]
+
+# Tag system with categories
+class Tag(Base):
+    id: str (UUID)
+    name: str
+    icon: str
+    color: str (hex)
+    description: str
+    category: str ("character", "location", etc.)
+    project_id: str (FK)
+    is_system: bool
+    is_archived: bool
+    usage_count: int
+    
+    # Many-to-many relationships
+    projects: List[Project]
+    documents: List[Document]
+    file_tree_items: List[FileTreeItem]
+```
+
+**Key Relationships:**
+- **Many-to-Many**: Tags ↔ Projects, Documents, FileTreeItems
+- **Hierarchical**: FileTreeItem parent/children self-reference
+- **One-to-Many**: Project → Documents, Project → FileTreeItems
+- **Optional Links**: Document ↔ FileTreeItem for file tree integration
+
+### **3. Authentication & User Context**
+
+**Supabase JWT Integration:**
+```python
+# Extract user context without validation (trust frontend)
+async def get_optional_user_context(
+    authorization: str = Header(None)
+) -> dict:
+    if not authorization or not authorization.startswith("Bearer "):
+        return {"token": None, "authenticated": False}
+    
+    token = authorization.replace("Bearer ", "")
+    return {"token": token, "authenticated": True}
+
+# Environment-based user filtering
+@router.get("/projects")
+async def list_projects(user_id: str = Depends(get_current_user_id)):
+    if settings.should_filter_by_user:
+        projects = await repos.project.list_by_user(user_id)
+    else:
+        projects = await repos.project.list_all()  # Development mode
+```
+
+**Authentication Strategy:**
+- **Frontend-First**: Supabase Auth handled entirely in frontend
+- **Backend Trust**: Backend trusts frontend auth tokens for user context
+- **Environment-Aware**: Development mode allows unfiltered access
+- **Token Extraction**: Extract user ID from JWT for ownership filtering
+
+### **4. Content Processing & Word Count**
+
+**ProseMirror Content Handling:**
+```python
+def calculate_word_count(content: DocumentContent) -> int:
+    """Extract text from ProseMirror JSON and count words"""
+    def extract_text(node: Dict[str, Any]) -> str:
+        text = ""
+        if "text" in node:
+            text += node["text"]
+        if "content" in node and isinstance(node["content"], list):
+            for child in node["content"]:
+                child_text = extract_text(child)
+                if child_text:
+                    text += " " + child_text if text else child_text
+        return text
+    
+    # Extract all text and count words
+    full_text = ""
+    for node in content.content:
+        extracted = extract_text(node)
+        if extracted:
+            full_text += " " + extracted if full_text else extracted
+    
+    words = [word.strip() for word in full_text.split() if word.strip()]
+    return len(words)
+```
+
+**Content Features:**
+- **ProseMirror Support**: Full JSON document structure preservation
+- **Word Count**: Automatic calculation from extracted text content
+- **Version Tracking**: Document versioning with update timestamps
+- **Locking Mechanism**: Basic document locking for edit conflicts
+
+### **5. LLM Integration & Agent System**
+
+**Portkey Gateway Integration:**
+```python
+# Self-hosted LLM proxy supporting multiple providers
+class LLMService:
+    async def chat_completion(
+        self,
+        provider: str,
+        model: str,
+        messages: List[LLMMessage],
+        temperature: float = 0.7,
+        stream: bool = False,
+        api_key: str = None
+    ) -> ChatCompletionResponse:
+        # Route through Portkey Gateway
+        # Supports OpenAI, Anthropic, Google, Ollama
+```
+
+**WikiGen Agent System:**
+```python
+# AI agents for automated wiki generation
+class BaseAgent:
+    def __init__(self, llm_service: LLMService):
+        self.llm_service = llm_service
+    
+    async def process(self, context: dict) -> dict:
+        # Agent-specific processing logic
+
+# Specialized agents
+class ArcSplitter(BaseAgent):
+    """Divide story into narrative arcs for spoiler prevention"""
+    
+class WikiPlanner(BaseAgent):
+    """Plan wiki structure and article organization"""
+    
+class ArticleWriter(BaseAgent):
+    """Generate wiki article content"""
+    
+class ChapterBacklinker(BaseAgent):
+    """Create links between chapters and wiki articles"""
+```
+
+**LLM Features:**
+- **Multiple Providers**: OpenAI, Anthropic, Google via Portkey Gateway
+- **Key Management**: Encrypted API key storage with validation
+- **Model Catalog**: Capability-based model selection with cost tracking
+- **Streaming Support**: Real-time response streaming for chat interfaces
+- **Thinking Modes**: Enhanced reasoning with configurable thinking budgets
+
 ---
 
-## Things to Keep in Mind (But Don't Build Yet)
+## Environment Configuration
 
-### Future Enhancements:
-- **Real AI integration** with OpenAI/Anthropic APIs
-- **Real-time collaboration** with WebSocket support
-- **Advanced search** with full-text and semantic search
-- **File storage** for images, attachments
-- **Performance optimizations** (caching, database optimization)
-- **Background tasks** for heavy processing
-- **Rate limiting** and API security
-- **Monitoring and observability**
+### **Multi-Environment Support**
+```bash
+# Environment behavior configuration
+ENVIRONMENT=development|testing|production
+DEBUG=true|false
+DATABASE_BACKEND=memory|file|database
+TABLE_PREFIX=dev_|test_|staging_|""
 
-### Architectural Decisions:
-- Database service pattern supports future scaling
-- AI service interface ready for real implementation
-- Reference system designed for complex query types
-- API structure supports real-time features later
+# Authentication behavior
+SHOULD_FILTER_BY_USER=true|false  # Auto-calculated based on environment
+
+# Database configuration  
+DATABASE_URL=postgresql://...     # Supabase PostgreSQL
+SUPABASE_URL=https://...
+SUPABASE_ANON_KEY=...
+
+# LLM configuration
+PORTKEY_BASE_URL=http://localhost:8787
+ENCRYPTION_KEY=...                # For API key encryption
+
+# Seeding and development
+ENABLE_DATABASE_SEEDING=true|false
+CLEAR_BEFORE_SEED=true|false
+```
+
+**Environment Behaviors:**
+- **Development**: No user filtering, database seeding, debug logging
+- **Testing**: Memory backend, complete isolation, no external dependencies
+- **Production**: Full user filtering, optimized queries, encrypted keys
+
+### **Database Backend Selection**
+- **Memory**: Pure Python, perfect for testing, no persistence
+- **File**: SQLite + file storage, legacy support, local development
+- **Database**: PostgreSQL + Supabase, production environment
 
 ---
 
-## Success Criteria
+## Key Technical Achievements
 
-**MVP backend is successful when:**
-- Frontend can authenticate users via Supabase JWT
-- Complete project data loads efficiently in single request
-- Document CRUD operations work reliably
-- Reference and tag extraction processes documents correctly
-- Project data structure supports fast client-side search
-- Mock AI endpoints return structured responses
+### **1. Clean Architecture**
+- **Repository Pattern**: Interface-based design enables easy testing and backend swapping
+- **Dependency Injection**: FastAPI's built-in DI system for clean service composition
+- **Environment Abstraction**: Single codebase works across development, testing, and production
 
-**Core API Flow:**
-1. Frontend sends JWT → Backend validates → User authenticated
-2. Load project → Backend returns complete project data → Frontend builds index
-3. Create/edit document → Content saved with extracted references and tags
-4. Frontend uses local index for instant @-reference autocomplete
-5. AI panel requests → Backend returns mock but structured responses
+### **2. Content Management**
+- **ProseMirror Integration**: Full support for rich text editor JSON content
+- **Hierarchical Organization**: File tree structure with parent/child relationships
+- **Word Count Automation**: Real-time word count calculation from document content
+- **Tag Relationships**: Proper many-to-many relationships with usage tracking
+
+### **3. LLM & AI Integration**
+- **Self-Hosted Gateway**: Portkey proxy for multiple LLM providers
+- **Agent Architecture**: Extensible system for AI-powered features
+- **Key Security**: Encrypted API key storage with validation
+- **Cost Awareness**: Model capabilities and pricing integration
+
+### **4. Testing & Reliability**
+- **Memory Backend**: Complete test isolation without external dependencies
+- **Comprehensive Coverage**: Repository, API, and integration test suites
+- **Environment Parity**: Same code paths across all environments
+- **Error Handling**: Consistent error responses and logging
 
 ---
 
-This specification focuses on building a solid, testable API foundation that supports the frontend's @-reference system while preparing for future AI and collaboration features.
+## Fantasy Writing Capabilities
+
+### **Current Backend Support for Fantasy Writing**
+
+**✅ **Hierarchical Project Organization:**
+- File tree structure supports Characters/, Locations/, Chapters/, Magic/ folders
+- Document-to-file-tree linking for organized navigation
+- Tag system with categories for character, location, magic-system classification
+
+**✅ **Rich Content Storage:**
+- ProseMirror JSON content preserves rich text formatting
+- Document versioning and locking for draft management
+- Word count tracking per document and project-wide
+
+**✅ **Tag-Based Organization:**
+- Many-to-many tag relationships for complex categorization
+- Color-coded tags with icons for visual organization
+- Usage tracking and search capabilities
+
+**✅ **AI-Powered Features:**
+- WikiGen agent system for automated worldbuilding documentation
+- LLM integration for writing assistance and content generation
+- Agent orchestration for complex multi-step workflows
+
+**❌ **Missing Frontend Features for Fantasy Writing:**
+- **@-Reference System**: `@character/Aragorn`, `@location/Rivendell` parsing and linking
+- **Cross-Reference Navigation**: Click-to-navigate between related documents
+- **Bidirectional Linking**: "Referenced by" panels showing character appearances
+- **Timeline Management**: Chronological event tracking and validation
+- **Relationship Mapping**: Visual connections between characters, locations, events
+
+### **Backend Foundation for @-Reference System**
+
+The current backend provides excellent foundation for implementing @-references:
+
+**✅ **Data Structure Support:**
+- File tree provides hierarchical paths for reference targets
+- ProseMirror JSON content supports custom node types
+- Document relationships can track reference dependencies
+- Tag system can categorize reference types
+
+**✅ **API Capabilities:**
+- Complete project data loading for reference index building
+- Document CRUD operations for reference updates
+- Search capabilities for reference autocomplete
+- Relationship tracking for dependency validation
+
+**Frontend Implementation Needed:**
+- Parse `@character/name` syntax from ProseMirror content
+- Build reference index from project data
+- Implement click-to-navigate functionality
+- Add reference validation and suggestion system
+
+---
+
+## Success Metrics
+
+**The current backend successfully provides:**
+
+1. **✅ Complete API Coverage** - All CRUD operations for projects, documents, tags, and file tree
+2. **✅ Clean Architecture** - Repository pattern with dependency injection for maintainability
+3. **✅ Multi-Environment Support** - Memory/file/database backends with environment-specific behaviors
+4. **✅ Authentication Integration** - Supabase JWT validation with user context extraction
+5. **✅ Content Management** - ProseMirror JSON support with word count and version tracking
+6. **✅ LLM Integration** - Self-hosted Portkey Gateway with multiple provider support
+7. **✅ Agent System** - WikiGen AI agents for automated worldbuilding features
+8. **✅ Testing Infrastructure** - Comprehensive test suite with memory backend isolation
+
+**Ready for Frontend Development:**
+- All necessary APIs implemented and documented
+- Data models support fantasy writing workflows
+- Foundation ready for @-reference system implementation
+- LLM integration available for AI-assisted writing features
+
+The backend provides a solid, well-architected foundation that can support both the current fantasy writing use case and future expansion into collaborative editing, real-time features, and advanced AI integration.

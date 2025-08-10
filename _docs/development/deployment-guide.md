@@ -299,4 +299,4 @@ railway logs --service shuscribe-backend --tail 100
 For detailed service-specific deployment instructions:
 - **Railway Backend**: [`/backend/railway-deploy.md`](../../backend/railway-deploy.md)
 - **Frontend Setup**: [`/frontend/CLAUDE-frontend.md`](../../frontend/CLAUDE-frontend.md)
-- **API Documentation**: [`/_docs/core/api-reference.md`](../core/api-reference.md)
+- **API Documentation**: [`/_docs/core/complete-api-specification.md`](../core/complete-api-specification.md)

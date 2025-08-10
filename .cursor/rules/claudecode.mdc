@@ -1,0 +1,12 @@
+---
+description: When working/reading code in this codebase
+alwaysApply: false
+---
+
+ALWAYS read the CLAUDE.md file first (its in the root of the project). The file provides guidance when working with code in this repository.
+
+# Main Doc References (they also have additional links to other documentation files):
+
+[CLAUDE.md](../CLAUDE.md) from the root of the project (`/shuscribe/CLAUDE.md`) for an overview of the project and other rules you MUST follow.
+[CLAUDE-backend.md](../backend/CLAUDE-backend.md) from the root of the project (`/shuscribe/backend/CLAUDE-backend.md`) for backend specific rules you MUST follow.
+[CLAUDE-frontend.md](../frontend/CLAUDE-frontend.md) from the root of the project (`/shuscribe/frontend/CLAUDE-frontend.md`) for frontend specific rules you MUST follow.

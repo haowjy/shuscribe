@@ -1,6 +1,13 @@
 ---
-description: 
-globs: 
-alwaysApply: true
+description: When working with the backend fastAPI Python server
+alwaysApply: false
 ---
-when running python commands in the terminal, make sure to activate the environment first `source .venv/bin/activate`
+<!-- when running python commands in the terminal, make sure to activate the environment first `source .venv/bin/activate` -->
+
+# Commands
+when running python commands in the terminal, use `uv run python`. Note that `uv` should run from the `/backend` directory (from root of the shuscribe project), so you should cd into the `/backend` directory first.
+
+## Pytest Usage
+- Default: `uv run pytest` (quiet, warnings+ only)
+- Debug: `uv run pytest --log-level=DEBUG` (verbose logging)
+- Specific tests: `uv run pytest tests/test_database/`

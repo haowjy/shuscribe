@@ -8,16 +8,21 @@
 
 ## Core MVP Features
 
-### What We're Actually Building
-1. **Flexible workspace** - Resizable/collapsible file explorer, editor, mock AI panel
-2. **@-reference system + tagging** - Context-aware linking like "Cursor for fiction writing"
-3. **Client-side autocomplete** - Instant suggestions from local project index
-4. **Basic document management** - Create, edit, save, delete documents
-5. **Project data loading** - Load all documents/tags once for fast local search
-6. **Supabase auth** - Login/signup/logout
-7. **AI wiki generation UI** - One-click wiki creation from @-references
-8. **Export functionality** - Generate Markdown, PDF, EPUB files
-9. **Basic publishing interface** - Simple publication wizard and public page management
+### Current Implementation Snapshot
+
+- Implemented now: Landing page (`/`) and Editor Test page (`/editor-test`) showcasing a rich Tiptap editor with toolbar, tables, images (via DataURL), lists, headings, formatting, highlight, sub/superscript, and alignment.
+- Not yet implemented: workspace layout, @-reference system, dashboard/auth, API integration, TanStack Query, publishing/export, wiki generation UI.
+
+### Planned MVP Features
+1. Flexible workspace — Resizable/collapsible file explorer, editor, mock AI panel
+2. @-reference system + tagging — Context-aware linking
+3. Client-side autocomplete — Instant suggestions from local project index
+4. Basic document management — Create, edit, save, delete documents
+5. Project data loading — Load all documents/tags once for fast local search
+6. Supabase auth — Login/signup/logout
+7. AI wiki generation UI — One-click wiki creation from @-references
+8. Export functionality — Generate Markdown, PDF, EPUB files
+9. Basic publishing interface — Simple publication wizard and public page management
 
 ### What We're NOT Building Yet
 - Real-time collaboration
@@ -126,79 +131,7 @@
 
 ### 5. Publishing & Export System
 
-**Purpose:** Validate the core platform concept by enabling wiki generation and basic publishing
-
-#### AI Wiki Generation Interface
-```typescript
-interface WikiGenerationUI {
-  // Wiki generation trigger
-  generateButton: "Generate Wiki from @-references";
-  progressIndicator: WikiGenerationProgress;
-  
-  // Configuration options
-  spoilerManagement: {
-    arcBreakpoints: ArcDefinition[];
-    spoilerLevels: SpoilerLevel[];
-  };
-  
-  // Preview and editing
-  wikiPreview: WikiPreviewComponent;
-  editMode: WikiEditingInterface;
-}
-```
-
-**Components:**
-- **Wiki Generation Wizard**: Step-by-step process for creating wikis from @-references
-- **Arc Management**: Define story arcs for spoiler-safe wiki organization
-- **Wiki Preview**: Show generated wiki content with editing capabilities
-- **Spoiler Controls**: Manage what content is revealed at different story points
-
-#### Export Functionality
-```typescript
-interface ExportUI {
-  // Format selection
-  exportFormats: ('markdown' | 'pdf' | 'epub')[];
-  
-  // Content selection
-  contentSelector: {
-    includeStory: boolean;
-    includeWiki: boolean;
-    specificChapters: number[];
-  };
-  
-  // Export options
-  exportOptions: ExportConfiguration;
-  downloadHandler: ExportDownload;
-}
-```
-
-**Components:**
-- **Export Wizard**: Multi-step export process with format and content selection
-- **Format Options**: PDF styling, EPUB metadata, Markdown formatting options
-- **Preview Generator**: Show export preview before final generation
-- **Download Manager**: Handle large file downloads with progress indicators
-
-#### Basic Publishing Interface
-```typescript
-interface PublishingUI {
-  // Publication settings
-  publicationMode: 'story-only' | 'wiki-only' | 'story-and-wiki';
-  visibility: 'private' | 'unlisted' | 'public';
-  
-  // Simple public page
-  publicPageBuilder: PublicPageBuilder;
-  urlManager: CustomDomainHandler;
-  
-  // Basic analytics
-  analyticsView: BasicAnalytics;
-}
-```
-
-**Components:**
-- **Publishing Wizard**: Simple process to make stories/wikis public
-- **Public Page Editor**: Basic customization of public story pages
-- **URL Management**: Handle public URLs and custom domains
-- **Basic Analytics**: View counts and basic engagement metrics
+Planned feature set. Details will be documented when implementation begins.
 
 ---
 
@@ -206,100 +139,19 @@ interface PublishingUI {
 
 ### Project Structure
 
-```
-frontend/src/
-├── app/                     # Next.js app router
-│   ├── (auth)/             # Auth pages
-│   ├── (dashboard)/        # Main app
-│   ├── project/[id]/       # Project workspace
-│   └── public/             # Public story/wiki pages
-├── components/
-│   ├── editor/             # ProseMirror components
-│   ├── project/            # File tree, navigation
-│   ├── ai/                 # Mock AI panel
-│   ├── publishing/         # Publishing UI components
-│   ├── wiki/               # Wiki generation and display
-│   └── ui/                 # shadcn/ui components
-├── lib/
-│   ├── supabase/           # Auth client
-│   ├── api/                # FastAPI client
-│   ├── prosemirror/        # Editor schema/plugins
-│   ├── publishing/         # Export and publishing utilities
-│   └── stores/             # Zustand stores
-└── types/                  # TypeScript types
-```
+Current minimal structure focuses on the editor demo (`components/editor/`, `app/page.tsx`, `app/editor-test/page.tsx`). Expanded structure is planned and tracked in design docs.
 
 ### State Management Strategy
 
-**Project Data Loading:**
-- Load complete project on open: all documents, metadata, tags
-- Build local searchable index for instant autocomplete
-- Cache in memory for session, refresh on document changes
-
-**Zustand Stores (Keep Simple):**
-- `useAuthStore` - User session, login/logout
-- `useProjectStore` - Project data, local index, file tree state
-- `useWorkspaceStore` - Panel sizes, collapse states, UI preferences
-- `useEditorStore` - Open tabs, active document
-- `usePublishingStore` - Wiki generation state, export progress, publishing status
-
-**TanStack Query:**
-- Load project data once per session
-- Document save mutations with optimistic updates
-- Reference validation on save (not for autocomplete)
-- Wiki generation mutations with progress tracking
-- Export operations with file download handling
-- Publishing mutations for making content public
+Planned: TanStack Query for server state and small Zustand stores for UI. Not implemented yet.
 
 ### ProseMirror Integration
 
-**Custom Schema:**
-- Standard nodes (paragraph, heading, text)
-- Custom `reference` node for @-references
-- Basic marks (bold, italic)
-
-**Key Plugins:**
-- Reference input detection (@ character)
-- Reference autocomplete
-- Basic editing commands
-
-**Reference Node:**
-```typescript
-// Conceptual structure - we'll implement this
-referenceNode = {
-  attrs: {
-    type: 'file' | 'tag',
-    path: string,
-    displayText: string,
-    isValid: boolean
-  },
-  // rendering, parsing logic
-}
-```
+Current: Tiptap-based editor with core extensions (headings, lists, tables, images, formatting). Planned: custom @-reference node and autocomplete plugin.
 
 ### FastAPI Integration
 
-**Core Endpoints:**
-- `GET /projects/{id}/data` - Load complete project data once
-- `GET /documents/{id}` - Get single document content
-- `POST /documents` - Create document
-- `PUT /documents/{id}` - Save document
-- `POST /projects/{id}/references/validate` - Validate references on demand
-
-**Publishing Endpoints:**
-- `POST /projects/{id}/wiki/generate` - Generate AI wiki from @-references
-- `GET /projects/{id}/wiki` - Get generated wiki content
-- `POST /documents/{id}/export` - Export document to various formats
-- `POST /projects/{id}/publish` - Publish story/wiki publicly
-- `GET /public/stories/{slug}` - Public story page
-- `GET /public/wikis/{slug}` - Public wiki page
-
-**Client Setup:**
-- Simple fetch wrapper with auth headers
-- TanStack Query for project data loading and document mutations
-- Local project index for instant search (no API calls for autocomplete)
-- Publishing operations with progress tracking and error handling
-- Export file downloads with proper MIME types
+Planned. See backend docs and API specification. Not implemented in frontend yet.
 
 ---
 

@@ -14,6 +14,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
 - **Cross-References**: Update all CLAUDE.md and other documentation files when making changes that affect the documentation
 - **Never directly edit `pyproject.toml` or `package.json`**: ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend)
+- **Always use absolute file paths for Python FastAPI, never use relative paths**
+- **Tailwind Best Practices**: Use utility-first approach with direct classes in JSX. Never create CSS_CLASSES constants - this is an anti-pattern that defeats Tailwind's purpose and breaks JIT compilation.
+- **Update CLAUDE.md**: Make sure to ALWAYS update the CLAUDE.md and/or other documentation files when making changes that affect the documentation.
 
 ## Project Overview
 
@@ -37,6 +40,11 @@ ShuScribe is a **frontend-centric** Universe Content Management Platform built w
 4. **Backend Implementation**: Backend implements endpoints to match frontend expectations
 5. **Validation**: Frontend types become backend Pydantic models with field aliases
 
+### Current Implementation Snapshot
+
+- Frontend currently implements an editor demo only: landing (`/`) and `/editor-test` with a comprehensive Tiptap editor.
+- Not yet implemented: dashboard/workspace layout, Supabase auth, TanStack Query, API routes/mocks, and @-reference system.
+
 ## Quick Start
 
 ### Essential Commands
@@ -58,7 +66,8 @@ pnpm dlx shadcn@latest add [component]    # Add UI components
 cd backend
 uv sync && source .venv/bin/activate     # Setup environment
 uv run hypercorn src.main:app --reload --bind "[::]:8000"  # Dev server
-uv run pytest                            # Run tests
+uv run pytest                            # Run tests (quiet by default)
+uv run pytest --log-level=DEBUG          # Run tests with debug logging
 uv run black . && uv run isort .         # Format code
 ```
 
@@ -87,6 +96,8 @@ docker-compose down                      # Stop all services
 
 ## Frontend-Backend Integration
 
+Note: The items below describe the target architecture. The current frontend does not yet include auth, dashboard, or API integration.
+
 ### Core Integration Principles
 
 **Authentication Strategy**:
@@ -101,8 +112,8 @@ docker-compose down                      # Stop all services
 - **Error Handling**: Consistent error format across frontend and backend
 
 **Field Naming Conventions**:
-- **Frontend**: snake_case (`project_id`, `created_at`, `word_count`)
-- **Backend**: snake_case (prefer no aliases)
+- **Frontend**: camelCase (`projectId`, `createdAt`, `wordCount`)
+- **Backend**: snake_case (Pydantic models can alias to/from camelCase)
 - **API**: Backend handles both formats seamlessly
 
 ### Integration Development Workflow
@@ -123,9 +134,10 @@ docker-compose down                      # Stop all services
 
 ### Core Documentation
 
-- **📚 API Reference**: [`/_docs/core/api-reference.md`](_docs/core/api-reference.md)
-  - Complete API documentation with request/response examples
+- **📚 Complete API Specification**: [`/_docs/core/complete-api-specification.md`](_docs/core/complete-api-specification.md)
+  - Comprehensive API documentation covering current + future endpoints
   - Authentication, error handling, and field naming conventions
+  - Implementation roadmap and integration patterns
   - Insomnia/Postman testing guidance
 - **🗺️ Frontend Routes**: [`/_docs/core/frontend-routes.md`](_docs/core/frontend-routes.md)
   - Complete routing documentation and navigation patterns
@@ -162,13 +174,19 @@ docker-compose down                      # Stop all services
 - **🚀 Deployment Guide**: [`/_docs/development/deployment-guide.md`](_docs/development/deployment-guide.md) - Production deployment process
 - **🚂 Railway Deployment**: [`/backend/railway-deploy.md`](backend/railway-deploy.md) - Complete Railway deployment guide
 
+### Design Documentation
+
+Design docs for unimplemented features have been removed to keep the code context lean. When starting new major features, create focused docs under `/_docs/` alongside implementation.
+
 ## Architecture Overview
 
 ShuScribe is a **Universe Content Management Platform** with a three-panel VS Code-like workspace, scaling from indie fiction writers to Hollywood studios:
 
-1. **File Explorer** - Hierarchical project organization (characters, locations, chapters)
-2. **Editor** - Tabbed document editor with @-reference system
+1. **File Explorer** - Hierarchical project organization with path-based auto-folder creation
+2. **Editor** - Tabbed document editor with @-reference system and ProseMirror rich content
 3. **AI Panel** - Context-aware AI assistance (future implementation)
+
+**Path-Based Organization**: Documents use intuitive file paths (e.g., `/world/regions/kingdoms/stormlands/cities`) with automatic folder creation, eliminating manual folder management.
 
 **Key Technologies**:
 - **Frontend**: Next.js 15.3.5, React 19, TypeScript, shadcn/ui, TanStack Query
@@ -204,6 +222,7 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 - Backend `src/schemas/` models match frontend types with field aliases
 - Both systems use `ApiResponse<T>` wrapper for consistent responses
 - Authentication context flows from frontend to backend via Bearer tokens
+- **Path-Based Document Creation**: Documents automatically create folder hierarchies from paths (e.g., `/characters/locations/taverns/document` creates all missing folders)
 
 ## Documentation Maintenance
 
@@ -219,7 +238,7 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 When making changes, update documentation in this order:
 
 #### 1. API Changes
-- **Update**: `/_docs/core/api-reference.md` - Complete API documentation
+- **Update**: `/_docs/core/complete-api-specification.md` - Complete API documentation
 - **Update**: Main `CLAUDE.md` - If integration patterns change
 - **Update**: `/_docs/api/contracts.md` - If interface definitions change
 
@@ -237,6 +256,11 @@ When making changes, update documentation in this order:
 - **Update**: `/_docs/core/integration-guide.md` (when created)
 - **Update**: Main `CLAUDE.md` - Core integration principles
 - **Update**: Both specialized CLAUDE files if relevant
+
+#### 5. Design/Planning Changes
+- **Create/Update**: Focused docs under `/_docs/` when starting implementation
+- **Update**: Main `CLAUDE.md` - If new planning docs are added
+- **Reference**: Keep cross-references current and minimal
 
 ### Documentation Location Guidelines
 
@@ -256,6 +280,9 @@ When making changes, update documentation in this order:
 - Environment setup, testing, deployment
 - Workflow guides and development standards
 
+**Design Documentation**:
+- Keep planning lightweight. Prefer documenting alongside code in `/_docs/`.
+
 ### CLAUDE.md File Responsibilities
 
 - **Main `CLAUDE.md`**: Project overview, navigation hub, core integration principles
@@ -267,4 +294,4 @@ When making changes, update documentation in this order:
 **Need specific guidance?** Check the specialized guides:
 - 🎨 **Frontend**: [`/frontend/CLAUDE-frontend.md`](frontend/CLAUDE-frontend.md)
 - ⚙️ **Backend**: [`/backend/CLAUDE-backend.md`](backend/CLAUDE-backend.md)
-- 📚 **API**: [`/_docs/core/api-reference.md`](_docs/core/api-reference.md)
+- 📚 **API**: [`/_docs/core/complete-api-specification.md`](_docs/core/complete-api-specification.md)

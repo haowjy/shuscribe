@@ -85,3 +85,4 @@ frontend/.turbo/         # If using Turborepo or similar monorepo tooling
 # Other Ignored Files
 # ----------------------------------------------------------- #
 temp/
+**/TODO
