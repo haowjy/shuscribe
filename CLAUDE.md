@@ -11,6 +11,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Critical Rules
 
+- **Always think about best practices and patterns for the code you are writing**
+- **Always think about the user experience and the code you are writing**
+- **Always think about the code you are writing**
 - **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
 - **Cross-References**: Update all CLAUDE.md and other documentation files when making changes that affect the documentation
 - **Never directly edit `pyproject.toml` or `package.json`**: ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend)
@@ -53,8 +56,8 @@ ShuScribe is a **frontend-centric** Universe Content Management Platform built w
 ```bash
 cd frontend
 pnpm install                              # Install dependencies
-npm run build                             # Production build
-npm run lint                              # Run ESLint
+pnpm run build                             # Production build
+pnpm run lint                              # Run ESLint
 pnpm dlx shadcn@latest add [component]    # Add UI components
 
 # IMPORTANT: Never run dev server via Claude Code - let user handle this

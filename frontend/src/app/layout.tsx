@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import ConditionalHeader from "@/components/layout/ConditionalHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,20 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-background font-sans antialiased">
-        <header className="border-b border-border">
-          <div className="container mx-auto h-14 px-4 flex items-center justify-between">
-            <Link href="/" className="font-semibold text-foreground">ShuScribe</Link>
-            {showGallery && (
-              <Link
-                href="/component-gallery"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Component Gallery
-              </Link>
-            )}
-          </div>
-        </header>
-        <main>{children}</main>
+        <ConditionalHeader showGallery={showGallery}>
+          {children}
+        </ConditionalHeader>
       </body>
     </html>
   );

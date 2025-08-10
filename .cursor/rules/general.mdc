@@ -4,6 +4,7 @@ alwaysApply: true
 ---
 
 ## Essential Tools
+
 * context7: when the user requests code examples, setup or configuration steps, or library/API documentation
 * Use `uv run python` for running Python commands in the backend
 
@@ -11,8 +12,12 @@ alwaysApply: true
 
 ### Critical Rules
 
-- **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
-- **Never directly edit `pyproject.toml` or `package.json`**: ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend)
-- **Always use absolute file paths for Python FastAPI, never use relative paths**
-- **Tailwind Best Practices**: Use utility-first approach with direct classes in JSX. Never create CSS_CLASSES constants - this is an anti-pattern that defeats Tailwind's purpose and breaks JIT compilation.
-- If something is unclear
+- ALWAYS think about best practices and patterns for the code you are writing
+- ALWAYS think about the user experience and the code you are writing
+- ALWAYS think about the code you are writing
+- If something is unclear, ask the user for clarification
+- NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
+- Update all CLAUDE.md and other documentation files when making changes that affect the documentation
+- NEVER directly edit `pyproject.toml` or `package.json` - ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend)
+- ALWAYS use absolute file paths for Python FastAPI, never use relative paths
+- Tailwind Best Practices: Use utility-first approach with direct classes in JSX. Never create CSS_CLASSES constants - this is an anti-pattern that defeats Tailwind's purpose and breaks JIT compilation.
