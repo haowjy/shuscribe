@@ -1,40 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Home, FileText } from "lucide-react";
 import { TiptapEditor } from "@/components/editor/tiptap-editor";
 
-export default function EditorTestPage() {
+export default function ComponentGalleryClient() {
   const [content, setContent] = useState("");
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="flex items-center gap-2">
-            <Link 
-              href="/"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft size={20} />
-              <Home size={20} />
-            </Link>
-          </div>
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2 flex items-center gap-3">
-              <FileText size={36} />
-              Editor Test
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Test the enhanced Tiptap editor with toolbar and formatting options
-            </p>
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold mb-8">Component Gallery</h1>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Editor */}
           <div className="lg:col-span-2 space-y-6">
             <div>
               <h2 className="text-2xl font-semibold mb-4">Full-Featured Editor</h2>
@@ -47,7 +24,7 @@ export default function EditorTestPage() {
                 className="w-full"
               />
             </div>
-            
+
             <div>
               <h2 className="text-2xl font-semibold mb-4">Lightweight Chat Editor</h2>
               <TiptapEditor
@@ -56,32 +33,40 @@ export default function EditorTestPage() {
                   console.log("Chat content:", newContent);
                 }}
                 toolbar={{
-                  sections: ['history', 'formatting', 'lists', 'alignment'],
-                  commands: ['undo', 'redo', 'toggleBold', 'toggleItalic', 'toggleHighlight', 'toggleBulletList', 'toggleOrderedList', 'setTextAlign']
+                  sections: ["history", "formatting", "lists", "alignment"],
+                  commands: [
+                    "undo",
+                    "redo",
+                    "toggleBold",
+                    "toggleItalic",
+                    "toggleHighlight",
+                    "toggleBulletList",
+                    "toggleOrderedList",
+                    "setTextAlign",
+                  ],
                 }}
                 footer={{ show: false }}
                 className="w-full"
               />
             </div>
-            
+
             <div>
               <h2 className="text-2xl font-semibold mb-4">Minimal Notes Editor</h2>
               <TiptapEditor
                 placeholder="Add a quick note..."
                 toolbar={{
-                  sections: ['formatting'],
-                  commands: ['toggleBold', 'toggleItalic']
+                  sections: ["formatting"],
+                  commands: ["toggleBold", "toggleItalic"],
                 }}
                 footer={{
                   showCharacterCount: false,
-                  showWordCount: false
+                  showWordCount: false,
                 }}
                 className="w-full"
               />
             </div>
           </div>
 
-          {/* Info Panel */}
           <div className="space-y-6">
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-semibold mb-3">Customization Features</h3>
@@ -104,7 +89,6 @@ export default function EditorTestPage() {
               </div>
             </div>
 
-            {/* Content Preview */}
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-semibold mb-3">Live HTML Output</h3>
               <div className="bg-muted rounded p-3 max-h-60 overflow-y-auto">
@@ -114,7 +98,6 @@ export default function EditorTestPage() {
               </div>
             </div>
 
-            {/* Test Instructions */}
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-semibold mb-3">Quick Tips</h3>
               <div className="text-sm space-y-2 text-muted-foreground">

@@ -42,7 +42,7 @@ ShuScribe is a **frontend-centric** Universe Content Management Platform built w
 
 ### Current Implementation Snapshot
 
-- Frontend currently implements an editor demo only: landing (`/`) and `/editor-test` with a comprehensive Tiptap editor.
+- Frontend currently implements an editor demo only: landing (`/`) and `/editor-test` with a comprehensive Tiptap editor (📚 [`/_docs/frontend/TIPTAP-EDITOR.md`](_docs/frontend/TIPTAP-EDITOR.md)).
 - Not yet implemented: dashboard/workspace layout, Supabase auth, TanStack Query, API routes/mocks, and @-reference system.
 
 ## Quick Start
@@ -130,53 +130,13 @@ Note: The items below describe the target architecture. The current frontend doe
 3. **Frontend Integration**: Update frontend to use new endpoints if needed
 4. **Validation**: Ensure ProseMirror content structure matches between systems
 
-## Documentation Structure
+## Key Documentation
 
-### Core Documentation
+**📚 Core Docs**: [`/_docs/core/api-reference.md`](_docs/core/api-reference.md), [`/_docs/api/contracts.md`](_docs/api/contracts.md), [`/_docs/core/system-architecture.md`](_docs/core/system-architecture.md)
 
-- **📚 Complete API Specification**: [`/_docs/core/complete-api-specification.md`](_docs/core/complete-api-specification.md)
-  - Comprehensive API documentation covering current + future endpoints
-  - Authentication, error handling, and field naming conventions
-  - Implementation roadmap and integration patterns
-  - Insomnia/Postman testing guidance
-- **🗺️ Frontend Routes**: [`/_docs/core/frontend-routes.md`](_docs/core/frontend-routes.md)
-  - Complete routing documentation and navigation patterns
-  - Route guards, parameters, and frontend-backend mapping
-  - Entry point behavior and dashboard-first user flow
+**🎯 Architecture**: [`/_docs/high-level/1-product-overview.md`](_docs/high-level/1-product-overview.md), [`/_docs/high-level/2-mvp.md`](_docs/high-level/2-mvp.md)
 
-- **🏗️ Content Architecture**: [`/_docs/core/content-architecture.md`](_docs/core/content-architecture.md)
-  - Multi-content system architecture supporting flexible publishing workflows
-  - Database schema design for universe management
-  - Scalability considerations and API architecture
-
-### High-Level Documentation
-
-- **📖 Product Overview**: [`/_docs/high-level/1-product-overview.md`](_docs/high-level/1-product-overview.md)
-- **🎯 MVP Specification**: [`/_docs/high-level/2-mvp.md`](_docs/high-level/2-mvp.md)
-- **🎨 Frontend Architecture**: [`/_docs/high-level/3-frontend.md`](_docs/high-level/3-frontend.md)
-- **⚙️ Backend Architecture**: [`/_docs/high-level/4-backend.md`](_docs/high-level/4-backend.md)
-- **🔮 Future Vision**: [`/_docs/high-level/5-future-vision.md`](_docs/high-level/5-future-vision.md)
-- **📚 Publishing Strategy**: [`/_docs/high-level/6-publishing-strategy.md`](_docs/high-level/6-publishing-strategy.md)
-- **📈 Market Strategy**: [`/_docs/high-level/7-market-strategy.md`](_docs/high-level/7-market-strategy.md)
-
-### API & Integration Documentation
-
-- **📝 API Contracts**: [`/_docs/api/contracts.md`](_docs/api/contracts.md) - Frontend-backend interface definitions
-- **🔐 Authentication**: [`/_docs/api/authentication.md`](_docs/api/authentication.md) - Auth implementation details (planned)
-
-### Development Documentation
-
-- **🛠️ Environment Setup**: [`/_docs/development/environment-setup.md`](_docs/development/environment-setup.md) - Complete dev environment guide (planned)
-- **⚙️ Environment Configuration**: [`/_docs/development/environment-configuration.md`](_docs/development/environment-configuration.md) - Environment variables and behavior differences
-- **🧪 Testing Strategy**: [`/_docs/development/testing-strategy.md`](_docs/development/testing-strategy.md) - Testing approach and tools (planned)
-- **📤 Publication System**: [`/_docs/development/publication-system.md`](_docs/development/publication-system.md) - Future publication workflow design
-- **🤖 AI Collaboration**: [`/_docs/development/ai-collaboration-conflict-resolution.md`](_docs/development/ai-collaboration-conflict-resolution.md) - AI-assisted editing and conflict resolution patterns
-- **🚀 Deployment Guide**: [`/_docs/development/deployment-guide.md`](_docs/development/deployment-guide.md) - Production deployment process
-- **🚂 Railway Deployment**: [`/backend/railway-deploy.md`](backend/railway-deploy.md) - Complete Railway deployment guide
-
-### Design Documentation
-
-Design docs for unimplemented features have been removed to keep the code context lean. When starting new major features, create focused docs under `/_docs/` alongside implementation.
+**⚙️ Development**: [`/_docs/development/environment-configuration.md`](_docs/development/environment-configuration.md), [`/backend/railway-deploy.md`](backend/railway-deploy.md)
 
 ## Architecture Overview
 
@@ -226,68 +186,12 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 
 ## Documentation Maintenance
 
-### Critical Documentation Rules
+**Critical Rule**: Always update CLAUDE.md files and relevant `/_docs/` files when making changes.
 
-- **ALWAYS update relevant `/_docs/` files** when making changes to the codebase
-- **ALWAYS update the appropriate CLAUDE.md file** when documentation changes
-- **ALWAYS maintain cross-references** between all documentation files
-- All documentation must include complete examples and clear descriptions
-
-### Documentation Update Workflow
-
-When making changes, update documentation in this order:
-
-#### 1. API Changes
-- **Update**: `/_docs/core/complete-api-specification.md` - Complete API documentation
-- **Update**: Main `CLAUDE.md` - If integration patterns change
-- **Update**: `/_docs/api/contracts.md` - If interface definitions change
-
-#### 2. Frontend Changes
-- **Update**: Relevant `/_docs/core/` or `/_docs/development/` files
-- **Update**: `/frontend/CLAUDE-frontend.md` - Add short description of change
-- **Update**: Main `CLAUDE.md` - If core patterns change
-
-#### 3. Backend Changes  
-- **Update**: Relevant `/_docs/core/` or `/_docs/development/` files
-- **Update**: `/backend/CLAUDE-backend.md` - Add short description of change
-- **Update**: Main `CLAUDE.md` - If core patterns change
-
-#### 4. Integration/Architecture Changes
-- **Update**: `/_docs/core/integration-guide.md` (when created)
-- **Update**: Main `CLAUDE.md` - Core integration principles
-- **Update**: Both specialized CLAUDE files if relevant
-
-#### 5. Design/Planning Changes
-- **Create/Update**: Focused docs under `/_docs/` when starting implementation
-- **Update**: Main `CLAUDE.md` - If new planning docs are added
-- **Reference**: Keep cross-references current and minimal
-
-### Documentation Location Guidelines
-
-**Core Technical Documentation** (`/_docs/core/`):
-- Detailed technical guides, implementation patterns
-- API reference, frontend/backend architecture guides
-
-**High-Level Documentation** (`/_docs/high-level/`):
-- Product overview, MVP specs, architectural decisions
-- Business logic and system design documentation
-
-**API Documentation** (`/_docs/api/`):
-- Interface definitions, contracts, field mapping
-- Authentication patterns, integration guides
-
-**Development Documentation** (`/_docs/development/`):
-- Environment setup, testing, deployment
-- Workflow guides and development standards
-
-**Design Documentation**:
-- Keep planning lightweight. Prefer documenting alongside code in `/_docs/`.
-
-### CLAUDE.md File Responsibilities
-
-- **Main `CLAUDE.md`**: Project overview, navigation hub, core integration principles
-- **Backend CLAUDE**: Backend-specific workflows, short descriptions of backend doc updates
-- **Frontend CLAUDE**: Frontend-specific workflows, short descriptions of frontend doc updates
+**Update Order**: 
+1. **API Changes**: Update `/_docs/core/api-reference.md` and `/_docs/api/contracts.md`
+2. **Frontend/Backend Changes**: Update respective CLAUDE files and main `CLAUDE.md` if integration changes
+3. **Keep Cross-References Current**: Maintain links between documentation files
 
 ---
 

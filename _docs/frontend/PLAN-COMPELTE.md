@@ -97,7 +97,7 @@
 - [x] **Code blocks** with syntax highlighting
 - [x] **Character/word counting** in status bar
 - [x] **Draft management** with auto-save
-- [x] **Configurable TiptapEditor** with customizable toolbar, footer, and extensions
+- [x] **Configurable TiptapEditor** with customizable toolbar, footer, and extensions (📚 [`TIPTAP-EDITOR.md`](TIPTAP-EDITOR.md))
 - [x] **Editor reusability patterns** for lightweight chat vs full document editing
 - [x] **Component composition approach** using exported hooks and primitives
 

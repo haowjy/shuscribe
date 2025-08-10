@@ -296,7 +296,7 @@ To verify your environment configuration:
 
 - **Main Guide**: [CLAUDE.md](../../CLAUDE.md) - Project overview and integration
 - **Backend Guide**: [backend/CLAUDE-backend.md](../../backend/CLAUDE-backend.md) - Backend-specific development
-- **API Reference**: [API Reference](../core/complete-api-specification.md) - Complete API documentation
+- **API Reference**: [API Reference](../core/api-reference.md) - Complete API documentation
 - **Deployment Guide**: [deployment-guide.md](deployment-guide.md) - Production deployment process
 
 ---

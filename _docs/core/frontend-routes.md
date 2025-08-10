@@ -212,6 +212,6 @@ Planned routes for future features:
 
 ## Related Documentation
 
-- **Backend API**: [`/_docs/core/complete-api-specification.md`](./complete-api-specification.md)
+- **Backend API**: [`/_docs/core/api-reference.md`](./api-reference.md)
 - **Frontend Architecture**: [`/_docs/high-level/3-frontend.md`](../high-level/3-frontend.md)
 - **Authentication Guide**: [`/_docs/api/authentication.md`](../api/authentication.md) (planned)
