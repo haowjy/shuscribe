@@ -5,7 +5,7 @@ Tag repository interface
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
 
-from src.database.models import Tag
+from .models import Tag
 
 
 class TagRepository(ABC):
@@ -84,4 +84,31 @@ class TagRepository(ABC):
     @abstractmethod
     async def search_tags(self, query: str, user_id: Optional[str] = None, limit: int = 20) -> List[Tag]:
         """Search tags by name (global and user's if user_id provided)"""
+        pass
+    
+    # Tag forking and precedence methods
+    
+    @abstractmethod
+    async def get_global_tag_by_name(self, name: str) -> Optional[Tag]:
+        """Get global tag by name"""
+        pass
+    
+    @abstractmethod
+    async def get_project_tag_by_name(self, project_id: str, name: str) -> Optional[Tag]:
+        """Get project-specific tag by name"""
+        pass
+    
+    @abstractmethod
+    async def get_tag_by_name_with_precedence(self, project_id: str, name: str) -> Optional[Tag]:
+        """Get tag by name with project → global precedence"""
+        pass
+    
+    @abstractmethod
+    async def get_all_usable_tags(self, project_id: str, include_archived: bool = False) -> List[Tag]:
+        """Get all tags available to project (project-specific + global) with precedence deduplication"""
+        pass
+    
+    @abstractmethod
+    async def fork_global_tag(self, project_id: str, global_tag_id: str, customizations: Dict[str, Any]) -> Tag:
+        """Create project-specific copy of global tag with customizations"""
         pass

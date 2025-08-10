@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from pydantic import BaseModel, Field
 
 from src.database.factory import get_repositories
-from src.database.models import Project, FileTreeItem, Tag
+from src.database.interfaces.models import Project, FileTreeItem, Tag
 from src.schemas.base import ApiResponse
 from src.schemas.responses.tags import TagInfo
 from src.api.dependencies import require_auth, get_current_user_id
@@ -157,20 +157,30 @@ class FileTreeResponse(BaseModel):
 # Helper Functions
 # ============================================================================
 
-def tag_to_info(tag: Tag) -> TagInfo:
-    """Convert Tag model to TagInfo response"""
-    return TagInfo(
-        id=tag.id,
-        name=tag.name,
-        icon=tag.icon,
-        color=tag.color
-    )
+def tag_to_info(tag: Tag | str) -> TagInfo:
+    """Convert Tag model or tag string to TagInfo response"""
+    if isinstance(tag, str):
+        # For domain models where tags are stored as strings
+        return TagInfo(
+            id=tag,  # Use the tag string as ID for now
+            name=tag,
+            icon=None,
+            color=None
+        )
+    else:
+        # Full Tag object
+        return TagInfo(
+            id=tag.id,
+            name=tag.name,
+            icon=tag.icon,
+            color=tag.color
+        )
 
 
-async def recalculate_project_word_count(project: Project, repos) -> int:
+async def recalculate_project_word_count(project: Project, repos) -> Project:
     """
     Recalculate project word count from all its documents.
-    Returns the actual word count and updates project if different.
+    Returns the updated project with correct counts.
     """
     try:
         # Get all documents for this project
@@ -194,21 +204,20 @@ async def recalculate_project_word_count(project: Project, repos) -> int:
             )
             
             # Update project with correct counts
-            await repos.project.update(project.id, {
+            updated_project = await repos.project.update(project.id, {
                 "word_count": actual_word_count,
                 "document_count": actual_document_count,
             })
             
-            # Update the project object for immediate return
-            project.word_count = actual_word_count
-            project.document_count = actual_document_count
+            # Return the updated project or original if update failed
+            return updated_project if updated_project else project
         
-        return actual_word_count
+        return project
         
     except Exception as e:
         logger.error(f"Error recalculating word count for project {project.id}: {e}")
-        # Return stored value if calculation fails
-        return project.word_count
+        # Return original project if calculation fails
+        return project
 
 
 def project_to_summary(project: Project) -> ProjectSummary:
@@ -223,15 +232,18 @@ def project_to_summary(project: Project) -> ProjectSummary:
             avatar=collab.get("avatar"),
         ))
     
+    # Handle tags - in domain models they are List[str], convert to TagInfo
+    tags = [tag_to_info(tag) for tag in project.tags] if project.tags else []
+    
     return ProjectSummary(
         id=project.id,
         title=project.title,
         description=project.description,
         word_count=project.word_count,
         document_count=project.document_count,
-        created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
-        updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
-        tags=[tag_to_info(tag) for tag in project.tags],
+        created_at=project.created_at.isoformat() if project.created_at and hasattr(project.created_at, 'isoformat') else str(project.created_at) if project.created_at else "",
+        updated_at=project.updated_at.isoformat() if project.updated_at and hasattr(project.updated_at, 'isoformat') else str(project.updated_at) if project.updated_at else "",
+        tags=tags,
         collaborators=collaborators,
     )
 
@@ -256,15 +268,18 @@ def project_to_response(project: Project) -> ProjectDetails:
         backup_enabled=settings_data.get("backup_enabled", True),
     )
     
+    # Handle tags - in domain models they are List[str], convert to TagInfo
+    tags = [tag_to_info(tag) for tag in project.tags] if project.tags else []
+    
     return ProjectDetails(
         id=project.id,
         title=project.title,
         description=project.description,
         word_count=project.word_count,
         document_count=project.document_count,
-        created_at=project.created_at.isoformat() if hasattr(project.created_at, 'isoformat') else str(project.created_at),
-        updated_at=project.updated_at.isoformat() if hasattr(project.updated_at, 'isoformat') else str(project.updated_at),
-        tags=[tag_to_info(tag) for tag in project.tags],
+        created_at=project.created_at.isoformat() if project.created_at and hasattr(project.created_at, 'isoformat') else str(project.created_at) if project.created_at else "",
+        updated_at=project.updated_at.isoformat() if project.updated_at and hasattr(project.updated_at, 'isoformat') else str(project.updated_at) if project.updated_at else "",
+        tags=tags,
         collaborators=collaborators,
         settings=settings,
     )
@@ -272,6 +287,9 @@ def project_to_response(project: Project) -> ProjectDetails:
 
 def file_tree_item_to_response(item: FileTreeItem, children: List["FileTreeItemResponse"] | None = None) -> FileTreeItemResponse:
     """Convert FileTreeItem model to FileTreeItemResponse"""
+    # Handle tags - in domain models they are List[str], convert to TagInfo  
+    tags = [tag_to_info(tag) for tag in item.tags] if item.tags else []
+    
     return FileTreeItemResponse(
         id=item.id,
         name=item.name,
@@ -281,10 +299,10 @@ def file_tree_item_to_response(item: FileTreeItem, children: List["FileTreeItemR
         children=children if children else None,
         document_id=item.document_id,
         icon=item.icon,
-        tags=[tag_to_info(tag) for tag in item.tags],
+        tags=tags,
         word_count=item.word_count,
-        created_at=item.created_at.isoformat() if hasattr(item.created_at, 'isoformat') else str(item.created_at),
-        updated_at=item.updated_at.isoformat() if hasattr(item.updated_at, 'isoformat') else str(item.updated_at),
+        created_at=item.created_at.isoformat() if item.created_at and hasattr(item.created_at, 'isoformat') else str(item.created_at) if item.created_at else "",
+        updated_at=item.updated_at.isoformat() if item.updated_at and hasattr(item.updated_at, 'isoformat') else str(item.updated_at) if item.updated_at else "",
     )
 
 
@@ -314,6 +332,73 @@ def build_file_tree_hierarchy(items: List[FileTreeItem]) -> List[FileTreeItemRes
     
     # Build tree starting from root items (parent_id = None)
     return build_children(None)
+
+
+async def resolve_project_tags(project_id: str, tag_requests: List[TagInfo], repos) -> List[Tag]:
+    """
+    Resolve tags for project creation with always-fork logic
+    
+    For each requested tag:
+    1. Check if project-specific tag exists → use it
+    2. Check if global tag exists → always fork it to project
+    3. Create new project-specific tag if neither exists
+    """
+    resolved_tags = []
+    
+    for tag_request in tag_requests:
+        try:
+            # Check if project-specific tag already exists
+            project_tag = await repos.tag.get_project_tag_by_name(project_id, tag_request.name)
+            
+            if project_tag:
+                # Use existing project-specific tag
+                logger.info(f"Using existing project tag '{tag_request.name}' for project {project_id}")
+                resolved_tags.append(project_tag)
+            else:
+                # Check if global tag exists
+                global_tag = await repos.tag.get_global_tag_by_name(tag_request.name)
+                
+                if global_tag:
+                    # Always fork global tag to project with any customizations
+                    logger.info(f"Forking global tag '{tag_request.name}' for project {project_id}")
+                    customizations = extract_tag_customizations(tag_request, global_tag)
+                    forked_tag = await repos.tag.fork_global_tag(
+                        project_id, global_tag.id, customizations
+                    )
+                    resolved_tags.append(forked_tag)
+                else:
+                    # Create new project-specific tag
+                    logger.info(f"Creating new project tag '{tag_request.name}' for project {project_id}")
+                    new_tag = await repos.tag.create({
+                        "name": tag_request.name,
+                        "icon": tag_request.icon,
+                        "color": tag_request.color,
+                        "description": None,  # TagInfo doesn't have description
+                        "category": None,     # TagInfo doesn't have category
+                        "project_id": project_id,
+                        "is_global": False,
+                        "is_system": False,
+                        "usage_count": 0
+                    })
+                    resolved_tags.append(new_tag)
+                
+        except Exception as e:
+            logger.error(f"Error resolving tag '{tag_request.name}' for project {project_id}: {e}")
+            # Continue with other tags rather than failing entire project creation
+            continue
+    
+    return resolved_tags
+
+
+
+
+def extract_tag_customizations(tag_request: TagInfo, global_tag: Tag) -> Dict[str, Any]:
+    """Extract customization fields from tag request, using global tag defaults"""
+    customizations = {
+        "icon": tag_request.icon if tag_request.icon is not None else global_tag.icon,
+        "color": tag_request.color if tag_request.color is not None else global_tag.color
+    }
+    return customizations
 
 
 
@@ -417,7 +502,7 @@ async def get_project(
             )
         
         # Lazy sync: recalculate word count from documents
-        await recalculate_project_word_count(project, repos)
+        project = await recalculate_project_word_count(project, repos)
         
         logger.info(f"Retrieved project: {project.title} (ID: {project_id}) for user: {user_id}")
         response_data = project_to_response(project)
@@ -460,7 +545,7 @@ async def get_project_file_tree(
             )
         
         # Lazy sync: recalculate word count from documents
-        await recalculate_project_word_count(project, repos)
+        project = await recalculate_project_word_count(project, repos)
         
         # Get file tree items
         items = await repos.file_tree.get_by_project_id(project_id)
@@ -516,22 +601,35 @@ async def create_project(
     try:
         repos = get_repositories()
         
-        # Prepare project data
+        # Prepare project data (without tags initially)
         project_data = {
             "title": request.title,
             "description": request.description,
-            # Note: tags will be assigned after project creation via relationship
             "collaborators": [],  # Start with empty collaborators
             "settings": request.settings.model_dump() if request.settings else {},
             "word_count": 0,
             "document_count": 0,
             "owner_id": user_id,
             "created_by": user_id,
+            "tags": []  # Start with empty tags, will resolve after creation
         }
         
+        # Create project first
         project = await repos.project.create(project_data)
         
-        logger.info(f"Created project: {project.title} (ID: {project.id}) for user: {user_id}")
+        # Resolve and assign tags with smart forking logic
+        if request.tags:
+            resolved_tags = await resolve_project_tags(project.id, request.tags, repos)
+            
+            # Convert resolved tags to string list for domain model
+            tag_names = [tag.name for tag in resolved_tags]
+            
+            # Update project with resolved tags
+            updated_project = await repos.project.update(project.id, {"tags": tag_names})
+            if updated_project:
+                project = updated_project
+        
+        logger.info(f"Created project: {project.title} (ID: {project.id}) with {len(project.tags) if project.tags else 0} tags for user: {user_id}")
         response_data = project_to_response(project)
         return response_data
         
@@ -576,13 +674,10 @@ async def update_project(
             updates["title"] = request.title
         if request.description is not None:
             updates["description"] = request.description
-        if request.tags is not None:
-            # Note: tags will be updated via relationship, not direct field assignment
-            pass
         if request.settings is not None:
             updates["settings"] = request.settings.model_dump()
         
-        # Update project
+        # Update project with basic fields first
         updated_project = await repos.project.update(project_id, updates)
         
         if updated_project is None:
@@ -590,6 +685,23 @@ async def update_project(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to update project: Updated project not returned"
             )
+        
+        # Handle tag updates separately with always-fork logic
+        if request.tags is not None:
+            logger.info(f"Updating tags for project {project_id}")
+            resolved_tags = await resolve_project_tags(project_id, request.tags, repos)
+            
+            # Convert resolved tags to string list for domain model
+            tag_names = [tag.name for tag in resolved_tags]
+            
+            # Update project with resolved tags
+            updated_project = await repos.project.update(project_id, {"tags": tag_names})
+            
+            if updated_project is None:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update project tags"
+                )
 
         logger.info(f"Updated project: {project_id} for user: {user_id}")
         response_data = project_to_response(updated_project)

@@ -35,10 +35,16 @@ source .venv/bin/activate
 # Start development server
 uv run hypercorn src.main:app --reload --bind "[::]:8000"
 
-# Run tests
-uv run pytest
+# Run tests (quiet by default)
+uv run pytest                              # Minimal output, warnings+ only
 uv run pytest tests/test_database/         # Database-specific tests
 uv run pytest --cov=src --cov-report=html  # With coverage
+
+# Debug options - when you need verbose logging
+uv run pytest --log-level=DEBUG            # Full debug logs
+uv run pytest --log-level=INFO             # Info+ logs  
+uv run pytest --log-cli-level=DEBUG        # Debug logs to console
+uv run pytest -v --log-cli-level=INFO      # Verbose test names + info logs
 
 # Code quality
 uv run black .                             # Format code
@@ -225,6 +231,29 @@ docker-compose exec postgres psql -U postgres -d shuscribe
 - Minimum 40% coverage requirement
 - Test files in `tests/` mirror `src/` structure
 
+#### Pytest Configuration
+**Default Behavior**: Tests run quietly with minimal output (WARNING+ logs only) for clean CI/development.
+
+**Debug Options** (when troubleshooting):
+```bash
+# Enable different log levels
+uv run pytest --log-level=DEBUG           # Full debug logging
+uv run pytest --log-level=INFO            # Info+ logging
+uv run pytest --log-cli-level=DEBUG       # Debug logs to console
+
+# Combine with other useful flags
+uv run pytest -v --log-cli-level=INFO     # Verbose test names + info logs
+uv run pytest -s --log-cli-level=DEBUG    # No capture + debug logs
+uv run pytest --tb=short --log-level=INFO # Short traceback + info logs
+```
+
+**Environment Override**:
+```bash
+PYTEST_LOG_LEVEL=DEBUG uv run pytest     # Set log level via environment
+```
+
+**Configuration Location**: `pyproject.toml` contains default `--log-level=WARNING` in `addopts`
+
 ### Code Standards
 - **Formatting**: Black (88 char limit)
 - **Imports**: isort with Black profile
@@ -293,7 +322,7 @@ When using file backend, the structure in `temp/` is:
 ## Documentation Resources
 
 ### Core Documentation (`/_docs/core/`)
-- **📚 API Reference**: [`/_docs/core/api-reference.md`](/_docs/core/api-reference.md) - Complete API documentation with request/response examples
+- **📚 API Reference**: [`/_docs/core/complete-api-specification.md`](/_docs/core/complete-api-specification.md) - Complete API documentation with request/response examples
 - **⚙️ Backend Guide**: [`/_docs/core/backend-guide.md`](/_docs/core/backend-guide.md) - Repository patterns, LLM integration, agent systems (planned)
 - **🔗 Integration Guide**: [`/_docs/core/integration-guide.md`](/_docs/core/integration-guide.md) - Frontend-backend integration patterns (planned)
 
@@ -418,13 +447,50 @@ else:
 init_repositories(backend=settings.DATABASE_BACKEND)
 ```
 
+## Recent Architecture Changes
+
+### Path-Based Document Creation (August 2025)
+**BREAKING CHANGE**: Implemented automatic folder hierarchy creation from document paths.
+
+**What Changed**:
+- **Removed Field**: `file_tree_parent_id` field removed from `CreateDocumentRequest` schema
+- **New Utility**: Added `src/utils/path_utils.py` with comprehensive path parsing and validation
+- **Auto-Folder Creation**: `ensure_folder_hierarchy_exists()` function automatically creates missing folders from document paths
+- **Enhanced API**: Document creation endpoint now supports complex nested paths like `/world/regions/kingdoms/stormlands/cities/windmere/locations/tavern`
+- **Path Validation**: Comprehensive validation prevents directory traversal attacks and ensures path security
+
+**Benefits**:
+- **Simplified API**: Eliminated redundant field and reduced API complexity
+- **Better UX**: Users can create complex organizational structures in single API calls
+- **Intuitive**: Path-based organization matches file system expectations
+- **Robust**: Comprehensive path validation, normalization, and security measures
+
+**Implementation Details**:
+```python
+# Path utility functions in src/utils/path_utils.py
+async def ensure_folder_hierarchy_exists(
+    project_id: str,
+    document_path: str,
+    file_tree_repo: FileTreeRepository
+) -> Optional[str]:
+    """Auto-create missing folders from document path"""
+    # Implementation handles path parsing, validation, and folder creation
+```
+
+**Migration Impact**: 
+- **API Endpoints**: `POST /documents` no longer accepts `file_tree_parent_id`
+- **Request Schema**: `CreateDocumentRequest` schema updated in `/src/schemas/requests/documents.py`
+- **Comprehensive Testing**: New test suites in `tests/test_utils/test_path_utils.py` and `tests/test_api/test_path_based_document_creation.py`
+
+---
+
 ### Backend Documentation Maintenance
 
 When making backend changes, update documentation in this order:
 
 #### Core Documentation Updates
 - **Repository Pattern Changes**: Update `/_docs/core/backend-guide.md` (when created) with new patterns
-- **API Endpoint Changes**: Update `/_docs/core/api-reference.md` with complete request/response schemas
+- **API Endpoint Changes**: Update `/_docs/core/complete-api-specification.md` with complete request/response schemas
 - **Integration Changes**: Update `/_docs/core/integration-guide.md` (when created) if affecting frontend
 
 #### This CLAUDE File Updates

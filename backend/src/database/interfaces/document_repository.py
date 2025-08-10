@@ -5,7 +5,7 @@ Document repository interface
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 
-from src.database.models import Document
+from .models import Document
 
 
 class DocumentRepository(ABC):

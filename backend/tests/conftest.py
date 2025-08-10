@@ -12,6 +12,8 @@ from typing import Iterator, AsyncIterator, Dict, Any
 from uuid import uuid4
 
 from src.database.factory import RepositoryContainer, create_repositories
+from tests.factories import ProjectFactory, DocumentFactory, FileTreeItemFactory
+from tests.helpers import DomainToRepositoryConverter
 
 # Async test support
 @pytest.fixture(scope="session")
@@ -111,15 +113,15 @@ async def database_setup():
 async def populated_repositories(repository_container: RepositoryContainer) -> Dict[str, Any]:
     """Provide repositories with sample data for integration tests."""
     
-    # Create test project
-    project_data = {
-        "id": "test-project-123",
-        "title": "Test Fantasy Novel",
-        "description": "A test project for integration tests",
-        "word_count": 2500,
-        "document_count": 3,
-        "tags": ["fantasy", "novel", "test"],
-        "collaborators": [
+    # Create test project using factory
+    test_project = ProjectFactory.create(
+        id="test-project-123",
+        title="Test Fantasy Novel",
+        description="A test project for integration tests",
+        word_count=2500,
+        document_count=3,
+        tags=["fantasy", "novel", "test"],
+        collaborators=[
             {
                 "user_id": "user_1",
                 "role": "owner",
@@ -127,47 +129,56 @@ async def populated_repositories(repository_container: RepositoryContainer) -> D
                 "avatar": None
             }
         ],
-        "settings": {
+        settings={
             "auto_save_interval": 30000,
             "word_count_target": 80000,
             "backup_enabled": True
         }
-    }
+    )
     
+    project_data = DomainToRepositoryConverter.project_to_dict(test_project)
     project = await repository_container.project.create(project_data)
     
-    # Create test file tree structure
+    # Create test file tree structure using factories
     # Root folders
-    characters_folder = await repository_container.file_tree.create({
-        "id": "folder-characters",
-        "project_id": project.id,
-        "name": "Characters",
-        "type": "folder",
-        "path": "/Characters",
-        "parent_id": None,
-        "tags": ["character"]
-    })
+    characters_folder_model = FileTreeItemFactory.create_folder(
+        id="folder-characters",
+        project_id=project.id,
+        name="Characters",
+        path="/Characters",
+        parent_id=None,
+        tags=["character"]
+    )
     
-    chapters_folder = await repository_container.file_tree.create({
-        "id": "folder-chapters",
-        "project_id": project.id,
-        "name": "Chapters",
-        "type": "folder",
-        "path": "/Chapters",
-        "parent_id": None,
-        "tags": ["story"]
-    })
+    chapters_folder_model = FileTreeItemFactory.create_folder(
+        id="folder-chapters",
+        project_id=project.id,
+        name="Chapters",
+        path="/Chapters",
+        parent_id=None,
+        tags=["story"]
+    )
     
-    # Create test documents with different content types
+    characters_folder_data = DomainToRepositoryConverter.file_tree_item_to_dict(characters_folder_model)
+    chapters_folder_data = DomainToRepositoryConverter.file_tree_item_to_dict(chapters_folder_model)
+    
+    characters_folder = await repository_container.file_tree.create(characters_folder_data)
+    chapters_folder = await repository_container.file_tree.create(chapters_folder_data)
+    
+    # Create test documents with different content types using factories
     documents = []
     
     # Character document
-    char_doc = await repository_container.document.create({
-        "id": "doc-main-character",
-        "project_id": project.id,
-        "title": "Main Character Profile",
-        "path": "/Characters/main_character.md",
-        "content": {
+    char_doc_model = DocumentFactory.create_character_profile(
+        name="Aria Thornfield",
+        project_id=project.id
+    )
+    char_doc_model = DocumentFactory.create(
+        id="doc-main-character",
+        project_id=project.id,
+        title="Main Character Profile",
+        path="/Characters/main_character.md",
+        content={
             "type": "doc",
             "content": [
                 {
@@ -181,10 +192,13 @@ async def populated_repositories(repository_container: RepositoryContainer) -> D
                 }
             ]
         },
-        "tags": ["character", "protagonist", "mage"],
-        "word_count": 45,
-        "version": "1.0.0"
-    })
+        tags=["character", "protagonist", "mage"],
+        word_count=45,
+        version="1.0.0"
+    )
+    
+    char_doc_data = DomainToRepositoryConverter.document_to_dict(char_doc_model)
+    char_doc = await repository_container.document.create(char_doc_data)
     documents.append(char_doc)
     
     # Chapter documents

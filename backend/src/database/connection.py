@@ -51,17 +51,24 @@ def init_database() -> None:
                 }
             }
         
-        engine = create_async_engine(
-            database_url,
-            echo=settings.DEBUG,  # Log SQL queries in debug mode
-            pool_pre_ping=True,  # Verify connections before use
-            pool_recycle=3600,   # Recycle connections every hour
-            pool_timeout=settings.DATABASE_POOL_TIMEOUT,  # Timeout for getting connection from pool
-            pool_size=settings.DATABASE_POOL_SIZE,  # Base number of connections in pool
-            max_overflow=settings.DATABASE_MAX_OVERFLOW,  # Additional connections beyond pool_size
-            pool_reset_on_return='commit',  # Ensure clean connections on return to pool
-            connect_args=connect_args
-        )
+        # Configure engine parameters based on database type
+        engine_params = {
+            "echo": settings.DEBUG,  # Log SQL queries in debug mode
+            "connect_args": connect_args
+        }
+        
+        # Only add pool settings for databases that support them (not SQLite)
+        if not database_url.startswith("sqlite"):
+            engine_params.update({
+                "pool_pre_ping": True,  # Verify connections before use
+                "pool_recycle": 3600,   # Recycle connections every hour
+                "pool_timeout": settings.DATABASE_POOL_TIMEOUT,  # Timeout for getting connection from pool
+                "pool_size": settings.DATABASE_POOL_SIZE,  # Base number of connections in pool
+                "max_overflow": settings.DATABASE_MAX_OVERFLOW,  # Additional connections beyond pool size
+                "pool_reset_on_return": 'commit',  # Ensure clean connections on return to pool
+            })
+        
+        engine = create_async_engine(database_url, **engine_params)
         
         # Create session factory
         async_session_factory = async_sessionmaker(

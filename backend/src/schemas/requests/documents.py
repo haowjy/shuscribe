@@ -24,7 +24,6 @@ class CreateDocumentRequest(BaseSchema):
     path: str
     content: DocumentContent = Field(default_factory=DocumentContent)
     tags: List[str] = Field(default_factory=list)
-    file_tree_parent_id: Optional[str] = None
 
 
 class UpdateDocumentRequest(BaseSchema):

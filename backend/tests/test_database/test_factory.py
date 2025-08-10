@@ -316,6 +316,16 @@ class TestIntegration:
             "parent_id": root_folder.id
         })
         
+        # Create document for file item (required)
+        document = await repository_container.document.create({
+            "id": "hero-document",
+            "project_id": project.id,
+            "title": "Hero Character",
+            "path": "/Characters/Protagonists/hero.md",
+            "content": {"type": "doc", "content": []},
+            "word_count": 0
+        })
+        
         # Create file in sub-folder
         file_item = await repository_container.file_tree.create({
             "id": "char-file",
@@ -323,6 +333,7 @@ class TestIntegration:
             "name": "hero.md",
             "type": "file",
             "path": "/Characters/Protagonists/hero.md",
+            "document_id": document.id,
             "parent_id": sub_folder.id
         })
         

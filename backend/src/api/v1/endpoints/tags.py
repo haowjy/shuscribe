@@ -59,7 +59,7 @@ async def list_project_tags(
             project_id=project_id
         )
         
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except Exception as e:
         logger.error(f"Error listing tags for project {project_id}: {e}")
@@ -92,7 +92,7 @@ async def create_tag(
         tag = await repositories.tag.create(tag_data)
         
         response = TagResponse.model_validate(tag.__dict__)
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise
@@ -118,7 +118,7 @@ async def get_tag(
             raise HTTPException(status_code=404, detail="Tag not found")
         
         response = TagResponse.model_validate(tag.__dict__)
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise
@@ -156,7 +156,7 @@ async def update_tag(
             raise HTTPException(status_code=404, detail="Tag not found")
         
         response = TagResponse.model_validate(tag.__dict__)
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise
@@ -190,7 +190,7 @@ async def delete_tag(
         if not success:
             raise HTTPException(status_code=404, detail="Tag not found")
         
-        return ApiResponse(success=True, data={"message": "Tag deleted successfully"})
+        return ApiResponse.success(data={"message": "Tag deleted successfully"})
         
     except HTTPException:
         raise
@@ -218,7 +218,7 @@ async def archive_tag(
             raise HTTPException(status_code=404, detail="Tag not found")
         
         response = TagResponse.model_validate(tag.__dict__)
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise
@@ -246,7 +246,7 @@ async def unarchive_tag(
             raise HTTPException(status_code=404, detail="Tag not found")
         
         response = TagResponse.model_validate(tag.__dict__)
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise
@@ -292,7 +292,7 @@ async def search_tags(
             limit=limit
         )
         
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise
@@ -337,7 +337,7 @@ async def get_tag_stats(
             most_used_tags=most_used_responses
         )
         
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise
@@ -375,7 +375,7 @@ async def assign_tag_to_file(
         # Return updated tag
         updated_tag = await repositories.tag.get_by_id(tag_id)
         response = TagResponse.model_validate(updated_tag.__dict__)
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise
@@ -413,7 +413,7 @@ async def unassign_tag_from_file(
         # Return updated tag
         updated_tag = await repositories.tag.get_by_id(tag_id)
         response = TagResponse.model_validate(updated_tag.__dict__)
-        return ApiResponse(success=True, data=response)
+        return ApiResponse.success(data=response)
         
     except HTTPException:
         raise

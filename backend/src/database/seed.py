@@ -84,7 +84,7 @@ class MockDataFactory:
             "description": fake.random_element(config["descriptions"]),
             "word_count": word_count,
             "document_count": document_count,
-            "tag_names": fake.random_elements(config["tags"], length=fake.random_int(min=2, max=4), unique=True),
+            "tags": fake.random_elements(config["tags"], length=fake.random_int(min=2, max=4), unique=True),
             "owner_id": user_id,
             "created_by": user_id,
             "updated_by": user_id,
@@ -138,7 +138,7 @@ class MockDataFactory:
             }
             
             word_count = sum(len(p["content"][0]["text"].split()) for p in paragraphs)
-            tag_ids = []  # Will be populated with actual tag IDs from project
+            tags = []  # Will be populated by seeder with relevant tag names
             
         elif document_type == "character":
             character_name = fake.name()
@@ -194,7 +194,7 @@ class MockDataFactory:
             }
             
             word_count = len((personality + backstory).split())
-            tag_ids = []  # Will be populated with actual tag IDs from project
+            tags = []  # Will be populated by seeder with relevant tag names
             
         elif document_type == "location":
             location_name = f"{fake.city()} {fake.random_element(['Castle', 'Forest', 'Temple', 'Academy', 'Market'])}"
@@ -239,7 +239,7 @@ class MockDataFactory:
             }
             
             word_count = len(description.split()) + fake.random_int(min=20, max=60)
-            tag_ids = []  # Will be populated with actual tag IDs from project
+            tags = []  # Will be populated by seeder with relevant tag names
             
         else:  # notes or general document
             title = fake.catch_phrase()
@@ -263,7 +263,7 @@ class MockDataFactory:
             }
             
             word_count = len(note_content.split())
-            tag_ids = []  # Will be populated with actual tag IDs from project
+            tags = []  # Will be populated by seeder with relevant tag names
         
         return {
             "id": document_id,
@@ -271,7 +271,7 @@ class MockDataFactory:
             "title": title,
             "path": path,
             "content": content,
-            "tag_ids": tag_ids,
+            "tags": [],  # Will be populated by seeder with relevant tag names
             "word_count": word_count,
             "version": "1.0.0",
             "is_locked": False,
@@ -302,7 +302,7 @@ class MockDataFactory:
             base_item.update({
                 "document_id": document_id,
                 "icon": MockDataFactory._get_file_icon(name),
-                "tag_ids": [],  # Will be populated with actual tag IDs from project
+                "tags": [],  # Will be populated by seeder with relevant tag names
                 "word_count": fake.random_int(min=50, max=2000) if document_id else None
             })
         else:
@@ -310,7 +310,7 @@ class MockDataFactory:
             base_item.update({
                 "document_id": None,
                 "icon": "folder",
-                "tag_ids": [],  # Will be populated with actual tag IDs from project
+                "tags": [],  # Will be populated by seeder with relevant tag names
                 "word_count": None
             })
         
@@ -399,7 +399,7 @@ class MockDataFactory:
     @staticmethod
     def generate_sample_private_tags(user_id: str) -> List[Dict[str, Any]]:
         """Generate sample private tags for a user"""
-        private_tags = [
+        private_tags: List[Dict[str, Any]] = [
             {"name": "favorite", "icon": "star", "color": "#fbbf24", "category": "personal"},
             {"name": "needs-work", "icon": "edit-3", "color": "#ef4444", "category": "personal"},
             {"name": "inspiration", "icon": "lightbulb", "color": "#10b981", "category": "personal"},

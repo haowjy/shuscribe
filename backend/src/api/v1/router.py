@@ -4,7 +4,7 @@ Main API router for v1 endpoints
 """
 from fastapi import APIRouter
 
-from src.api.v1.endpoints import health, projects, documents, llm, tags
+from src.api.v1.endpoints import health, projects, documents, llm, tags, file_tree
 
 # Create the main router
 api_router = APIRouter()
@@ -15,3 +15,4 @@ api_router.include_router(projects.router, prefix="/projects", tags=["projects"]
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(llm.router, prefix="/llm", tags=["llm"])
 api_router.include_router(tags.router, prefix="/projects", tags=["tags"])
+api_router.include_router(file_tree.router, prefix="/projects", tags=["file-tree"])

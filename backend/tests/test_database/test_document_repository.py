@@ -23,8 +23,8 @@ class TestDocumentRepositoryInterface:
             # Initialize database connection
             init_database()
             
-            # Create tables
-            await create_tables()
+            # Create fresh tables (drop existing to ensure clean state)
+            await create_tables(drop_existing=True)
             
             repos = create_repositories(backend=request.param)
             
@@ -223,7 +223,7 @@ class TestDocumentRepositoryInterface:
         assert updated_document.id == "test-doc-update"
         assert updated_document.title == "Updated Title"
         assert updated_document.content["content"][0]["content"][0]["text"] == "Updated content with more text for word count testing."
-        assert updated_document.tags == ["updated", "modified"]
+        assert set(updated_document.tags) == {"updated", "modified"}
         assert updated_document.word_count == 100
         assert updated_document.version == "1.1.0"
         assert updated_document.created_at == original_created_at  # Should not change

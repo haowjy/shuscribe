@@ -45,13 +45,13 @@ def create_repositories(backend: str = "database") -> RepositoryContainer:
     """
     if backend == "memory":
         logger.info("Creating in-memory repositories for testing")
-        from src.database.repositories import (
+        from src.database.memory.repositories import (
             MemoryProjectRepository,
             MemoryDocumentRepository, 
             MemoryFileTreeRepository,
-            MemoryTagRepository
+            MemoryTagRepository,
+            MemoryUserRepository
         )
-        from src.database.memory import MemoryUserRepository
         return RepositoryContainer(
             project=MemoryProjectRepository(),
             document=MemoryDocumentRepository(),
@@ -61,18 +61,18 @@ def create_repositories(backend: str = "database") -> RepositoryContainer:
         )
     elif backend == "database":
         logger.info("Creating database repositories")
-        from src.database.repositories import (
+        from src.database.sqlalchemy.repositories import (
             DatabaseProjectRepository,
             DatabaseDocumentRepository,
             DatabaseFileTreeRepository,
-            DatabaseTagRepository
+            DatabaseTagRepository,
+            DatabaseUserRepository
         )
-        from src.database.memory import MemoryUserRepository  # TODO: Replace with DatabaseUserRepository
         return RepositoryContainer(
             project=DatabaseProjectRepository(),
             document=DatabaseDocumentRepository(),
             file_tree=DatabaseFileTreeRepository(),
-            user=MemoryUserRepository(),  # TODO: Replace with DatabaseUserRepository
+            user=DatabaseUserRepository(),
             tag=DatabaseTagRepository(),
         )
     else:

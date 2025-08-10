@@ -5,7 +5,7 @@ File tree repository interface
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 
-from src.database.models import FileTreeItem
+from .models import FileTreeItem
 
 
 class FileTreeRepository(ABC):
@@ -44,4 +44,19 @@ class FileTreeRepository(ABC):
     @abstractmethod
     async def unassign_tag(self, item_id: str, tag_id: str) -> bool:
         """Unassign tag from file tree item"""
+        pass
+    
+    @abstractmethod
+    async def get_by_path(self, project_id: str, path: str) -> Optional[FileTreeItem]:
+        """Get file tree item by project ID and path"""
+        pass
+    
+    @abstractmethod
+    async def get_children(self, parent_id: str) -> List[FileTreeItem]:
+        """Get direct children of a file tree item"""
+        pass
+    
+    @abstractmethod
+    async def move_item(self, item_id: str, new_parent_id: Optional[str], new_path: str) -> Optional[FileTreeItem]:
+        """Move file tree item to new location"""
         pass

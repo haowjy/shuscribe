@@ -3,49 +3,10 @@ User repository interface for user data and API key management
 """
 from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Any
-from datetime import UTC, datetime
+from datetime import datetime
 
 from src.core.constants import PROVIDER_ID
-
-
-class UserAPIKey:
-    """User API key model for LLM providers"""
-    def __init__(
-        self, 
-        user_id: str,
-        provider: PROVIDER_ID,
-        encrypted_api_key: str,
-        validation_status: str = "unknown",
-        last_validated_at: Optional[datetime] = None,
-        provider_metadata: Optional[Dict[str, Any]] = None,
-        created_at: Optional[datetime] = None,
-        updated_at: Optional[datetime] = None
-    ):
-        self.user_id: str = user_id
-        self.provider: PROVIDER_ID = provider
-        self.encrypted_api_key: str = encrypted_api_key
-        self.validation_status: str = validation_status
-        self.last_validated_at: Optional[datetime] = last_validated_at
-        self.provider_metadata: Optional[Dict[str, Any]] = provider_metadata or {}
-        self.created_at = created_at or datetime.now(UTC)
-        self.updated_at: Optional[datetime] = updated_at
-
-
-class User:
-    """User model"""
-    def __init__(
-        self,
-        user_id: str,
-        email: str,
-        created_at: Optional[datetime] = None,
-        updated_at: Optional[datetime] = None,
-        metadata: Optional[Dict[str, Any]] = None
-    ):
-        self.user_id = user_id
-        self.email = email
-        self.created_at = created_at or datetime.now(UTC)
-        self.updated_at = updated_at
-        self.metadata = metadata or {}
+from .models import User, UserAPIKey
 
 
 class IUserRepository(ABC):

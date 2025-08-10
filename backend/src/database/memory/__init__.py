@@ -1,6 +1,24 @@
+# backend/src/database/memory/__init__.py
 """
-In-memory repository implementations
-"""
-from .user_repository import MemoryUserRepository
+Memory repository implementations
 
-__all__ = ["MemoryUserRepository"]
+Memory repositories work directly with domain models for testing and development.
+All implementations have been moved to the repositories/ subdirectory.
+"""
+
+# Re-export all memory repositories for backward compatibility
+from .repositories import (
+    MemoryProjectRepository,
+    MemoryDocumentRepository,
+    MemoryFileTreeRepository,
+    MemoryUserRepository,
+    MemoryTagRepository,
+)
+
+__all__ = [
+    "MemoryProjectRepository",
+    "MemoryDocumentRepository",
+    "MemoryFileTreeRepository", 
+    "MemoryUserRepository",
+    "MemoryTagRepository",
+]

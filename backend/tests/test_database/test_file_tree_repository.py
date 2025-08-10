@@ -8,6 +8,8 @@ from typing import Dict, Any, List
 
 from src.database.factory import create_repositories
 from src.database.interfaces import FileTreeRepository, ProjectRepository
+from tests.factories import ProjectFactory, FileTreeItemFactory, DocumentFactory
+from tests.helpers import DomainToRepositoryConverter
 
 
 class TestFileTreeRepositoryInterface:
@@ -23,8 +25,8 @@ class TestFileTreeRepositoryInterface:
             # Initialize database connection
             init_database()
             
-            # Create tables
-            await create_tables()
+            # Create fresh tables (drop existing to ensure clean state)
+            await create_tables(drop_existing=True)
             
             repos = create_repositories(backend=request.param)
             
@@ -51,28 +53,29 @@ class TestFileTreeRepositoryInterface:
     @pytest.fixture
     async def test_project(self, project_repo: ProjectRepository):
         """Create a test project for file tree tests"""
-        project_data = {
-            "id": "test-project-for-files",
-            "title": "Test Project for File Tree",
-            "description": "A project to test file tree operations"
-        }
+        test_project = ProjectFactory.create(
+            id="test-project-for-files",
+            title="Test Project for File Tree",
+            description="A project to test file tree operations"
+        )
+        project_data = DomainToRepositoryConverter.project_to_dict(test_project)
         return await project_repo.create(project_data)
     
     async def test_create_file_tree_item(self, file_tree_repo: FileTreeRepository, test_project):
         """Test creating a new file tree item"""
-        item_data = {
-            "id": "test-file-create",
-            "project_id": test_project.id,
-            "name": "test_file.md",
-            "type": "file",
-            "path": "/test_file.md",
-            "parent_id": None,
-            "document_id": "some-doc-id",
-            "icon": "file-text",
-            "tags": ["test", "file"],
-            "word_count": 150
-        }
+        # Create expected file tree item with factory
+        expected_item = FileTreeItemFactory.create_file(
+            id="test-file-create",
+            project_id=test_project.id,
+            name="test_file.md",
+            path="/test_file.md",
+            parent_id=None,
+            document_id="some-doc-id",
+            word_count=150,
+            tags=["test", "file"]
+        )
         
+        item_data = DomainToRepositoryConverter.file_tree_item_to_dict(expected_item)
         item = await file_tree_repo.create(item_data)
         
         assert item is not None
@@ -169,16 +172,18 @@ class TestFileTreeRepositoryInterface:
     
     async def test_update_file_tree_item(self, file_tree_repo: FileTreeRepository, test_project):
         """Test updating an existing file tree item"""
-        # Create item first
-        item_data = {
-            "id": "test-item-update",
-            "project_id": test_project.id,
-            "name": "original.md",
-            "type": "file",
-            "path": "/original.md",
-            "tags": ["original"],
-            "word_count": 100
-        }
+        # Create item first using factory
+        original_item = FileTreeItemFactory.create_file(
+            id="test-item-update",
+            project_id=test_project.id,
+            name="original.md",
+            path="/original.md",
+            tags=["original"],
+            word_count=100,
+            document_id="some-doc-id"  # Required for files
+        )
+        
+        item_data = DomainToRepositoryConverter.file_tree_item_to_dict(original_item)
         created_item = await file_tree_repo.create(item_data)
         original_created_at = created_item.created_at
         
@@ -196,7 +201,7 @@ class TestFileTreeRepositoryInterface:
         assert updated_item.id == "test-item-update"
         assert updated_item.name == "renamed.md"
         assert updated_item.path == "/renamed.md"
-        assert updated_item.tags == ["updated", "renamed"]
+        assert set(updated_item.tags) == {"updated", "renamed"}
         assert updated_item.word_count == 200
         assert updated_item.icon == "file-edit"
         assert updated_item.created_at == original_created_at  # Should not change
@@ -213,14 +218,16 @@ class TestFileTreeRepositoryInterface:
     
     async def test_delete_file_tree_item(self, file_tree_repo: FileTreeRepository, test_project):
         """Test deleting an existing file tree item"""
-        # Create item first
-        item_data = {
-            "id": "test-item-delete",
-            "project_id": test_project.id,
-            "name": "to_delete.md",
-            "type": "file",
-            "path": "/to_delete.md"
-        }
+        # Create item first using factory
+        delete_item = FileTreeItemFactory.create_file(
+            id="test-item-delete",
+            project_id=test_project.id,
+            name="to_delete.md",
+            path="/to_delete.md",
+            document_id="some-doc-id"  # Required for files
+        )
+        
+        item_data = DomainToRepositoryConverter.file_tree_item_to_dict(delete_item)
         await file_tree_repo.create(item_data)
         
         # Verify it exists
@@ -600,12 +607,32 @@ class TestFileTreeTagging:
     
     async def test_create_item_with_tags(self, memory_repos, test_project):
         """Test creating file tree items with tags"""
+        # Create documents for file items (required)
+        hero_doc = await memory_repos.document.create({
+            "id": "hero-doc",
+            "project_id": test_project.id,
+            "title": "Hero Character",
+            "path": "/Characters/hero.md",
+            "content": {"type": "doc", "content": []},
+            "word_count": 0
+        })
+        
+        notes_doc = await memory_repos.document.create({
+            "id": "notes-doc", 
+            "project_id": test_project.id,
+            "title": "Notes",
+            "path": "/notes.md",
+            "content": {"type": "doc", "content": []},
+            "word_count": 0
+        })
+        
         items_with_tags = [
             {
                 "id": "tagged-file-1",
                 "name": "hero.md",
                 "type": "file",
                 "path": "/Characters/hero.md",
+                "document_id": hero_doc.id,
                 "tags": ["character", "protagonist", "main"]
             },
             {
@@ -620,6 +647,7 @@ class TestFileTreeTagging:
                 "name": "notes.md",
                 "type": "file",
                 "path": "/notes.md",
+                "document_id": notes_doc.id,
                 "tags": []  # Explicitly empty
             }
         ]
@@ -632,6 +660,7 @@ class TestFileTreeTagging:
                 "name": item_data["name"],
                 "type": item_data["type"],
                 "path": item_data["path"],
+                "document_id": item_data.get("document_id"),
                 "tags": item_data["tags"]
             })
             created_items.append(item)
@@ -643,6 +672,16 @@ class TestFileTreeTagging:
     
     async def test_update_item_tags(self, memory_repos, test_project):
         """Test updating file tree item tags"""
+        # Create document for file item (required)
+        character_doc = await memory_repos.document.create({
+            "id": "character-doc",
+            "project_id": test_project.id,
+            "title": "Character",
+            "path": "/character.md",
+            "content": {"type": "doc", "content": []},
+            "word_count": 0
+        })
+        
         # Create item with initial tags
         item = await memory_repos.file_tree.create({
             "id": "taggable-item",
@@ -650,6 +689,7 @@ class TestFileTreeTagging:
             "name": "character.md",
             "type": "file",
             "path": "/character.md",
+            "document_id": character_doc.id,
             "tags": ["character", "draft"]
         })
         

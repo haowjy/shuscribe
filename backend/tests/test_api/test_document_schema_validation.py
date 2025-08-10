@@ -26,48 +26,70 @@ class TestDocumentSchemaValidation:
     
     @pytest.fixture
     def client(self):
-        """FastAPI test client"""
-        return TestClient(app)
+        """FastAPI test client with auth disabled for testing"""
+        from src.api.dependencies import get_current_user_id
+        
+        # Override auth dependency to return a test user ID
+        def override_get_current_user_id():
+            return "test-user-123"
+        
+        app.dependency_overrides[get_current_user_id] = override_get_current_user_id
+        
+        client = TestClient(app)
+        
+        yield client
+        
+        # Clean up dependency override
+        app.dependency_overrides.clear()
     
     @pytest.fixture
     async def test_data(self):
         """Create test project, tags, and document"""
         repos = get_repositories()
         
-        # Create project
-        project = await repos.project.create({
-            "id": "schema-test-project",
-            "title": "Schema Test Project",
-            "description": "Project for schema validation tests",
-            "word_count": 0,
-            "document_count": 0,
-            "tags": ["project", "test"]
-        })
+        from tests.factories import ProjectFactory, TagFactory, DocumentFactory
+        from tests.helpers import DomainToRepositoryConverter
         
-        # Create tags with metadata
-        tag1 = await repos.tag.create({
-            "id": "tag-chapter",
-            "name": "chapter",
-            "icon": "book-open",
-            "color": "#3b82f6",
-            "project_id": project.id
-        })
+        # Create project using factory
+        project_model = ProjectFactory.create(
+            id="schema-test-project",
+            title="Schema Test Project",
+            description="Project for schema validation tests",
+            word_count=0,
+            document_count=0,
+            tags=["project", "test"]
+        )
+        project_data = DomainToRepositoryConverter.project_to_dict(project_model)
+        project = await repos.project.create(project_data)
         
-        tag2 = await repos.tag.create({
-            "id": "tag-intro", 
-            "name": "intro",
-            "icon": "play",
-            "color": "#10b981",
-            "project_id": project.id
-        })
+        # Create tags with metadata using factory
+        tag1_model = TagFactory.create(
+            id="tag-chapter",
+            name="chapter",
+            icon="book-open",
+            color="#3b82f6",
+            project_id=project.id
+        )
+        tag1_data = DomainToRepositoryConverter.tag_to_dict(tag1_model)
+        tag1 = await repos.tag.create(tag1_data)
         
-        # Create document with tags
-        document = await repos.document.create({
-            "id": "schema-test-document",
-            "project_id": project.id,
-            "title": "Schema Test Document",
-            "path": "/schema_test.md",
-            "content": {
+        tag2_model = TagFactory.create(
+            id="tag-intro", 
+            name="intro",
+            icon="play",
+            color="#10b981",
+            project_id=project.id
+        )
+        tag2_data = DomainToRepositoryConverter.tag_to_dict(tag2_model)
+        tag2 = await repos.tag.create(tag2_data)
+        
+        # Create document with tags using factory
+        document_model = DocumentFactory.create(
+            id="schema-test-document",
+            project_id=project.id,
+            title="Schema Test Document",
+            path="/schema_test.md",
+            content={
                 "type": "doc",
                 "content": [
                     {
@@ -76,11 +98,13 @@ class TestDocumentSchemaValidation:
                     }
                 ]
             },
-            "tags": [tag1, tag2],
-            "word_count": 3,
-            "version": "1.0.0",
-            "is_locked": False
-        })
+            tags=[tag1, tag2],
+            word_count=3,
+            version="1.0.0",
+            is_locked=False
+        )
+        document_data = DomainToRepositoryConverter.document_to_dict(document_model)
+        document = await repos.document.create(document_data)
         
         return {
             "project": project,
@@ -140,7 +164,7 @@ class TestDocumentSchemaValidation:
         response = client.get(f"/api/v1/documents/{document.id}")
         
         assert response.status_code == 200
-        data = response.json()["data"]
+        data = response.json()
         
         # Validate overall schema
         assert self.validate_document_response_schema(data)
@@ -198,7 +222,7 @@ class TestDocumentSchemaValidation:
         response = client.post("/api/v1/documents", json=create_request)
         
         assert response.status_code == 200
-        data = response.json()["data"]
+        data = response.json()
         
         # Response should return TagInfo objects
         assert self.validate_document_response_schema(data)
@@ -218,7 +242,7 @@ class TestDocumentSchemaValidation:
         document = test_data["document"]
         
         response = client.get(f"/api/v1/documents/{document.id}")
-        data = response.json()["data"]
+        data = response.json()
         
         # This test documents the expected frontend-backend contract:
         # 1. Requests send tag names as strings
