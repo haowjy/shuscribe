@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ConditionalHeader from "@/components/layout/ConditionalHeader";
+import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,9 +20,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-background font-sans antialiased">
-        <ConditionalHeader showGallery={showGallery}>
-          {children}
-        </ConditionalHeader>
+        <AuthProvider>
+          <ConditionalHeader showGallery={showGallery}>
+            {children}
+          </ConditionalHeader>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -9,15 +9,22 @@ This is the **backend-specific** guide. For complete project context, see:
 - **Frontend Guide**: `/frontend/CLAUDE-frontend.md` - Frontend patterns and API contract definition
 - **Backend Architecture**: [`/_docs/backend/overview.md`](../_docs/backend/overview.md) - Detailed backend architecture
 
-## Frontend-First Integration
+## Backend-First Integration
 
-**Core Principle**: The backend implements APIs to match frontend expectations.
+**Core Principle**: The backend domain models are the **source of truth** for all data structures.
 
 **Key Integration Points**:
-- **API Contract Source**: Frontend `src/types/api.ts` defines the expected API structure
-- **Response Format**: Backend returns `ApiResponse<T>` wrapper matching frontend
+- **Domain Models Authority**: Backend models in `src/database/interfaces/models/` define canonical structure
+- **Frontend Alignment**: Frontend types must exactly match backend domain models
+- **Response Format**: Backend `ApiResponse<T>` wrapper is the authoritative format
 - **Authentication**: Backend trusts frontend auth tokens, extracts for context only
-- **Field Naming**: Backend handles both camelCase (frontend) and snake_case via Pydantic aliases
+- **Field Naming**: Backend snake_case is authoritative; frontend maps via utilities
+
+**⚠️ CRITICAL**: When modifying domain models, you MUST update the frontend types:
+1. Update domain model in `src/database/interfaces/models/`
+2. Update frontend types in `/frontend/src/lib/localdb/types.ts`
+3. Update local data provider in `/frontend/src/lib/data/local-provider.ts`
+4. Update seed data in `/frontend/src/lib/localdb/seeds.ts`
 
 ## Quick Start
 
@@ -53,9 +60,8 @@ async def get_project(
     return ApiResponse.success(project)
 ```
 
-**Three backends supported**:
+**Two backends supported**:
 - **`memory`**: In-memory repositories (testing)
-- **`file`**: SQLite database (legacy) 
 - **`database`**: PostgreSQL with SQLAlchemy (production)
 
 ### Database Models
@@ -111,21 +117,30 @@ POST                 /projects/{id}/llm/generate
 - **Authentication**: Handle Supabase JWT validation errors gracefully
 
 ### API Development
-1. **Check Frontend Contract**: Review `frontend/src/types/api.ts` for expected structure
-2. **Implement Backend**: Create endpoint with matching response format
-3. **Add Tests**: Unit and integration tests for new endpoints
-4. **Update Documentation**: Update relevant docs in `/_docs/`
+1. **Define Domain Model**: Create/update domain model in `src/database/interfaces/models/`
+2. **Update Frontend Types**: Align frontend types in `/frontend/src/lib/localdb/types.ts`
+3. **Implement Backend**: Create endpoint with proper Pydantic schemas
+4. **Add Tests**: Unit and integration tests for new endpoints
+5. **Update Documentation**: Update relevant docs in `/_docs/`
+
+### Domain Model Changes
+**CRITICAL WORKFLOW** - When changing any domain model:
+1. **Backend First**: Modify domain model in `src/database/interfaces/models/`
+2. **Frontend Sync**: Update `/frontend/src/lib/localdb/types.ts` to match exactly
+3. **Provider Update**: Update `/frontend/src/lib/data/local-provider.ts` with new fields
+4. **Seed Data**: Update `/frontend/src/lib/localdb/seeds.ts` to include new fields
+5. **Test Both**: Ensure both backend and frontend work with the updated model
 
 ## Environment Configuration
 
 **Key Environment Variables**:
-- `DATABASE_BACKEND`: "memory" | "file" | "database"
+- `DATABASE_BACKEND`: "memory" | "database"
 - `DATABASE_URL`: PostgreSQL connection string
 - `SUPABASE_*`: Authentication configuration
 - `PORTKEY_*`: LLM gateway configuration
 
 **Development vs Production**:
-- **Development**: Uses memory/file backends, local services
+- **Development**: Uses memory backend, local services  
 - **Production**: Uses PostgreSQL, Supabase auth, hosted Portkey
 
 ## Documentation Resources

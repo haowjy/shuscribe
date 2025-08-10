@@ -99,9 +99,15 @@ docker-compose down                      # Stop all services
 
 ## Frontend-Backend Integration
 
-Note: The items below describe the target architecture. The current frontend does not yet include auth, dashboard, or API integration.
+**CRITICAL**: The backend is the **source of truth** for all data models and API contracts.
 
 ### Core Integration Principles
+
+**Backend-First Domain Models**:
+- **Backend**: Domain models in `/backend/src/database/interfaces/models/` define the canonical data structure
+- **Frontend**: Must align types exactly with backend models for seamless integration
+- **API Contract**: Backend endpoint responses are authoritative
+- **Data Validation**: Backend Pydantic schemas define the validation rules
 
 **Authentication Strategy**:
 - **Frontend**: Handles all authentication via Supabase Auth
@@ -109,37 +115,40 @@ Note: The items below describe the target architecture. The current frontend doe
 - **Token Validation**: Backend validates tokens with Supabase for security
 
 **Data Flow**:
-- **Frontend-First**: UI state drives API requirements
-- **Offline-First**: LocalStorage + TanStack Query provide offline functionality
+- **Backend-Driven**: Backend domain models drive frontend type definitions
+- **Offline-First**: Frontend local storage mirrors backend structure exactly
 - **API Consistency**: Both systems use `ApiResponse<T>` wrapper for all responses
-- **Error Handling**: Consistent error format across frontend and backend
+- **Error Handling**: Consistent error format defined by backend
 
 **Field Naming Conventions**:
-- **Frontend**: camelCase (`projectId`, `createdAt`, `wordCount`)
-- **Backend**: snake_case (Pydantic models can alias to/from camelCase)
-- **API**: Backend handles both formats seamlessly
+- **Backend**: snake_case (authoritative - `project_id`, `created_at`, `word_count`)
+- **Frontend**: camelCase with mapping utilities (`projectId`, `createdAt`, `wordCount`)
+- **API**: Backend handles both formats via Pydantic aliases
 
 ### Integration Development Workflow
 
-**For Frontend Features**:
-1. **Design First**: Create UI components and define TypeScript interfaces in `/frontend/src/types/api.ts`
-2. **Mock Implementation**: Use MSW and Next.js API routes for rapid prototyping
-3. **Backend Alignment**: Backend implements endpoints to match frontend TypeScript interfaces
-4. **Integration**: Both systems use consistent `ApiResponse<T>` wrapper and field naming
+**For Backend Changes (Primary)**:
+1. **Modify Backend Models**: Update domain models in `/backend/src/database/interfaces/models/`
+2. **Update Frontend Types**: Align `/frontend/src/lib/localdb/types.ts` to match backend exactly
+3. **Update Local Provider**: Ensure local storage handles all backend fields
+4. **Update Seed Data**: Include all backend fields in sample data
+5. **Test Integration**: Verify frontend works with extended types
 
-**For Backend Features**:
-1. **API Contract**: Check frontend expectations in `/frontend/src/types/api.ts`
-2. **Implementation**: Create backend endpoints with proper response format and field aliases
-3. **Frontend Integration**: Update frontend to use new endpoints if needed
-4. **Validation**: Ensure ProseMirror content structure matches between systems
+**For Frontend Features**:
+1. **Check Backend Contract**: Review backend domain models and API endpoints first
+2. **Align Frontend Types**: Ensure frontend types match backend structure
+3. **Mock Implementation**: Use local storage that mirrors backend exactly
+4. **Integration**: Test that frontend can consume backend API format
+
+**⚠️  IMPORTANT**: Any changes to backend domain models MUST be reflected in frontend types immediately to maintain compatibility.
 
 ## Key Documentation
 
-**📚 Core Docs**: [`/_docs/core/api-reference.md`](_docs/core/api-reference.md), [`/_docs/api/contracts.md`](_docs/api/contracts.md), [`/_docs/core/system-architecture.md`](_docs/core/system-architecture.md)
+**📚 Essential**: [`/_docs/api/contracts.md`](_docs/api/contracts.md), [`/_docs/core/system-architecture.md`](_docs/core/system-architecture.md), [`/_docs/backend/overview.md`](_docs/backend/overview.md)
 
-**🎯 Architecture**: [`/_docs/high-level/1-product-overview.md`](_docs/high-level/1-product-overview.md), [`/_docs/high-level/2-mvp.md`](_docs/high-level/2-mvp.md)
+**🎯 Architecture**: [`/_docs/high-level/2-mvp.md`](_docs/high-level/2-mvp.md)
 
-**⚙️ Development**: [`/_docs/development/environment-configuration.md`](_docs/development/environment-configuration.md), [`/backend/railway-deploy.md`](backend/railway-deploy.md)
+**⚙️ Development**: [`/_docs/development/environment-configuration.md`](_docs/development/environment-configuration.md)
 
 ## Architecture Overview
 
@@ -201,4 +210,4 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 **Need specific guidance?** Check the specialized guides:
 - 🎨 **Frontend**: [`/frontend/CLAUDE-frontend.md`](frontend/CLAUDE-frontend.md)
 - ⚙️ **Backend**: [`/backend/CLAUDE-backend.md`](backend/CLAUDE-backend.md)
-- 📚 **API**: [`/_docs/core/complete-api-specification.md`](_docs/core/complete-api-specification.md)
+- 📚 **API**: [`/_docs/api/contracts.md`](_docs/api/contracts.md)

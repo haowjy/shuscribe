@@ -1,7 +1,16 @@
+'use client'
+
 import Link from "next/link";
+import { useState } from "react";
 import { ArrowRight, FileText, Layers, Wand2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { useUser } from "@/hooks/useUser";
 
 export default function HomePage() {
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const { isAuthenticated, loading } = useUser()
+  
   const showGallery =
     process.env.NODE_ENV === "development" ||
     process.env.NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY === "true";
@@ -26,12 +35,32 @@ export default function HomePage() {
             Explore Features
             <ArrowRight size={16} />
           </a>
+          
+          {!loading && (
+            isAuthenticated ? (
+              <Link href="/projects">
+                <Button className="inline-flex items-center gap-2">
+                  Continue to Projects
+                  <ArrowRight size={16} />
+                </Button>
+              </Link>
+            ) : (
+              <Button 
+                onClick={() => setAuthModalOpen(true)}
+                className="inline-flex items-center gap-2"
+              >
+                Get Started
+                <ArrowRight size={16} />
+              </Button>
+            )
+          )}
+          
           {showGallery && (
             <Link
               href="/component-gallery"
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-primary-foreground hover:opacity-90 transition"
+              className="inline-flex items-center gap-2 rounded-md bg-secondary px-4 py-2 text-secondary-foreground hover:opacity-90 transition"
             >
-              Open Component Gallery
+              Component Gallery
             </Link>
           )}
         </div>
@@ -69,6 +98,11 @@ export default function HomePage() {
           Built with Next.js 15, React 19, TypeScript, and Tiptap
         </p>
       </div>
+
+      <AuthModal 
+        open={authModalOpen} 
+        onOpenChange={setAuthModalOpen}
+      />
     </div>
   );
 }
