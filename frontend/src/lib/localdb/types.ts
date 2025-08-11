@@ -1,3 +1,19 @@
+// API Tag format (from backend)
+export interface ApiTag {
+  id: string;
+  name: string;
+  icon?: string | null;
+  color?: string | null;
+}
+
+// API Collaborator format (from backend) 
+export interface ApiCollaborator {
+  user_id: string;
+  role: string;
+  name: string;
+  avatar?: string | null;
+}
+
 // Domain model matching backend exactly
 export interface Project {
   id: string;
@@ -13,6 +29,19 @@ export interface Project {
   tags: string[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+// API Project format (from backend /v1/projects)
+export interface ApiProject {
+  id: string;
+  title: string;
+  description: string;
+  word_count: number;
+  document_count: number;
+  created_at: string;
+  updated_at: string;
+  tags: ApiTag[];
+  collaborators: ApiCollaborator[];
 }
 
 export interface Collaborator {

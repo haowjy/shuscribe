@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ConditionalHeader from "@/components/layout/ConditionalHeader";
+import { AppLayoutWithRail } from "@/components/layout/AppLayoutWithRail";
 import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
 
@@ -22,7 +23,9 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-sans antialiased">
         <AuthProvider>
           <ConditionalHeader showGallery={showGallery}>
-            {children}
+            <AppLayoutWithRail>
+              {children}
+            </AppLayoutWithRail>
           </ConditionalHeader>
         </AuthProvider>
       </body>

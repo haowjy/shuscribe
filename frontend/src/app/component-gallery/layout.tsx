@@ -58,16 +58,6 @@ const galleryNav: GallerySection[] = [
       },
     ],
   },
-  {
-    title: "Debug",
-    items: [
-      { 
-        title: "Storage", 
-        href: "/component-gallery/debug/storage",
-        description: "Local storage testing and IndexedDB management"
-      },
-    ],
-  },
 ];
 
 function ComponentGallerySidebar() {
@@ -148,11 +138,6 @@ export default function ComponentGalleryLayout({
     
     if (parts[1] === 'editor' && parts[2]) {
       breadcrumbs.push('Editor');
-      breadcrumbs.push(parts[2].charAt(0).toUpperCase() + parts[2].slice(1));
-    }
-    
-    if (parts[1] === 'debug' && parts[2]) {
-      breadcrumbs.push('Debug');
       breadcrumbs.push(parts[2].charAt(0).toUpperCase() + parts[2].slice(1));
     }
     

@@ -20,6 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Always use absolute file paths for Python FastAPI, never use relative paths**
 - **Tailwind Best Practices**: Use utility-first approach with direct classes in JSX. Never create CSS_CLASSES constants - this is an anti-pattern that defeats Tailwind's purpose and breaks JIT compilation.
 - **Update CLAUDE.md**: Make sure to ALWAYS update the CLAUDE.md and/or other documentation files when making changes that affect the documentation.
+- **Documentation**: Most documentation should be pretty sparse. Each document should not be excessizely long. Please split out new documents if a document is becoming too long and has multiple purposes
 
 ## Project Overview
 
@@ -196,6 +197,12 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 - Authentication context flows from frontend to backend via Bearer tokens
 - **Path-Based Document Creation**: Documents automatically create folder hierarchies from paths (e.g., `/characters/locations/taverns/document` creates all missing folders)
 
+## Navigation Strategy
+
+**Design Philosophy**: Respects creative workflow patterns - writers focus deeply on single projects rather than rapidly switching between universes.
+
+**Detailed Documentation**: See [`/_docs/frontend/designs/navigation-patterns.md`](_docs/frontend/designs/navigation-patterns.md) for comprehensive UI patterns, user flow diagrams, and design decisions.
+
 ## Documentation Maintenance
 
 **Critical Rule**: Always update CLAUDE.md files and relevant `/_docs/` files when making changes.
@@ -211,3 +218,4 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 - 🎨 **Frontend**: [`/frontend/CLAUDE-frontend.md`](frontend/CLAUDE-frontend.md)
 - ⚙️ **Backend**: [`/backend/CLAUDE-backend.md`](backend/CLAUDE-backend.md)
 - 📚 **API**: [`/_docs/api/contracts.md`](_docs/api/contracts.md)
+- 

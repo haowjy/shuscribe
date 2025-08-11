@@ -12,13 +12,14 @@ interface ConditionalHeaderProps {
 export default function ConditionalHeader({ children, showGallery }: ConditionalHeaderProps) {
   const pathname = usePathname();
   const isGalleryRoute = pathname.startsWith("/component-gallery");
+  const isAppRoute = pathname.startsWith("/projects");
 
-  if (isGalleryRoute) {
-    // Gallery routes: no global header, full-height app experience
+  if (isGalleryRoute || isAppRoute) {
+    // Gallery routes and app routes: no global header, full-height app experience
     return <>{children}</>;
   }
 
-  // Non-gallery routes: show global header
+  // Landing page and other marketing routes: show global header
   return (
     <div className="flex flex-col min-h-screen">
       <header className="border-b border-border">
