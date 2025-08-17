@@ -1,3 +1,38 @@
+/**
+ * Local Cache Layer - Performance-Optimized Domain Types
+ * 
+ * WHY: This file solves the critical UX problem of writers waiting for network requests.
+ * Content creators need instant feedback when editing - any latency breaks their flow state.
+ * This local cache layer provides zero-latency UI updates while background sync handles
+ * persistence.
+ * 
+ * Problem Context: Traditional web apps wait for server responses before updating UI,
+ * creating jarring delays for creative work. This layer enables "offline-first" patterns
+ * where the UI responds instantly to user actions, then syncs in the background.
+ * 
+ * Optimization Benefits:
+ * - Instant UI responses from local cache (no network latency)
+ * - Offline-first: App works without internet connection
+ * - Optimistic updates: UI updates immediately, sync happens in background
+ * - Field mappings handle automatic conversion to/from backend formats
+ * 
+ * Usage Patterns:
+ * - Use these types for component props and local state
+ * - Default value constants enable easy object creation
+ * - Helper functions provide business logic for domain operations
+ * 
+ * Data Flow:
+ * User Action → Update Local Cache → Update UI (instant) → Background API Sync
+ * 
+ * Integration Points:
+ * - Mirrors API types with camelCase convention and UI-specific fields
+ * - Used by components in workspace/, editor/, and UI layers
+ * - Synced with backend via automatic field mapping utilities
+ * 
+ * @see frontend/src/types/api.ts - Backend interface layer for server communication
+ * @see frontend/src/lib/data/local-provider.ts - Cache management implementation
+ */
+
 // API Tag format (from backend)
 export interface ApiTag {
   id: string;

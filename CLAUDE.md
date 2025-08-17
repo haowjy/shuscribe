@@ -14,13 +14,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Always think about best practices and patterns for the code you are writing**
 - **Always think about the user experience and the code you are writing**
 - **Always think about the code you are writing**
-- **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this
+- **Reasoning-First Documentation**: Always explain WHY we follow a pattern, rule, or make a design decision, not just what to do. Understanding reasoning helps developers adapt principles to new situations and avoid cargo-cult programming. For all future documentation: Include the rationale behind every significant decision.
+- **Question for Understanding**: When faced with unclear requirements or non-straightforward problems, always ask the user for the reasoning and context behind what they're trying to achieve. Understanding the WHY helps create better solutions than just implementing the WHAT.
+- **Frontend Dev Server**: NEVER run `npm run dev`, `pnpm dev` via Claude Code - user handles this (WHY: Maintains user workflow control and prevents port conflicts with their development environment)
 - **Cross-References**: Update all CLAUDE.md and other documentation files when making changes that affect the documentation
-- **Never directly edit `pyproject.toml` or `package.json`**: ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend)
-- **Always use absolute file paths for Python FastAPI, never use relative paths**
-- **Tailwind Best Practices**: Use utility-first approach with direct classes in JSX. Never create CSS_CLASSES constants - this is an anti-pattern that defeats Tailwind's purpose and breaks JIT compilation.
+- **Never directly edit `pyproject.toml` or `package.json`**: ALWAYS use the package manager (`uv` for backend, or `pnpm` for frontend) (WHY: Package managers handle dependency resolution, lock files, and virtual environments correctly)
+- **Always use absolute file paths for Python FastAPI, never use relative paths** (WHY: Prevents deployment issues and import resolution problems across different environments)
+- **Tailwind Best Practices**: Use utility-first approach with direct classes in JSX. Never create CSS_CLASSES constants - this is an anti-pattern that defeats Tailwind's purpose and breaks JIT compilation (WHY: Constants prevent JIT optimization and break Tailwind's utility-first philosophy for maintainable styles)
 - **Update CLAUDE.md**: Make sure to ALWAYS update the CLAUDE.md and/or other documentation files when making changes that affect the documentation.
-- **Documentation**: Most documentation should be pretty sparse. Each document should not be excessizely long. Please split out new documents if a document is becoming too long and has multiple purposes
+- **Documentation**: Most documentation should be pretty sparse. Each document should not be excessively long. Please split out new documents if a document is becoming too long and has multiple purposes (WHY: Reduces maintenance burden and prevents documentation drift by keeping docs focused and manageable)
 
 ## Project Overview
 
@@ -96,56 +98,15 @@ docker-compose down                      # Stop all services
   - LLM integration, API endpoints, and security
   - FastAPI development and testing strategies
 
-- **🔗 Integration Work**: Use this guide for understanding how frontend and backend work together
-
-## Frontend-Backend Integration
-
-**CRITICAL**: The backend is the **source of truth** for all data models and API contracts.
-
-### Core Integration Principles
-
-**Backend-First Domain Models**:
-- **Backend**: Domain models in `/backend/src/database/interfaces/models/` define the canonical data structure
-- **Frontend**: Must align types exactly with backend models for seamless integration
-- **API Contract**: Backend endpoint responses are authoritative
-- **Data Validation**: Backend Pydantic schemas define the validation rules
-
-**Authentication Strategy**:
-- **Frontend**: Handles all authentication via Supabase Auth
-- **Backend**: Validates Supabase JWT tokens from Authorization header
-- **Token Validation**: Backend validates tokens with Supabase for security
-
-**Data Flow**:
-- **Backend-Driven**: Backend domain models drive frontend type definitions
-- **Offline-First**: Frontend local storage mirrors backend structure exactly
-- **API Consistency**: Both systems use `ApiResponse<T>` wrapper for all responses
-- **Error Handling**: Consistent error format defined by backend
-
-**Field Naming Conventions**:
-- **Backend**: snake_case (authoritative - `project_id`, `created_at`, `word_count`)
-- **Frontend**: camelCase with mapping utilities (`projectId`, `createdAt`, `wordCount`)
-- **API**: Backend handles both formats via Pydantic aliases
-
-### Integration Development Workflow
-
-**For Backend Changes (Primary)**:
-1. **Modify Backend Models**: Update domain models in `/backend/src/database/interfaces/models/`
-2. **Update Frontend Types**: Align `/frontend/src/lib/localdb/types.ts` to match backend exactly
-3. **Update Local Provider**: Ensure local storage handles all backend fields
-4. **Update Seed Data**: Include all backend fields in sample data
-5. **Test Integration**: Verify frontend works with extended types
-
-**For Frontend Features**:
-1. **Check Backend Contract**: Review backend domain models and API endpoints first
-2. **Align Frontend Types**: Ensure frontend types match backend structure
-3. **Mock Implementation**: Use local storage that mirrors backend exactly
-4. **Integration**: Test that frontend can consume backend API format
-
-**⚠️  IMPORTANT**: Any changes to backend domain models MUST be reflected in frontend types immediately to maintain compatibility.
+- **🔗 Integration Work**: See [`/_docs/core/integration-architecture.md`](_docs/core/integration-architecture.md) for frontend-backend integration patterns
 
 ## Key Documentation
 
 **📚 Essential**: [`/_docs/api/contracts.md`](_docs/api/contracts.md), [`/_docs/core/system-architecture.md`](_docs/core/system-architecture.md), [`/_docs/backend/overview.md`](_docs/backend/overview.md)
+
+**🔗 Integration**: [`/_docs/core/integration-architecture.md`](_docs/core/integration-architecture.md) - Frontend-backend patterns and performance architecture
+
+**🎨 UI Patterns**: [`/_docs/frontend/ui-patterns.md`](_docs/frontend/ui-patterns.md) - Sidebar, navigation, and component patterns
 
 **🎯 Architecture**: [`/_docs/high-level/2-mvp.md`](_docs/high-level/2-mvp.md)
 
@@ -153,13 +114,7 @@ docker-compose down                      # Stop all services
 
 ## Architecture Overview
 
-ShuScribe is a **Universe Content Management Platform** with a three-panel VS Code-like workspace, scaling from indie fiction writers to Hollywood studios:
-
-1. **File Explorer** - Hierarchical project organization with path-based auto-folder creation
-2. **Editor** - Tabbed document editor with @-reference system and ProseMirror rich content
-3. **AI Panel** - Context-aware AI assistance (future implementation)
-
-**Path-Based Organization**: Documents use intuitive file paths (e.g., `/world/regions/kingdoms/stormlands/cities`) with automatic folder creation, eliminating manual folder management.
+ShuScribe is a **frontend-centric** Universe Content Management Platform with VS Code-like three-panel workspace.
 
 **Key Technologies**:
 - **Frontend**: Next.js 15.3.5, React 19, TypeScript, shadcn/ui, TanStack Query
@@ -167,6 +122,8 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 - **Authentication**: Supabase Auth with OAuth support
 - **AI**: Self-hosted Portkey Gateway with multiple LLM providers
 - **Deployment**: Railway (two-service architecture) + Vercel
+
+📚 **Detailed Architecture**: See [`/_docs/core/system-architecture.md`](_docs/core/system-architecture.md)
 
 ## Environment Setup
 
@@ -182,56 +139,53 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 2. Configure Supabase environment variables
 3. In Supabase dashboard: Enable auth providers, add redirect URLs
 
-### @-Reference System (Core Feature)
+### Core Features
 
-- Documents support `@character/name`, `@location/place` syntax for cross-references
-- References are highlighted and clickable in editor
-- **Frontend-Only Implementation**: Search uses local file tree data for instant results
-- **No Backend Integration**: Reference search stays in frontend for performance
+- **@-Reference System**: Cross-reference syntax (`@character/name`) with frontend-only search
+- **Path-Based Organization**: Automatic folder creation from document paths
+- **Dual Type System**: Performance-optimized with local cache and API layers
 
-### Common Patterns
-
-- Frontend `src/types/api.ts` defines the API contract
-- Backend `src/schemas/` models match frontend types with field aliases
-- Both systems use `ApiResponse<T>` wrapper for consistent responses
-- Authentication context flows from frontend to backend via Bearer tokens
-- **Path-Based Document Creation**: Documents automatically create folder hierarchies from paths (e.g., `/characters/locations/taverns/document` creates all missing folders)
-
-## Navigation Strategy
-
-**Design Philosophy**: Respects creative workflow patterns - writers focus deeply on single projects rather than rapidly switching between universes.
-
-**Detailed Documentation**: See [`/_docs/frontend/designs/navigation-patterns.md`](_docs/frontend/designs/navigation-patterns.md) for comprehensive UI patterns, user flow diagrams, and design decisions.
+📚 **Implementation Details**: See [`/_docs/frontend/ui-patterns.md`](_docs/frontend/ui-patterns.md) and [`/_docs/core/integration-architecture.md`](_docs/core/integration-architecture.md)
 
 ## Documentation Philosophy
 
-ShuScribe follows a **code-centric documentation approach** that prioritizes maintainability and accuracy.
+ShuScribe follows a **reasoning-first, code-centric documentation approach** that prioritizes maintainability and decision context.
 
 ### Core Principles
 
-**1. Documentation Points to Code, Never Duplicates It**
+**1. Reasoning-First Documentation**
+- Always start with WHY: Explain the problem context and reasoning behind decisions
+- Document the rationale before describing the solution (WHY: Helps developers adapt principles to new situations rather than cargo-cult programming)
+- Future documentation must include decision context for long-term maintainability
+- WHY: Reasoning ages better than implementation details and enables better decision-making
+
+**2. Documentation Points to Code, Never Duplicates It**
 - Documentation explains architecture, design decisions, and file organization
 - Code examples are avoided—instead, point to actual implementation files
 - API signatures, interfaces, and configurations live only in code
 - Documentation describes *what* and *why*, code shows *how*
+- WHY: Code duplication in docs becomes stale immediately, while architecture reasoning remains relevant
 
-**2. Structure Over Snippets**
-- Document component hierarchies, folder organization, and relationships
-- Explain integration patterns and data flow
+**3. Structure Over Snippets**
+- Document component hierarchies, folder organization, and relationships with reasoning for the structure
+- Explain integration patterns and data flow with context for why these patterns were chosen
 - Reference specific files and functions: `ComponentName.tsx:functionName()`
 - Use diagrams and architectural overviews instead of code blocks
+- WHY: Structural documentation remains relevant longer than implementation details
 
-**3. Maintenance-First Approach**
+**4. Maintenance-First Approach**
 - Documentation that duplicates code becomes stale immediately
 - File references auto-break when renamed, forcing updates
 - Keep docs focused on concepts that don't change frequently
 - Prefer linking to implementation over describing implementation
+- WHY: Reduces long-term maintenance burden and prevents documentation drift that misleads developers
 
-**4. Audience-Specific Documentation**
+**5. Audience-Specific Documentation**
 - **CLAUDE.md files**: Development guidance and project coordination
 - **_docs/ files**: Architecture, design decisions, and system overviews  
 - **README files**: Quick setup and orientation
 - **Comments in code**: Implementation details and complex logic
+- **.cursor/ files**: IDE-specific documentation and context for AI assistants
 
 ### Documentation Types
 
@@ -247,11 +201,26 @@ ShuScribe follows a **code-centric documentation approach** that prioritizes mai
 - Common patterns and anti-patterns
 - Tool usage and environment setup
 
-**Component Documentation** (within code)
-- TypeScript interfaces define APIs
-- JSDoc comments for complex functions
-- README files for setup instructions
-- Tests document expected behavior
+**Code Documentation Standards** (within files)
+- **File Headers**: Every significant file must have a purpose comment at the top explaining WHY it exists
+- **Architecture Role**: Explain how the file fits into overall system design and WHY this approach was chosen
+- **WHY-First Rationale**: Document why design decisions were made, not just what they do (essential for optimization and architectural patterns)
+- **Problem Context**: Explain what problem the file solves and why this solution was chosen
+- **Usage Patterns**: Guide developers on when and how to use the code, including reasoning for usage decisions
+- **Integration Points**: Explain how the file connects to other parts of the system and WHY these connections exist
+
+**Required File Header Format**:
+```typescript
+/**
+ * [File Purpose] - [Architecture Role]
+ * 
+ * WHY: [Problem Context and Design Rationale]
+ * [Integration Patterns and Reasoning]
+ * [Usage Guidelines with Context]
+ */
+```
+
+**Critical**: All file headers must explain the reasoning behind design decisions. Future developers need to understand WHY choices were made to adapt and extend the code correctly.
 
 ### Anti-Patterns to Avoid
 

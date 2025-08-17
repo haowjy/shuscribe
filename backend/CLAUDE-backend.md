@@ -7,6 +7,7 @@ This guide provides backend-specific information for working with the ShuScribe 
 This is the **backend-specific** guide. For complete project context, see:
 - **Main Guide**: `/CLAUDE.md` - Overall project philosophy and coordination
 - **Frontend Guide**: `/frontend/CLAUDE-frontend.md` - Frontend patterns and API contract definition
+- **Integration Patterns**: `/_docs/core/integration-architecture.md` - Frontend-backend integration
 - **Backend Architecture**: [`/_docs/backend/overview.md`](../_docs/backend/overview.md) - Detailed backend architecture
 
 ## Backend-First Integration

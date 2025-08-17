@@ -1,6 +1,27 @@
 /**
- * API Types matching backend domain models
- * These types represent the complete API contract for server communication
+ * Backend Interface Layer - Server Communication Types
+ * 
+ * WHY: This file exists to solve the performance problem of waiting for network requests.
+ * ShuScribe uses a dual type system where this layer handles server communication while
+ * localdb/types.ts provides instant local cache access. This separation enables
+ * offline-first functionality and instant UI responses.
+ * 
+ * Problem Context: Writers need instant feedback when editing, but server communication
+ * has network latency. This layer manages the network boundary with proper field mapping
+ * between frontend camelCase and backend snake_case conventions.
+ * 
+ * Usage Patterns:
+ * - Use these types for HTTP requests/responses with the backend
+ * - Field mapping utilities convert between naming conventions automatically
+ * - Integrates with TanStack Query for server state management
+ * 
+ * Integration Points:
+ * - Consumed by data providers in lib/data/
+ * - Field mappings sync with localdb/types.ts domain models
+ * - Supports offline-first architecture with background synchronization
+ * 
+ * @see frontend/src/lib/localdb/types.ts - Local cache layer for instant UI responses
+ * @see FIELD_MAPPINGS - Automatic case conversion utilities
  */
 
 // === Base Types ===
