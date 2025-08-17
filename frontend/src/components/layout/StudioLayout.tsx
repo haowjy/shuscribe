@@ -1,18 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ProjectsHeader } from './ProjectsHeader'
+import { StudioHeader } from './StudioHeader'
 import { SettingsModal } from '@/components/app/SettingsModal'
 import { DevToolsPage } from '@/components/debug/DevToolsPage'
 
-interface ProjectsLayoutProps {
+interface StudioLayoutProps {
   children: React.ReactNode
   onSettingsOpen: () => void
 }
 
-export function ProjectsLayout({ children, onSettingsOpen }: ProjectsLayoutProps) {
+export function StudioLayout({ children, onSettingsOpen }: StudioLayoutProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [currentView, setCurrentView] = useState<'projects' | 'devtools'>('projects')
+  const [currentView, setCurrentView] = useState<'studio' | 'devtools'>('studio')
 
   // Global keyboard shortcut for settings (⌘,)
   useEffect(() => {
@@ -37,24 +37,24 @@ export function ProjectsLayout({ children, onSettingsOpen }: ProjectsLayoutProps
     setCurrentView('devtools')
   }
 
-  const handleBackToProjects = () => {
-    setCurrentView('projects')
+  const handleBackToStudio = () => {
+    setCurrentView('studio')
   }
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <ProjectsHeader
+      <StudioHeader
         onSettingsClick={handleSettingsClick}
         onDevToolsClick={handleDevToolsClick}
-        onBackToProjects={handleBackToProjects}
+        onBackToStudio={handleBackToStudio}
         currentView={currentView}
       />
 
       {/* Main Content */}
       <main className="flex-1">
-        {currentView === 'projects' ? children : (
-          <DevToolsPage onBackToProjects={handleBackToProjects} />
+        {currentView === 'studio' ? children : (
+          <DevToolsPage onBackToProjects={handleBackToStudio} />
         )}
       </main>
 

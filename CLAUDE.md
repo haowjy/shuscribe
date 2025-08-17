@@ -48,7 +48,7 @@ ShuScribe is a **frontend-centric** Universe Content Management Platform built w
 
 ### Current Implementation Snapshot
 
-- **Implemented**: Comprehensive workspace system with projects (`/projects/[id]`), DocumentEditor with configurable toolbar/footer, Supabase auth integration, component gallery (`/component-gallery/editor/`), three-panel layout system (📚 [`/_docs/frontend/DOCUMENT-EDITOR.md`](_docs/frontend/DOCUMENT-EDITOR.md)).
+- **Implemented**: Comprehensive workspace system with studio projects (`/studio/[id]`), DocumentEditor with configurable toolbar/footer, Supabase auth integration, component gallery (`/component-gallery/editor/`), three-panel layout system (📚 [`/_docs/frontend/DOCUMENT-EDITOR.md`](_docs/frontend/DOCUMENT-EDITOR.md)).
 - **In Development**: TanStack Query integration, API routes/mocks, @-reference system, backend synchronization.
 
 ## Quick Start
@@ -124,6 +124,26 @@ ShuScribe is a **frontend-centric** Universe Content Management Platform with VS
 - **Deployment**: Railway (two-service architecture) + Vercel
 
 📚 **Detailed Architecture**: See [`/_docs/core/system-architecture.md`](_docs/core/system-architecture.md)
+
+### Frontend vs Backend Route Architecture
+
+**Frontend Routes**: `/studio` (UI workspace concept)
+- `/studio` - Author's creative workspace containing multiple projects
+- `/studio/[id]` - Individual project workspace within studio
+- Represents the user interface navigation and workspace organization
+
+**Backend APIs**: `/projects` (data resource management)  
+- `/projects` - CRUD operations for project data entities
+- `/projects/{id}` - Individual project data management
+- Represents RESTful resource management regardless of UI presentation
+
+**Why Different?**
+- **Separation of Concerns**: UI navigation vs data management
+- **API Stability**: Backend endpoints remain consistent regardless of frontend redesigns
+- **Semantic Clarity**: Frontend "studio" = workspace concept, Backend "projects" = data entities
+- **Future Flexibility**: Frontend can rebrand/restructure without breaking API contracts
+
+📚 **WHY**: This architecture prevents frontend UI changes from breaking backend APIs and allows independent evolution of presentation layer and data layer.
 
 ## Environment Setup
 

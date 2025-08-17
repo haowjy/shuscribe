@@ -48,7 +48,7 @@ export function SignInForm({ onModeChange, onSuccess }: SignInFormProps) {
       setLoading(false)
     } else {
       onSuccess()
-      router.push('/projects')
+      router.push('/studio')
     }
   }
 

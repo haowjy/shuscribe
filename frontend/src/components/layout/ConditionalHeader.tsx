@@ -12,7 +12,7 @@ interface ConditionalHeaderProps {
 export default function ConditionalHeader({ children, showGallery }: ConditionalHeaderProps) {
   const pathname = usePathname();
   const isGalleryRoute = pathname.startsWith("/component-gallery");
-  const isAppRoute = pathname.startsWith("/projects");
+  const isAppRoute = pathname.startsWith("/studio");
 
   if (isGalleryRoute || isAppRoute) {
     // Gallery routes and app routes: no global header, full-height app experience

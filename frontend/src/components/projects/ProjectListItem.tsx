@@ -41,7 +41,7 @@ export function ProjectListItem({
     if (onClick) {
       onClick(id)
     } else {
-      router.push(`/projects/${id}`)
+      router.push(`/studio/${id}`)
     }
   }
 

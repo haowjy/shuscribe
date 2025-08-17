@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Protected routes that require authentication
-  const protectedPaths = ['/projects', '/workspace']
+  const protectedPaths = ['/studio', '/workspace']
   const isProtectedPath = protectedPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
   )
@@ -46,10 +46,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If authenticated and trying to access landing, redirect to projects
+  // If authenticated and trying to access landing, redirect to studio
   if (request.nextUrl.pathname === '/' && user && !request.nextUrl.searchParams.has('redirect')) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/projects'
+    redirectUrl.pathname = '/studio'
     return NextResponse.redirect(redirectUrl)
   }
 

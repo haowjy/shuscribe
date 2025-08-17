@@ -22,19 +22,19 @@ import {
   TooltipTrigger 
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import type { AuthorRailMode } from './AuthorWorkspacesContainer'
+import type { StudioRailMode } from './StudioContainer'
 
 interface RailItem {
-  id: AuthorRailMode
+  id: StudioRailMode
   label: string
   icon: ComponentType<{ className?: string }>
   shortcut?: string
   disabled?: boolean
 }
 
-interface AuthorLeftRailProps {
-  activeMode: AuthorRailMode
-  onModeChange: (mode: AuthorRailMode) => void
+interface StudioLeftRailProps {
+  activeMode: StudioRailMode
+  onModeChange: (mode: StudioRailMode) => void
   onSettingsOpen: () => void
   projectId?: string
   mostRecentProjectId?: string | null
@@ -81,19 +81,19 @@ const toolsRailItems: RailItem[] = [
   ] : [])
 ]
 
-export function AuthorLeftRail({ 
+export function StudioLeftRail({ 
   activeMode, 
   onModeChange, 
   onSettingsOpen, 
   projectId, 
   mostRecentProjectId,
   className 
-}: AuthorLeftRailProps) {
+}: StudioLeftRailProps) {
 
   const router = useRouter()
   
   // Persisted expand/collapse state (default collapsed)
-  const STORAGE_KEY = 'shuscribe_ui_author_rail_collapsed'
+  const STORAGE_KEY = 'shuscribe_ui_studio_rail_collapsed'
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
@@ -116,12 +116,12 @@ export function AuthorLeftRail({
     }
   }, [expanded])
 
-  const handleModeClick = (mode: AuthorRailMode) => {
-    // If we're on /projects and clicking a project-specific mode, navigate to recent project
+  const handleModeClick = (mode: StudioRailMode) => {
+    // If we're on /studio and clicking a project-specific mode, navigate to recent project
     if (shouldGreyOut && mostRecentProjectId && (mode === 'workspace' || mode === 'series' || mode === 'articles')) {
       const targetPath = mode === 'workspace' 
-        ? `/projects/${mostRecentProjectId}` 
-        : `/projects/${mostRecentProjectId}/${mode}`
+        ? `/studio/${mostRecentProjectId}` 
+        : `/studio/${mostRecentProjectId}/${mode}`
       router.push(targetPath)
     } else {
       // Normal mode change
@@ -136,7 +136,7 @@ export function AuthorLeftRail({
   }
 
   const renderRailButton = (opts: {
-    id?: AuthorRailMode
+    id?: StudioRailMode
     label: string
     icon: ComponentType<{ className?: string }>
     active?: boolean
@@ -253,13 +253,13 @@ export function AuthorLeftRail({
 
         {/* Global Navigation Section */}
         <div className="flex flex-col gap-0.5 p-1.5">
-          {/* Projects */}
+          {/* Studio */}
           {renderRailButton({
-            id: 'projects',
-            label: 'Projects',
+            id: 'studio',
+            label: 'Studio',
             icon: Home,
-            active: activeMode === 'projects',
-            onClick: () => handleModeClick('projects')
+            active: activeMode === 'studio',
+            onClick: () => handleModeClick('studio')
           })}
 
         </div>

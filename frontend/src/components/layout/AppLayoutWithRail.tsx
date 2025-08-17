@@ -3,7 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { GlobalActivityRail } from './GlobalActivityRail'
-import { AuthorWorkspacesContainer } from './AuthorWorkspacesContainer'
+import { StudioContainer } from './StudioContainer'
 import { SettingsModal } from '@/components/app/SettingsModal'
 import { DevToolsPage } from '@/components/debug/DevToolsPage'
 import { ComponentGallery } from '@/components/debug/ComponentGallery'
@@ -15,15 +15,15 @@ interface AppLayoutWithRailProps {
 export function AppLayoutWithRail({ children }: AppLayoutWithRailProps) {
   const pathname = usePathname()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [currentView, setCurrentView] = useState<'projects' | 'devtools' | 'component-gallery'>('projects')
+  const [currentView, setCurrentView] = useState<'studio' | 'devtools' | 'component-gallery'>('studio')
   
-  // Determine if this is a projects route (now using AuthorWorkspacesContainer)
-  const isProjectsRoute = pathname.startsWith('/projects')
+  // Determine if this is a studio route (now using StudioContainer)
+  const isStudioRoute = pathname.startsWith('/studio')
   
-  // Global keyboard shortcut for settings (⌘,) - only for non-projects routes 
-  // (projects routes handle this in AuthorWorkspacesContainer)
+  // Global keyboard shortcut for settings (⌘,) - only for non-studio routes 
+  // (studio routes handle this in StudioContainer)
   useEffect(() => {
-    if (isProjectsRoute) return // Don't add listener for projects routes
+    if (isStudioRoute) return // Don't add listener for studio routes
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey && event.key === ',') {
@@ -34,21 +34,21 @@ export function AppLayoutWithRail({ children }: AppLayoutWithRailProps) {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isProjectsRoute])
+  }, [isStudioRoute])
 
   // Ensure routed pages always render in main area by exiting devtools view on navigation
   useEffect(() => {
-    setCurrentView('projects')
+    setCurrentView('studio')
   }, [pathname])
 
-  // For projects routes, use AuthorWorkspacesContainer with unified rail
-  if (isProjectsRoute) {
-    return <AuthorWorkspacesContainer>{children}</AuthorWorkspacesContainer>
+  // For studio routes, use StudioContainer with unified rail
+  if (isStudioRoute) {
+    return <StudioContainer>{children}</StudioContainer>
   }
 
   const handleSearchFocus = () => {
-    // Only try to focus search if we're in projects view
-    if (currentView === 'projects') {
+    // Only try to focus search if we're in studio view
+    if (currentView === 'studio') {
       const searchInput = document.querySelector('input[type="search"], input[placeholder*="search" i]') as HTMLInputElement
       if (searchInput) {
         searchInput.focus()
@@ -57,7 +57,7 @@ export function AppLayoutWithRail({ children }: AppLayoutWithRailProps) {
   }
 
   const handleHomeClick = () => {
-    setCurrentView('projects')
+    setCurrentView('studio')
   }
 
   const handleDevToolsClick = () => {
@@ -68,7 +68,7 @@ export function AppLayoutWithRail({ children }: AppLayoutWithRailProps) {
     setCurrentView('component-gallery')
   }
 
-  // Non-projects app routes - show rail + content with proper spacing
+  // Non-studio app routes - show rail + content with proper spacing
   return (
     <div className="relative min-h-screen">
       <GlobalActivityRail 
@@ -82,9 +82,9 @@ export function AppLayoutWithRail({ children }: AppLayoutWithRailProps) {
       
       {/* Main content with left margin to account for rail on desktop, no margin on mobile (floating dock) */}
       <main className="md:ml-14">
-        {currentView === 'projects' ? children : 
+        {currentView === 'studio' ? children : 
          currentView === 'devtools' ? (
-          <DevToolsPage onBackToProjects={() => setCurrentView('projects')} />
+          <DevToolsPage onBackToProjects={() => setCurrentView('studio')} />
          ) : currentView === 'component-gallery' ? (
           <ComponentGallery />
          ) : children}

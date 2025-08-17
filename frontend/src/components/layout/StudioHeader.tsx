@@ -10,21 +10,21 @@ import {
 } from '@/components/ui/tooltip'
 import { AppBreadcrumb, type BreadcrumbItemData } from '@/components/ui/AppBreadcrumb'
 
-interface ProjectsHeaderProps {
+interface StudioHeaderProps {
   onSettingsClick: () => void
   onProfileClick?: () => void
   onDevToolsClick?: () => void
-  onBackToProjects?: () => void
-  currentView?: 'projects' | 'devtools'
+  onBackToStudio?: () => void
+  currentView?: 'studio' | 'devtools'
 }
 
-export function ProjectsHeader({
+export function StudioHeader({
   onSettingsClick,
   onProfileClick,
   onDevToolsClick,
-  onBackToProjects,
-  currentView = 'projects'
-}: ProjectsHeaderProps) {
+  onBackToStudio,
+  currentView = 'studio'
+}: StudioHeaderProps) {
   const showDevTools = process.env.NODE_ENV === 'development'
 
   const handleProfileClick = () => {
@@ -40,7 +40,7 @@ export function ProjectsHeader({
   const breadcrumbItems: BreadcrumbItemData[] = [
     {
       label: 'ShuScribe',
-      onClick: onBackToProjects
+      onClick: onBackToStudio
     },
     ...(currentView === 'devtools' ? [{
       label: 'Developer Tools',

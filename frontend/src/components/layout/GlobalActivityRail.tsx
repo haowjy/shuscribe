@@ -24,7 +24,7 @@ interface GlobalActivityRailProps {
   onDevToolsClick?: () => void
   onComponentGalleryClick?: () => void
   onHomeClick?: () => void
-  currentView?: 'projects' | 'devtools' | 'component-gallery'
+  currentView?: 'studio' | 'devtools' | 'component-gallery'
   className?: string
 }
 
@@ -34,7 +34,7 @@ export function GlobalActivityRail({
   onDevToolsClick,
   onComponentGalleryClick,
   onHomeClick,
-  currentView = 'projects',
+  currentView = 'studio',
   className = '' 
 }: GlobalActivityRailProps) {
   const router = useRouter()
@@ -45,7 +45,7 @@ export function GlobalActivityRail({
       onHomeClick()
     } else {
       // Fallback to routing if no callback provided
-      router.push('/projects')
+      router.push('/studio')
     }
   }
 
@@ -91,7 +91,7 @@ export function GlobalActivityRail({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={currentView === 'projects' ? "secondary" : "ghost"}
+                variant={currentView === 'studio' ? "secondary" : "ghost"}
                 size="icon"
                 className="h-9 w-9"
                 onClick={handleHomeClick}
@@ -231,7 +231,7 @@ export function GlobalActivityRail({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={currentView === 'projects' ? "secondary" : "ghost"}
+              variant={currentView === 'studio' ? "secondary" : "ghost"}
               size="icon"
               className="h-8 w-8"
               onClick={handleHomeClick}

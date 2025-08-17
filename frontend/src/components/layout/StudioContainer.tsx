@@ -4,7 +4,7 @@ import { useCallback, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
-import { AuthorLeftRail } from './AuthorLeftRail'
+import { StudioLeftRail } from './StudioLeftRail'
 import { WorkspaceLayout } from '@/components/workspace/layout/WorkspaceLayout'
 import { DevToolsPage } from '@/components/debug/DevToolsPage'
 import { SettingsPage } from '@/components/app/SettingsPage'
@@ -19,8 +19,8 @@ import { useState } from 'react'
 import { ProjectStateProvider, useProjectState } from '@/components/providers/ProjectStateProvider'
 import type { RailMode } from '@/components/workspace/layout/types'
 
-// Extend RailMode to include 'projects' for projects list view
-export type AuthorRailMode = 'projects' | 'workspace' | 'component-gallery' | 'devtools' | 'settings' | 'series' | 'articles'
+// Extend RailMode to include 'studio' for studio list view
+export type StudioRailMode = 'studio' | 'workspace' | 'component-gallery' | 'devtools' | 'settings' | 'series' | 'articles'
 
 interface ActivityConfiguration {
   leftPanel: { enabled: boolean; defaultOpen: boolean }
@@ -42,11 +42,11 @@ const TOOL_CONFIGURATION: ActivityConfiguration = {
   bottomPanel: { enabled: false, defaultOpen: false }
 }
 
-interface AuthorWorkspacesContainerProps {
+interface StudioContainerProps {
   children: React.ReactNode
 }
 
-export function AuthorWorkspacesContainer({ children }: AuthorWorkspacesContainerProps) {
+export function StudioContainer({ children }: StudioContainerProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -70,18 +70,18 @@ export function AuthorWorkspacesContainer({ children }: AuthorWorkspacesContaine
   }, []) // Empty dependency array - only run once after mount
   
   // Extract project ID from URL if we're in a specific project
-  const projectId = pathname.match(/^\/projects\/([^\/]+)/)?.[1]
+  const projectId = pathname.match(/^\/studio\/([^\/]+)/)?.[1]
   
   // Determine current rail mode based on pathname
-  const railMode: AuthorRailMode = (() => {
-    if (pathname === '/projects') return 'projects'
+  const railMode: StudioRailMode = (() => {
+    if (pathname === '/studio') return 'studio'
     if (pathname.includes('/devtools')) return 'devtools'
     if (pathname.includes('/settings')) return 'settings'
     if (pathname.includes('/component-gallery')) return 'component-gallery'
     if (pathname.includes('/series')) return 'series'
     if (pathname.includes('/articles')) return 'articles'
-    if (projectId && pathname === `/projects/${projectId}`) return 'workspace'
-    return projectId ? 'workspace' : 'projects' // default based on context
+    if (projectId && pathname === `/studio/${projectId}`) return 'workspace'
+    return projectId ? 'workspace' : 'studio' // default based on context
   })()
   
   // Get activity configuration based on current mode
@@ -109,16 +109,16 @@ export function AuthorWorkspacesContainer({ children }: AuthorWorkspacesContaine
   }, [])
 
   // Navigation handler - navigate between different modes
-  const handleRailNavigation = useCallback((mode: AuthorRailMode) => {
-    if (mode === 'projects') {
-      router.push('/projects')
+  const handleRailNavigation = useCallback((mode: StudioRailMode) => {
+    if (mode === 'studio') {
+      router.push('/studio')
     } else if (mode === 'workspace' && projectId) {
-      router.push(`/projects/${projectId}`)
+      router.push(`/studio/${projectId}`)
     } else if (projectId) {
-      router.push(`/projects/${projectId}/${mode}`)
+      router.push(`/studio/${projectId}/${mode}`)
     } else {
-      // If we're not in a project context, navigate to projects first
-      router.push('/projects')
+      // If we're not in a project context, navigate to studio first
+      router.push('/studio')
     }
   }, [router, projectId])
 
@@ -132,8 +132,8 @@ export function AuthorWorkspacesContainer({ children }: AuthorWorkspacesContaine
   // Render content based on current rail mode
   const renderMainContent = () => {
     switch (railMode) {
-      case 'projects':
-        // Render the projects list (passed as children)
+      case 'studio':
+        // Render the studio project list (passed as children)
         return children
         
       case 'devtools':
@@ -273,8 +273,8 @@ export function AuthorWorkspacesContainer({ children }: AuthorWorkspacesContaine
     <ProjectStateProvider>
       <TooltipProvider delayDuration={300}>
         <div className="h-screen bg-background flex overflow-hidden">
-        {/* Author Left Rail - Controls activity/mode */}
-        <AuthorLeftRail 
+        {/* Studio Left Rail - Controls activity/mode */}
+        <StudioLeftRail 
           activeMode={railMode}
           onModeChange={handleRailNavigation}
           onSettingsOpen={() => setIsSettingsOpen(true)}

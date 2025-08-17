@@ -38,9 +38,9 @@ export default function HomePage() {
           
           {!loading && (
             isAuthenticated ? (
-              <Link href="/projects">
+              <Link href="/studio">
                 <Button className="inline-flex items-center gap-2">
-                  Continue to Projects
+                  Continue to Studio
                   <ArrowRight size={16} />
                 </Button>
               </Link>

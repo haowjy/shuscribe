@@ -46,7 +46,7 @@ export function ActivityContainer({ projectId }: ActivityContainerProps) {
     if (pathname.includes('/component-gallery')) return 'component-gallery'
     if (pathname.includes('/series')) return 'series'
     if (pathname.includes('/articles')) return 'articles'
-    if (pathname === `/projects/${projectId}`) return 'workspace'
+    if (pathname === `/studio/${projectId}`) return 'workspace'
     return 'workspace' // default
   })()
   
@@ -71,11 +71,11 @@ export function ActivityContainer({ projectId }: ActivityContainerProps) {
   // Navigation handler - navigate to project-specific routes
   const handleRailNavigation = useCallback((mode: RailMode) => {
     if (mode === 'workspace') {
-      router.push(`/projects/${projectId}`)
-    } else if (mode === 'projects') {
-      router.push(`/projects`)
+      router.push(`/studio/${projectId}`)
+    } else if (mode === 'studio') {
+      router.push(`/studio`)
     } else {
-      router.push(`/projects/${projectId}/${mode}`)
+      router.push(`/studio/${projectId}/${mode}`)
     }
   }, [router, projectId])
 

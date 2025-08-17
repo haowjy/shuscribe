@@ -91,8 +91,8 @@ export function LeftRail({ activeMode, onModeChange, className }: LeftRailProps)
     onModeChange(mode)
   }
 
-  const handleGoToProjects = () => {
-    router.push('/projects')
+  const handleGoToStudio = () => {
+    router.push('/studio')
   }
 
   const renderRailButton = (
@@ -174,14 +174,14 @@ export function LeftRail({ activeMode, onModeChange, className }: LeftRailProps)
           <Tooltip>
             <TooltipTrigger asChild>
               {renderRailButton({
-                label: 'Projects',
+                label: 'Studio',
                 icon: Home,
                 active: false,
-                onClick: handleGoToProjects
+                onClick: handleGoToStudio
               })}
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>Back to Projects</p>
+              <p>Back to Studio</p>
             </TooltipContent>
           </Tooltip>
         </div>

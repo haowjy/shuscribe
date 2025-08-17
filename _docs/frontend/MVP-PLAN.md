@@ -12,7 +12,7 @@
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Rail │                    Dynamic Content Area                              │
 │ ──── │ ──────────────────────────────────────────────────────────────────── │
-│ 📁   │ Route: /projects/[id] (Explorer)                                    │
+│ 📁   │ Route: /studio/[id] (Explorer)                                      │
 │ 📚   │ ┌─ Editor Tabs ─────────────────────────────────────────────┐        │
 │ 📄   │ │ chapter-01.md │ characters.md │           [+]          │        │
 │ ──── │ └───────────────────────────────────────────────────────────┘        │
@@ -23,7 +23,7 @@
 │      │                                                                      │
 │      │ [Footer: 847 words • Auto-saved • v1.1]                            │
 │      │                                                                      │
-│      │ Route: /projects/[id]/series (Series Management)                    │
+│      │ Route: /studio/[id]/series (Series Management)                      │
 │      │ ┌─ Series: "The Fire Chronicles" ─────────────────────────┐        │
 │      │ │ Status: Draft    Visibility: Public                    │        │
 │      │ │ Chapters:                                              │        │
@@ -46,7 +46,7 @@
 
 **✅ Universal Navigation System**:
 - Left-rail navigation consistent across all project tools
-- Route-based content switching (`/projects/[id]/[tool]`)
+- Route-based content switching (`/studio/[id]/[tool]`)
 - Active state management based on current route
 - Familiar navigation patterns for fiction writers
 
