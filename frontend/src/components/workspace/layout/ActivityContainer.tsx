@@ -72,8 +72,6 @@ export function ActivityContainer({ projectId }: ActivityContainerProps) {
   const handleRailNavigation = useCallback((mode: RailMode) => {
     if (mode === 'workspace') {
       router.push(`/studio/${projectId}`)
-    } else if (mode === 'studio') {
-      router.push(`/studio`)
     } else {
       router.push(`/studio/${projectId}/${mode}`)
     }

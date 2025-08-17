@@ -119,28 +119,33 @@ export function ComponentGallery({ }: ComponentGalleryProps) {
         <ResizablePanel defaultSize={75} className="min-w-0">
           <div className="h-full flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-3 border-b border-border bg-background">
-              {/* Left sidebar toggle - only show if sidebar is collapsed */}
-              {sidebarCollapsed && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 mr-3 shrink-0"
-                  onClick={handleSidebarToggle}
-                  aria-label="Show component browser"
-                >
-                  <PanelLeftOpen className="h-4 w-4" />
-                </Button>
-              )}
-              
-              {/* Component header content */}
-              <ComponentGalleryHeader
-                componentId={selectedComponentId}
-                variantId={selectedVariantId}
-                viewMode={viewMode}
-                onVariantChange={handleVariantChange}
-                onViewModeChange={handleViewModeChange}
-              />
+            <div className="border-b border-border bg-background">
+              <div className="p-4">
+                {/* Sidebar toggle - only show if sidebar is collapsed */}
+                {sidebarCollapsed && (
+                  <div className="mb-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleSidebarToggle}
+                      aria-label="Show component browser"
+                    >
+                      <PanelLeftOpen className="h-4 w-4" />
+                      Show Component Browser
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Component header content */}
+                <ComponentGalleryHeader
+                  componentId={selectedComponentId}
+                  variantId={selectedVariantId}
+                  viewMode={viewMode}
+                  onVariantChange={handleVariantChange}
+                  onViewModeChange={handleViewModeChange}
+                />
+              </div>
             </div>
 
             {/* Content */}

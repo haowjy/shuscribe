@@ -1,8 +1,9 @@
 'use client'
 
-import { Eye, Code } from 'lucide-react'
+import { Eye, Code, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { getComponentById, getVariantById } from './galleryConfig'
 
 interface ComponentGalleryHeaderProps {
@@ -25,7 +26,7 @@ export function ComponentGalleryHeader({
 
   if (!component || !variant) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="p-4">
         <div className="text-sm text-muted-foreground">
           No Component Selected
         </div>
@@ -34,71 +35,85 @@ export function ComponentGalleryHeader({
   }
 
   return (
-    <div className="flex items-center justify-between w-full min-w-0 h-8">
-      {/* Left side - Component info */}
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="min-w-0">
-          <h2 className="text-sm font-medium truncate leading-none">{component.name}</h2>
-          <p className="text-xs text-muted-foreground truncate leading-none mt-0.5">
-            {variant.name} - {variant.description}
+    <div className="space-y-4">
+      {/* Top section - Component name and variant selector */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold">{component.name}</h1>
+          <Badge variant="outline" className="text-xs">
+            {component.category}
+          </Badge>
+        </div>
+        
+        {/* Variant Dropdown */}
+        {component.variants.length > 1 && onVariantChange && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">variants:</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  {variant.name}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {component.variants.map((v) => (
+                  <DropdownMenuItem
+                    key={v.id}
+                    onClick={() => onVariantChange(v.id)}
+                    className={variantId === v.id ? "bg-muted" : ""}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{v.name}</span>
+                      <span className="text-xs text-muted-foreground">{v.description}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </div>
+
+      {/* Middle section - Two-column descriptions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2 border-y border-border">
+        <div>
+          <h3 className="text-sm font-medium mb-1">Component</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {component.description}
           </p>
         </div>
-        <Badge variant="outline" className="text-xs shrink-0 h-5">
-          {component.category}
-        </Badge>
+        <div>
+          <h3 className="text-sm font-medium mb-1">Variant</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {variant.description}
+          </p>
+        </div>
       </div>
-      
-      {/* Right side - Controls */}
-      <div className="flex items-center gap-3 shrink-0">
-        {/* Variant Selector */}
-        {component.variants.length > 1 && onVariantChange && (
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs text-muted-foreground shrink-0">Variant:</span>
-            <div className="relative min-w-0">
-              <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none pb-1">
-                {component.variants.map((v) => (
-                  <Button
-                    key={v.id}
-                    variant={variantId === v.id ? 'default' : 'outline'}
-                    size="sm"
-                    className="h-6 text-xs px-2 shrink-0"
-                    onClick={() => onVariantChange(v.id)}
-                  >
-                    {v.name}
-                  </Button>
-                ))}
-              </div>
-              {/* Subtle scroll fade indicators */}
-              <div className="pointer-events-none absolute top-0 left-0 w-3 h-full bg-gradient-to-r from-background to-transparent" />
-              <div className="pointer-events-none absolute top-0 right-0 w-3 h-full bg-gradient-to-l from-background to-transparent" />
-            </div>
-          </div>
-        )}
-        
-        {/* View Mode Toggle */}
-        {onViewModeChange && (
-          <div className="flex gap-1">
-            <Button
-              variant={viewMode === 'preview' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => onViewModeChange('preview')}
-              className="gap-1 h-6 px-2"
-            >
-              <Eye className="h-3 w-3" />
-              Preview
-            </Button>
-            <Button
-              variant={viewMode === 'code' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => onViewModeChange('code')}
-              className="gap-1 h-6 px-2"
-            >
-              <Code className="h-3 w-3" />
-              Code
-            </Button>
-          </div>
-        )}
-      </div>
+
+      {/* Bottom section - View mode toggle */}
+      {onViewModeChange && (
+        <div className="flex gap-1">
+          <Button
+            variant={viewMode === 'preview' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => onViewModeChange('preview')}
+            className="gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            Preview
+          </Button>
+          <Button
+            variant={viewMode === 'code' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => onViewModeChange('code')}
+            className="gap-2"
+          >
+            <Code className="h-4 w-4" />
+            Code
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
