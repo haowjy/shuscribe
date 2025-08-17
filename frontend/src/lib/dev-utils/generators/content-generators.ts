@@ -4,7 +4,7 @@
  */
 
 import { safeFaker, themeGenerators, getRandomTheme } from './faker-utils'
-import type { Project, Document, FileTreeItem, Tag } from '../localdb/types'
+import type { Project, Document, FileTreeItem, Tag } from '../../localdb/types'
 
 // Generate random project with theme-appropriate content
 export const generateProject = async (userId?: string): Promise<Partial<Project>> => {

@@ -2,25 +2,34 @@ import { db } from './db';
 import { generateProjectId, generateDocumentId, generateFileTreeId, generateTagId } from '../utils/id';
 
 // Conditional dev-only imports
-let contentGenerators: any = null;
+let enhancedSeeds: any = null;
+let legacyGenerators: any = null;
+
 if (process.env.NODE_ENV === 'development') {
   try {
-    contentGenerators = require('../dev/content-generators');
+    enhancedSeeds = require('../dev-utils/seeds/enhanced-seeds');
+    legacyGenerators = require('../dev-utils/generators/content-generators');
   } catch (error) {
-    console.warn('Content generators not available:', error);
+    console.warn('Dev utilities not available:', error);
   }
 }
 
-// Enhanced seed function with faker integration
+// Enhanced seed function with realistic markdown content
 export async function seedSampleProject(userId?: string): Promise<string> {
-  const projectId = generateProjectId();
-  
-  // Use faker-generated content in development, static fallback otherwise
-  if (contentGenerators && process.env.NODE_ENV === 'development') {
-    return await seedWithFaker(projectId, userId);
-  } else {
-    return await seedStaticContent(projectId, userId);
+  // Try enhanced seeds first (with rich markdown content)
+  if (enhancedSeeds && process.env.NODE_ENV === 'development') {
+    return await enhancedSeeds.seedSampleProject(userId);
   }
+  
+  // Fallback to legacy faker-generated content
+  if (legacyGenerators && process.env.NODE_ENV === 'development') {
+    const projectId = generateProjectId();
+    return await seedWithFaker(projectId, userId);
+  }
+  
+  // Final fallback to static content for production
+  const projectId = generateProjectId();
+  return await seedStaticContent(projectId, userId);
 }
 
 // Faker-powered seed function (development only)
@@ -31,7 +40,7 @@ async function seedWithFaker(projectId: string, userId?: string): Promise<string
     generateLocation,
     generateChapter,
     generateTags
-  } = contentGenerators;
+  } = legacyGenerators;
 
   await db.transaction('rw', [db.projects, db.documents, db.fileTree, db.tags, db.meta], async () => {
     // Generate random project
@@ -334,7 +343,13 @@ async function seedStaticContent(projectId: string, userId?: string): Promise<st
 
 // Enhanced large demo with multiple varied projects (development only)
 export async function seedLargeDemo(userId?: string): Promise<string> {
-  if (contentGenerators && process.env.NODE_ENV === 'development') {
+  // Try enhanced seeds first
+  if (enhancedSeeds && process.env.NODE_ENV === 'development') {
+    return await enhancedSeeds.seedLargeDemo(userId);
+  }
+  
+  // Fallback to legacy approach
+  if (legacyGenerators && process.env.NODE_ENV === 'development') {
     // Generate 3-5 varied projects with different themes
     const projectIds = [];
     
@@ -344,8 +359,8 @@ export async function seedLargeDemo(userId?: string): Promise<string> {
     }
     
     return projectIds[0]; // Return first project ID
-  } else {
-    // Fallback to single project
-    return await seedSampleProject(userId);
   }
+  
+  // Final fallback to single project
+  return await seedSampleProject(userId);
 }
