@@ -8,7 +8,6 @@ import { createLocalDataProvider } from '@/lib/data/local-provider'
 import { seedSampleProject } from '@/lib/localdb/seeds'
 import { ProjectList } from '@/components/projects/ProjectList'
 import { ProjectListItem } from '@/components/projects/ProjectListItem'
-import { ProjectsLayout } from '@/components/layout/ProjectsLayout'
 import type { Project } from '@/lib/localdb/types'
 import { 
   Plus, 
@@ -62,19 +61,17 @@ export default function ProjectsPage() {
 
   if (loading || loadingProjects) {
     return (
-      <ProjectsLayout onSettingsOpen={() => {}}>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground">Loading your projects...</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading your projects...</p>
         </div>
-      </ProjectsLayout>
+      </div>
     )
   }
 
   return (
-    <ProjectsLayout onSettingsOpen={() => {}}>
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
         {/* Top Bar */}
         <div className="flex items-center justify-start mb-8">
@@ -159,6 +156,6 @@ export default function ProjectsPage() {
           </div>
         )}
       </div>
-    </ProjectsLayout>
+    </div>
   )
 }

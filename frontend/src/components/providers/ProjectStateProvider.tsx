@@ -43,6 +43,7 @@ interface ProjectStateContextType {
   // Cache management
   clearProjectCache: (projectId: string) => void
   getProjectState: (projectId: string) => ProjectState | null
+  getMostRecentProjectId: () => string | null
 }
 
 // Default project state
@@ -167,6 +168,15 @@ export function ProjectStateProvider({ children }: ProjectStateProviderProps) {
     return projectCache[projectId] || null
   }, [projectCache])
 
+  const getMostRecentProjectId = useCallback((): string | null => {
+    const projects = Object.entries(projectCache)
+    if (projects.length === 0) return null
+    
+    // Sort by lastAccessed time, most recent first
+    const sorted = projects.sort(([, a], [, b]) => b.lastAccessed - a.lastAccessed)
+    return sorted[0][0] // Return the project ID of the most recent
+  }, [projectCache])
+
   const currentState = currentProjectId ? projectCache[currentProjectId] || null : null
 
   const value: ProjectStateContextType = {
@@ -177,7 +187,8 @@ export function ProjectStateProvider({ children }: ProjectStateProviderProps) {
     updateEditorTabs,
     updateActiveRoute,
     clearProjectCache,
-    getProjectState
+    getProjectState,
+    getMostRecentProjectId
   }
 
   return (

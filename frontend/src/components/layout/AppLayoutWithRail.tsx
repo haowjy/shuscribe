@@ -3,6 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { GlobalActivityRail } from './GlobalActivityRail'
+import { AuthorWorkspacesContainer } from './AuthorWorkspacesContainer'
 import { SettingsModal } from '@/components/app/SettingsModal'
 import { DevToolsPage } from '@/components/debug/DevToolsPage'
 import { ComponentGallery } from '@/components/debug/ComponentGallery'
@@ -16,10 +17,11 @@ export function AppLayoutWithRail({ children }: AppLayoutWithRailProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [currentView, setCurrentView] = useState<'projects' | 'devtools' | 'component-gallery'>('projects')
   
-  // Determine if this is a projects route (now using ProjectsLayout instead of rail)
+  // Determine if this is a projects route (now using AuthorWorkspacesContainer)
   const isProjectsRoute = pathname.startsWith('/projects')
   
-  // Global keyboard shortcut for settings (⌘,) - only for non-projects routes
+  // Global keyboard shortcut for settings (⌘,) - only for non-projects routes 
+  // (projects routes handle this in AuthorWorkspacesContainer)
   useEffect(() => {
     if (isProjectsRoute) return // Don't add listener for projects routes
 
@@ -39,9 +41,9 @@ export function AppLayoutWithRail({ children }: AppLayoutWithRailProps) {
     setCurrentView('projects')
   }, [pathname])
 
-  // For projects routes, skip the rail entirely since ProjectsLayout handles the UI
+  // For projects routes, use AuthorWorkspacesContainer with unified rail
   if (isProjectsRoute) {
-    return <>{children}</>
+    return <AuthorWorkspacesContainer>{children}</AuthorWorkspacesContainer>
   }
 
   const handleSearchFocus = () => {

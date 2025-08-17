@@ -2,6 +2,7 @@
 
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import type { WheelEvent } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -34,6 +35,16 @@ export function EditorTabs({
   onReorderTabs
 }: EditorTabsProps) {
   const { scrollContainerRef, canScrollLeft, canScrollRight, hasOverflow } = useTabScroll([tabs])
+  
+  // Prevent vertical scroll when hovering tabs; translate vertical wheel to horizontal scroll
+  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      event.preventDefault()
+      container.scrollLeft += event.deltaY
+    }
+  }
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -90,7 +101,8 @@ export function EditorTabs({
       >
         <div
           ref={scrollContainerRef}
-          className="flex items-center gap-0 overflow-x-auto scrollbar-none scroll-smooth flex-1 min-w-0 h-full pl-1 pr-0"
+          className="flex items-center gap-0 overflow-x-auto overflow-y-hidden overscroll-y-none touch-pan-x scrollbar-none scroll-smooth flex-1 min-w-0 h-full pl-1 pr-0"
+          onWheel={handleWheel}
           style={{ 
             scrollbarWidth: 'none', 
             msOverflowStyle: 'none'
