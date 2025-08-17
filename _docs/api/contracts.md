@@ -60,49 +60,15 @@ POST   /projects/{id}/llm/generate      // Generate content with AI
 
 ## Request/Response Examples
 
-### Create Document
-```json
-POST /api/v1/projects/{id}/documents
-{
-  "title": "Aria Stormwind",
-  "path": "/characters/protagonists/aria_stormwind", // Auto-creates folders
-  "content": { /* ProseMirror JSON */ },
-  "tags": ["character", "protagonist", "wind-magic"]
-}
+### Request/Response Format
 
-Response: ApiResponse<Document>
-```
+**Document Creation**: POST requests include title, path (auto-creates folder hierarchy), ProseMirror JSON content, and tag arrays. Returns `ApiResponse<Document>` wrapper.
 
-### File Tree Response
-```json
-GET /api/v1/projects/{id}/file-tree
-{
-  "success": true,
-  "data": {
-    "id": "root",
-    "name": "Project Root", 
-    "type": "folder",
-    "children": [
-      {
-        "id": "characters",
-        "name": "Characters",
-        "type": "folder",
-        "children": [/* nested items */]
-      }
-    ]
-  }
-}
-```
+**File Tree Structure**: Hierarchical JSON structure with nested children, type indicators (folder/file), and metadata for each item.
 
-## Error Handling
-```json
-{
-  "success": false,
-  "error": "ValidationError",
-  "message": "Invalid document path",
-  "status": 400
-}
-```
+**Error Responses**: Consistent error format with success boolean, error type, descriptive message, and HTTP status code.
+
+**Example Implementations**: See request/response handling in `frontend/src/lib/api/` and backend models in `backend/src/schemas/`.
 
 ## Field Naming
 - **Frontend**: camelCase (`createdAt`, `wordCount`)

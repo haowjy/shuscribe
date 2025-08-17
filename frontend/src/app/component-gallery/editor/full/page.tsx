@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { TiptapEditor } from "@/components/editor/tiptap-editor";
-import CustomizationPanel from "../../_components/CustomizationPanel";
-import VariantsPanel from "../../_components/VariantsPanel";
-import LiveHtmlPanel from "../../_components/LiveHtmlPanel";
-import TipsPanel from "../../_components/TipsPanel";
+import { DocumentEditor } from "@/components/editor/DocumentEditor";
+import CustomizationPanel from "@/components/debug/gallery/CustomizationPanel";
+import VariantsPanel from "@/components/debug/gallery/VariantsPanel";
+import LiveHtmlPanel from "@/components/debug/gallery/LiveHtmlPanel";
+import TipsPanel from "@/components/debug/gallery/TipsPanel";
 
 export default function FullEditorPage() {
   const [content, setContent] = useState("");
@@ -21,7 +21,7 @@ export default function FullEditorPage() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <TiptapEditor
+          <DocumentEditor
             placeholder="Start typing to test all editor features..."
             onUpdate={(newContent) => {
               setContent(newContent);

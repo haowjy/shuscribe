@@ -51,8 +51,8 @@ export function MagicLinkForm({ onModeChange, onSuccess }: MagicLinkFormProps) {
   if (success) {
     return (
       <div className="text-center space-y-4">
-        <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-          <CheckCircle2 className="w-6 h-6 text-blue-600" />
+        <div className="mx-auto w-12 h-12 bg-info/10 rounded-full flex items-center justify-center">
+          <CheckCircle2 className="w-6 h-6 text-info" />
         </div>
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Check your email</h3>
@@ -77,8 +77,8 @@ export function MagicLinkForm({ onModeChange, onSuccess }: MagicLinkFormProps) {
       <AuthError error={error} />
 
       <div className="text-center space-y-2">
-        <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-          <Mail className="w-6 h-6 text-blue-600" />
+        <div className="mx-auto w-12 h-12 bg-info/10 rounded-full flex items-center justify-center">
+          <Mail className="w-6 h-6 text-info" />
         </div>
         <p className="text-sm text-muted-foreground">
           Enter your email address and we'll send you a magic link to sign in.
@@ -96,7 +96,7 @@ export function MagicLinkForm({ onModeChange, onSuccess }: MagicLinkFormProps) {
             disabled={loading}
           />
           {errors.email && (
-            <p className="text-sm text-red-600">{errors.email.message}</p>
+            <p className="text-sm text-destructive">{errors.email.message}</p>
           )}
         </div>
 

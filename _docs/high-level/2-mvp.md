@@ -20,31 +20,22 @@
 ## Complete System Architecture
 
 ### Technology Stack Overview
-```
-Frontend (Next.js)              Backend (FastAPI)              Database (Supabase)
-├── React + TypeScript          ├── Python + FastAPI           ├── PostgreSQL
-├── shadcn/ui + Tailwind        ├── SQLAlchemy + Pydantic      ├── Auth management
-├── ProseMirror editor          ├── Dependency injection       ├── Real-time capabilities
-├── TanStack Query              ├── Reference processing       └── File storage
-└── Zustand stores              └── Mock AI services           
-```
+
+**Frontend Architecture**: Next.js 15 with React 19, TypeScript, shadcn/ui components, Tailwind CSS, ProseMirror editor, and TanStack Query for state management.
+
+**Backend Architecture**: FastAPI with Python, SQLAlchemy ORM, Pydantic validation, dependency injection patterns, and integrated reference processing.
+
+**Database & Services**: Supabase PostgreSQL with built-in authentication, real-time capabilities, and file storage.
+
+**Technology Details**: See technical specifications in [`3-frontend.md`](3-frontend.md) and [`4-backend.md`](4-backend.md).
 
 ### Data Flow Architecture
-```
-Project Load → Frontend Fetches All Documents & Tags → Local Index Built
-    ↓
-User Types "@char..." 
-    ↓
-ProseMirror Plugin Detects @ 
-    ↓
-Client-Side Fuzzy Search of Local Index
-    ↓
-Instant Suggestion List (no API call)
-    ↓
-User Selects → Reference Inserted 
-    ↓
-Document Saved → Backend Extracts References → Updates Index
-```
+
+**Reference System Flow**: Project data loads once into frontend index → @-character detection triggers client-side search → instant suggestions without API calls → reference insertion and backend extraction on save.
+
+**Performance Strategy**: Local indexing enables <50ms autocomplete responses while backend maintains reference integrity and cross-document relationships.
+
+**Implementation Details**: See data flow patterns in [`3-frontend.md`](3-frontend.md) and API contracts in [`../api/contracts.md`](../api/contracts.md).
 
 ---
 
@@ -59,42 +50,21 @@ Document Saved → Backend Extracts References → Updates Index
 - **Instant Autocomplete:** Client-side fuzzy search of all project content (no API delay)
 - **Visual Context:** See all story elements connected to current document
 
-**User Experience:**
-```
-User writing: "Elara walked into the tavern, her @"
-                                              ↑
-                                    Instant dropdown with:
-                                    📄 @characters/protagonists/elara 🔥💔
-                                    🏷️ @fire-magic (3 documents)
-                                    📄 @locations/settlements/hometown
-```
+**User Experience**: Writing `@` triggers instant autocomplete showing character references, tag-based suggestions, and location links with visual icons and tag indicators.
 
-**Technical Implementation:**
-- **Frontend:** Project data loaded once → built into searchable index
-- **Frontend:** Custom ProseMirror plugin detects `@` → instant client-side search
-- **Frontend:** No API calls for autocomplete (uses local project index)
-- **Backend:** Reference extraction and tag management on document save
+**Reference Types**: File references link directly to character/location documents, while tag references show all documents with thematic connections.
+
+**Technical Implementation**: Frontend builds searchable index from project data, custom ProseMirror plugin provides instant autocomplete, backend handles reference extraction and integrity checking.
+
+**Implementation Files**: See ProseMirror integration in `frontend/src/components/editor/` and reference processing in `backend/src/agents/reference/`.
 
 ### 2. Flexible Workspace Layout
 
-**Layout:**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Header: Project Selector | User Menu | Save Status         │
-├─────────────────────────────────────────────────────────────┤
-│ File Explorer │        Editor Workspace        │ AI Panel │
-│ [▼] [↔]       │         (flexible)             │ [↔] [▼]  │
-│               │                                │          │
-│ 📁 characters │ ┌─ Tabs ──────────────────────┐│ Mode:    │
-│ ├─ 👥 protag  │ │ elara.md │ chapter1.md │ x ││ 📝 Write │
-│ ├─ 💀 antag   │ └─────────────────────────────┘│          │
-│ └─ 🤝 support │                                │ Context: │
-│               │ ProseMirror Editor             │ • elara  │
-│ 📁 locations  │ with @-reference system        │ • magic  │
-│ 📁 timeline   │                                │          │
-│ 📁 world      │ Status: Auto-saved • 847 words│ [Mock]   │
-└─────────────────────────────────────────────────────────────┘
-```
+**Workspace Layout**: Three-panel VS Code-style interface with file explorer, tabbed editor workspace, and AI assistance panel. All panels are resizable and collapsible with persistent state.
+
+**Layout Components**: File explorer shows hierarchical project structure, editor supports multiple document tabs with @-reference system, AI panel provides context-aware assistance.
+
+**Implementation**: See workspace components in `frontend/src/components/workspace/layout/` and layout patterns in [`../frontend/designs/universal-container-pattern.md`](../frontend/designs/universal-container-pattern.md).
 
 **Panel Features:**
 - **Flexible Layout:** All panels resizable with drag handles
@@ -104,21 +74,9 @@ User writing: "Elara walked into the tavern, her @"
 
 ### 3. Document Management System
 
-**Project Structure:**
-```
-My Fantasy Novel/
-├── characters/
-│   ├── protagonists/
-│   │   ├── elara.md         🔥💔 (tags: fire-magic, trauma)
-│   │   └── marcus.md        🌍🎓 (tags: earth-magic, mentor)
-│   ├── antagonists/
-│   └── supporting/
-├── locations/
-│   ├── settlements/
-│   └── mystical/
-├── timeline/
-└── worldbuilding/
-```
+**Project Structure**: Hierarchical organization with characters, locations, timeline, and worldbuilding folders. Documents support multiple tags for thematic organization and cross-cutting concerns.
+
+**Organization Philosophy**: Path-based document creation automatically generates folder structure, eliminating manual folder management while maintaining intuitive hierarchy.
 
 **Document Operations:**
 - Create documents with templates
@@ -191,51 +149,19 @@ My Fantasy Novel/
 
 ### Frontend ↔ Backend Communication
 
-**Authentication Flow:**
-```
-Frontend                    Backend                     Supabase
-├── User login             ├── Validate JWT            ├── Issue JWT token
-├── Store JWT token        ├── Extract user ID         ├── Handle auth logic
-├── Send in API headers    ├── Protect routes          └── Manage sessions
-└── Handle auth state      └── Return user data        
-```
+**Authentication Flow**: Frontend handles Supabase Auth operations, backend validates JWT tokens from Authorization headers, maintaining stateless authentication pattern.
 
-**Document Operations:**
-```
-Frontend                    Backend                     Database
-├── Open document          ├── GET /documents/{id}     ├── Fetch document
-├── Edit in ProseMirror    ├── PUT /documents/{id}     ├── Save content
-├── Auto-save changes     ├── Extract references      ├── Update references
-└── Show save status       └── Validate integrity      └── Maintain consistency
-```
+**Document Operations**: Frontend editor auto-saves to backend, backend processes reference extraction and maintains document integrity, database stores rich ProseMirror content.
 
-**Reference System:**
-```
-Frontend                    Backend                     Processing
-├── Load project once      ├── GET /projects/{id}/data ├── Return all docs + tags
-├── Build local index      ├── Documents + metadata    ├── File tree structure
-├── Detect @ character     ├── Tags and relationships  ├── Reference mappings
-├── Client-side search     ├── No autocomplete API     └── Complete project context
-├── Instant suggestions    ├── Validate on save        
-├── Insert reference       ├── Extract new references  
-└── Render as styled span  └── Update project index    
-```
+**Reference System**: Frontend loads complete project data once to build local search index, enabling instant @-reference autocomplete without API calls, while backend validates references on save.
+
+**Integration Details**: See API contracts in [`../api/contracts.md`](../api/contracts.md) and authentication patterns in [`../core/system-architecture.md`](../core/system-architecture.md).
 
 ### Database Schema Integration
 
-**Core Tables:**
-```sql
-users (id, supabase_user_id, email, created_at)
-projects (id, user_id, title, created_at, updated_at)
-documents (id, project_id, path, title, content_json, tags, word_count)
-document_references (source_doc_id, target_path, reference_type, is_valid)
-```
+**Database Schema**: Users own projects containing hierarchical documents with reference relationships. Documents store ProseMirror JSON content with extracted metadata including word counts, tags, and reference mappings.
 
-**Key Relationships:**
-- User owns multiple Projects
-- Project contains hierarchical Documents 
-- Documents contain References to other Documents
-- References maintain integrity across operations
+**Schema Details**: See complete database models in [`../backend/overview.md`](../backend/overview.md) and data relationships in [`../core/system-architecture.md`](../core/system-architecture.md).
 
 ---
 
@@ -250,21 +176,13 @@ document_references (source_doc_id, target_path, reference_type, is_valid)
 - **Chat Interface:** Placeholder with "Coming Soon" messages
 - **Sample Suggestions:** Hardcoded examples of future AI assistance
 
-### API Structure (Ready for Real Implementation)
-```
-POST /projects/{id}/ai/chat
-├── Request: { message: string, mode: string, context: DocumentContext }
-├── Current: Returns hardcoded responses
-└── Future: Real AI integration with OpenAI/Anthropic
+### Mock AI Integration (Foundation for Future)
 
-GET /documents/{id}/ai/context  
-├── Current: Extracts references and returns story context
-└── Future: Enhanced with AI-generated insights
+**Current Implementation**: AI panel shows interface design with context display and placeholder chat functionality, demonstrating future AI integration patterns.
 
-POST /documents/{id}/ai/suggestions
-├── Current: Returns mock writing suggestions
-└── Future: Real AI suggestions based on content and context
-```
+**API Foundation**: Backend provides context extraction and mock response endpoints, ready for real AI integration with OpenAI/Anthropic services.
+
+**Future Integration**: See AI system architecture in [`../backend/capabilities.md`](../backend/capabilities.md) and context processing in [`../core/system-architecture.md`](../core/system-architecture.md).
 
 ---
 

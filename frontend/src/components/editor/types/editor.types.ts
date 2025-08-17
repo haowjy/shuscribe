@@ -1,6 +1,9 @@
 import { Editor } from "@tiptap/react";
 import { LucideIcon } from "lucide-react";
 
+// Rail mode types for contextual toolbar behavior
+export type RailMode = 'workspace' | 'component-gallery' | 'devtools' | 'settings' | 'series' | 'articles' | 'projects';
+
 // Supported editor commands for toolbar/actions
 export type EditorCommand =
   | "undo"
@@ -67,7 +70,7 @@ export interface ExtensionConfig {
 }
 
 // Main editor component props
-export interface TiptapEditorProps {
+export interface DocumentEditorProps {
   content?: string;
   placeholder?: string;
   onUpdate?: (content: string) => void;
@@ -75,13 +78,23 @@ export interface TiptapEditorProps {
   toolbar?: ToolbarConfig;
   footer?: FooterConfig;
   extensions?: ExtensionConfig;
+  editable?: boolean; // whether editor is editable (default true)
+  railMode?: RailMode; // contextual rail mode for toolbar behavior
+  // Styling customization props
+  border?: boolean | string; // false, true, or custom border classes
+  rounded?: boolean | string; // false, true, or custom rounded classes
+  container?: string; // custom container classes
+  // Height control props
+  height?: string; // explicit height (e.g., "400px", "50vh")
+  minHeight?: string | number; // minimum height override (e.g., "200px", 200)
+  // Paper mode props
+  paperMode?: boolean | 'A4' | 'letter' | 'legal'; // enables page-like appearance with predefined or default page size
+  autoPagination?: boolean; // enables automatic page breaks when content overflows (requires paperMode)
   // TODO: Add more customization props for lightweight editor variants:
-  // - editable?: boolean
   // - autofocus?: boolean | 'start' | 'end' | number
   // - editorProps?: Record<string, any>
   // - onImageUpload?: (file: File) => Promise<string>
   // - characterLimit?: number
-  // - minHeight?: number
 }
 
 // Editor state interface for useEditorState selector
@@ -245,6 +258,7 @@ export interface EditorToolbarProps {
   editorState: EditorState | null;
   toolbarState: UseEditorToolbarStateReturn;
   config?: ToolbarConfig;
+  railMode?: RailMode;
 }
 
 // Editor footer props

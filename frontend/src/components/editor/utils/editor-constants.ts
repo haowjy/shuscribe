@@ -62,7 +62,7 @@ export const EXTENSION_CONFIGS = {
     },
     codeBlock: {
       HTMLAttributes: {
-        class: "bg-gray-100 dark:bg-gray-800 rounded-md p-3 font-mono text-sm",
+        class: "bg-muted border border-border rounded-md p-3 font-mono text-sm",
       },
     },
   },
@@ -75,7 +75,7 @@ export const EXTENSION_CONFIGS = {
   link: {
     openOnClick: false,
     HTMLAttributes: {
-      class: "text-blue-600 underline cursor-pointer",
+      class: "text-primary underline cursor-pointer",
     },
   },
   image: {
@@ -94,7 +94,7 @@ export const EXTENSION_CONFIGS = {
 // Editor props configuration
 export const EDITOR_PROPS = {
   attributes: {
-    class: "tiptap prose prose-sm focus:outline-none max-w-none",
+    class: "tiptap focus:outline-none max-w-none",
   },
 } as const;
 

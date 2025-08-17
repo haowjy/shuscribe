@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { ComponentGallery } from "@/components/debug/ComponentGallery";
 
 export default function Page() {
-  // Redirect to the first editor variant
-  redirect("/component-gallery/editor/full");
+  return <ComponentGallery />;
 }

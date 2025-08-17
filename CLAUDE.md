@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. It is Aug 2025.
 
 ## Essential Tools
 
@@ -46,8 +46,8 @@ ShuScribe is a **frontend-centric** Universe Content Management Platform built w
 
 ### Current Implementation Snapshot
 
-- Frontend currently implements an editor demo only: landing (`/`) and `/editor-test` with a comprehensive Tiptap editor (📚 [`/_docs/frontend/TIPTAP-EDITOR.md`](_docs/frontend/TIPTAP-EDITOR.md)).
-- Not yet implemented: dashboard/workspace layout, Supabase auth, TanStack Query, API routes/mocks, and @-reference system.
+- **Implemented**: Comprehensive workspace system with projects (`/projects/[id]`), DocumentEditor with configurable toolbar/footer, Supabase auth integration, component gallery (`/component-gallery/editor/`), three-panel layout system (📚 [`/_docs/frontend/DOCUMENT-EDITOR.md`](_docs/frontend/DOCUMENT-EDITOR.md)).
+- **In Development**: TanStack Query integration, API routes/mocks, @-reference system, backend synchronization.
 
 ## Quick Start
 
@@ -202,6 +202,84 @@ ShuScribe is a **Universe Content Management Platform** with a three-panel VS Co
 **Design Philosophy**: Respects creative workflow patterns - writers focus deeply on single projects rather than rapidly switching between universes.
 
 **Detailed Documentation**: See [`/_docs/frontend/designs/navigation-patterns.md`](_docs/frontend/designs/navigation-patterns.md) for comprehensive UI patterns, user flow diagrams, and design decisions.
+
+## Documentation Philosophy
+
+ShuScribe follows a **code-centric documentation approach** that prioritizes maintainability and accuracy.
+
+### Core Principles
+
+**1. Documentation Points to Code, Never Duplicates It**
+- Documentation explains architecture, design decisions, and file organization
+- Code examples are avoided—instead, point to actual implementation files
+- API signatures, interfaces, and configurations live only in code
+- Documentation describes *what* and *why*, code shows *how*
+
+**2. Structure Over Snippets**
+- Document component hierarchies, folder organization, and relationships
+- Explain integration patterns and data flow
+- Reference specific files and functions: `ComponentName.tsx:functionName()`
+- Use diagrams and architectural overviews instead of code blocks
+
+**3. Maintenance-First Approach**
+- Documentation that duplicates code becomes stale immediately
+- File references auto-break when renamed, forcing updates
+- Keep docs focused on concepts that don't change frequently
+- Prefer linking to implementation over describing implementation
+
+**4. Audience-Specific Documentation**
+- **CLAUDE.md files**: Development guidance and project coordination
+- **_docs/ files**: Architecture, design decisions, and system overviews  
+- **README files**: Quick setup and orientation
+- **Comments in code**: Implementation details and complex logic
+
+### Documentation Types
+
+**Architecture Documentation** (`_docs/`)
+- System design and component relationships
+- Integration patterns and data flow
+- Future roadmap and evolution plans
+- Design decisions and trade-offs
+
+**Development Guidance** (`CLAUDE-*.md`)
+- Development workflows and best practices
+- File organization and naming conventions
+- Common patterns and anti-patterns
+- Tool usage and environment setup
+
+**Component Documentation** (within code)
+- TypeScript interfaces define APIs
+- JSDoc comments for complex functions
+- README files for setup instructions
+- Tests document expected behavior
+
+### Anti-Patterns to Avoid
+
+❌ **Code Snippets in Documentation**
+```tsx
+// DON'T DO THIS - will become outdated
+interface ComponentProps {
+  prop1: string;
+  prop2: boolean;
+}
+```
+
+✅ **Reference Implementation**
+```markdown
+Props interface: See `ComponentProps` in `components/Component.tsx`
+```
+
+❌ **Describing Implementation Details**
+"The component uses useState to manage open state and useEffect to handle..."
+
+✅ **Describing Purpose and Usage**  
+"Component provides collapsible content areas. See implementation: `CollapsiblePanel.tsx`"
+
+❌ **Duplicating Configuration**
+"Set these environment variables: NEXT_PUBLIC_SUPABASE_URL=..."
+
+✅ **Pointing to Source**
+"Environment setup: See `.env.local.example` for required variables"
 
 ## Documentation Maintenance
 

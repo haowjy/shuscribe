@@ -26,7 +26,7 @@ export function AuthError({ error }: AuthErrorProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+    <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
       <AlertCircle size={16} />
       <span>{getErrorMessage(error)}</span>
     </div>

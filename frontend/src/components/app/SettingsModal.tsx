@@ -145,7 +145,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               variant="ghost" 
               size="sm" 
               onClick={handleSignOut}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2"
+              className="text-destructive hover:bg-destructive/10 flex items-center gap-2"
             >
               <LogOut className="h-4 w-4" />
               Sign Out

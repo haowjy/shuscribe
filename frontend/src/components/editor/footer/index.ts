@@ -1,1 +1,1 @@
-export { EditorFooter } from './editor-footer'
+export { EditorFooter } from './EditorFooter'

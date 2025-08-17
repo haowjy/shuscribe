@@ -57,27 +57,27 @@ export function StorageStats({ className = '', refreshTrigger }: StorageStatsPro
       <h3 className="font-semibold mb-3 text-sm">Storage Statistics</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div className="text-center">
-          <div className="text-lg font-bold text-blue-600">{stats.projects}</div>
+          <div className="text-lg font-bold text-primary">{stats.projects}</div>
           <div className="text-xs text-muted-foreground">Projects</div>
         </div>
         <div className="text-center">
-          <div className="text-lg font-bold text-green-600">{stats.documents}</div>
+          <div className="text-lg font-bold text-success">{stats.documents}</div>
           <div className="text-xs text-muted-foreground">Documents</div>
         </div>
         <div className="text-center">
-          <div className="text-lg font-bold text-purple-600">{stats.fileTree}</div>
+          <div className="text-lg font-bold text-accent-foreground">{stats.fileTree}</div>
           <div className="text-xs text-muted-foreground">File Tree</div>
         </div>
         <div className="text-center">
-          <div className="text-lg font-bold text-orange-600">{stats.tags}</div>
+          <div className="text-lg font-bold text-warning">{stats.tags}</div>
           <div className="text-xs text-muted-foreground">Tags</div>
         </div>
         <div className="text-center">
-          <div className="text-lg font-bold text-pink-600">{stats.referenceIndex}</div>
+          <div className="text-lg font-bold text-info">{stats.referenceIndex}</div>
           <div className="text-xs text-muted-foreground">Indexes</div>
         </div>
         <div className="text-center">
-          <div className="text-lg font-bold text-gray-600">{stats.meta}</div>
+          <div className="text-lg font-bold text-muted-foreground">{stats.meta}</div>
           <div className="text-xs text-muted-foreground">Meta</div>
         </div>
       </div>

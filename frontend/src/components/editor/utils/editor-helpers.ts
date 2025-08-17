@@ -109,6 +109,7 @@ const commandHandlers: { [K in EditorCommand]: CommandHandler<K> } = {
   setTextAlign: (editor: Editor, params: CommandParamsMap['setTextAlign']) =>
     editor.chain().focus().setTextAlign(params.value).run(),
 
+
   // List commands
   toggleBulletList: (editor: Editor) => editor.chain().focus().toggleBulletList().run(),
   toggleOrderedList: (editor: Editor) => editor.chain().focus().toggleOrderedList().run(),

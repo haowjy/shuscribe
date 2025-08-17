@@ -1,0 +1,79 @@
+---
+description: Documentation philosophy and guidelines for ShuScribe
+alwaysApply: true
+---
+
+# ShuScribe Documentation Philosophy
+
+## Core Principle: Code-Centric Documentation
+
+Documentation should **point to code, never duplicate it**. Code is the source of truth.
+
+### What Documentation Should Do
+
+✅ **Explain Architecture & Design**
+- Component relationships and data flow
+- File organization and folder structure  
+- Integration patterns and system design
+- Design decisions and trade-offs
+
+✅ **Provide File References**
+- Point to specific files: `ComponentName.tsx`
+- Reference functions: `ComponentName.tsx:functionName()`
+- Link to implementation: "See `types/api.ts` for interfaces"
+- Use file paths as documentation anchors
+
+✅ **Document Concepts**
+- Development workflows and patterns
+- System architecture and relationships
+- User experience and design philosophy
+- Setup procedures and environment config
+
+### What Documentation Should NOT Do
+
+❌ **Code Snippets in Markdown**
+Never paste interface definitions, component props, or configuration examples
+
+❌ **Implementation Details**
+Don't describe useState, useEffect, or internal component logic
+
+❌ **Duplicate Configuration**
+Don't copy environment variables, package.json scripts, or API signatures
+
+### Documentation Types
+
+**CLAUDE.md Files**: Development guidance, patterns, best practices
+**_docs/ Files**: Architecture overviews, design decisions, system relationships  
+**README Files**: Quick setup, orientation, getting started
+**Code Comments**: Complex logic, implementation details, API documentation
+
+### Maintenance Strategy
+
+1. **File References Break When Renamed** - Forces documentation updates
+2. **Interfaces in Code** - TypeScript provides API documentation
+3. **Examples in Implementation** - Working code is always current
+4. **Architecture in Docs** - High-level concepts change less frequently
+
+### Example Patterns
+
+**Instead of copying interfaces:**
+```markdown
+Props: See `DocumentEditorProps` in `components/editor/types/editor.types.ts`
+```
+
+**Instead of describing implementation:**
+```markdown
+The DocumentEditor provides configurable rich text editing. 
+Implementation: `components/editor/DocumentEditor.tsx`
+Configuration options: `types/editor.types.ts`
+```
+
+**Instead of code examples:**
+```markdown
+See live examples at `/component-gallery/editor/` with three variants:
+- Full-featured: `app/component-gallery/editor/full/page.tsx`
+- Chat interface: `app/component-gallery/editor/chat/page.tsx`  
+- Minimal notes: `app/component-gallery/editor/notes/page.tsx`
+```
+
+This approach keeps documentation maintainable, accurate, and focused on what matters most: understanding the system's design and how to work with it effectively.

@@ -122,9 +122,9 @@ export function ReferenceIndexDebug({
                 <div key={index} className="bg-background p-2 rounded border text-xs">
                   <div className="font-medium flex items-center gap-2">
                     <span className={`inline-block w-8 text-xs px-1 py-0.5 rounded text-white ${
-                      entry.type === 'file' ? 'bg-blue-500' :
-                      entry.type === 'folder' ? 'bg-green-500' :
-                      'bg-purple-500'
+                      entry.type === 'file' ? 'bg-primary' :
+                      entry.type === 'folder' ? 'bg-success' :
+                      'bg-accent-foreground'
                     }`}>
                       {entry.type}
                     </span>
@@ -138,7 +138,7 @@ export function ReferenceIndexDebug({
                   {entry.tags && entry.tags.length > 0 && (
                     <div className="flex gap-1 mt-1 flex-wrap">
                       {entry.tags.slice(0, 3).map(tag => (
-                        <span key={tag} className="text-xs bg-gray-100 px-1 rounded">
+                        <span key={tag} className="text-xs bg-muted px-1 rounded">
                           {tag}
                         </span>
                       ))}

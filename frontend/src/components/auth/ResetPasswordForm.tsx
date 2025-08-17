@@ -51,8 +51,8 @@ export function ResetPasswordForm({ onModeChange, onSuccess }: ResetPasswordForm
   if (success) {
     return (
       <div className="text-center space-y-4">
-        <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-          <CheckCircle2 className="w-6 h-6 text-green-600" />
+        <div className="mx-auto w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
+          <CheckCircle2 className="w-6 h-6 text-success" />
         </div>
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Check your email</h3>
@@ -77,8 +77,8 @@ export function ResetPasswordForm({ onModeChange, onSuccess }: ResetPasswordForm
       <AuthError error={error} />
 
       <div className="text-center space-y-2">
-        <div className="mx-auto w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-          <KeyRound className="w-6 h-6 text-orange-600" />
+        <div className="mx-auto w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+          <KeyRound className="w-6 h-6 text-warning" />
         </div>
         <p className="text-sm text-muted-foreground">
           Enter your email address and we'll send you a link to reset your password.
@@ -96,7 +96,7 @@ export function ResetPasswordForm({ onModeChange, onSuccess }: ResetPasswordForm
             disabled={loading}
           />
           {errors.email && (
-            <p className="text-sm text-red-600">{errors.email.message}</p>
+            <p className="text-sm text-destructive">{errors.email.message}</p>
           )}
         </div>
 

@@ -76,8 +76,8 @@ export function SignUpForm({ onModeChange, onSuccess }: SignUpFormProps) {
   if (success) {
     return (
       <div className="text-center space-y-4">
-        <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-          <CheckCircle2 className="w-6 h-6 text-green-600" />
+        <div className="mx-auto w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
+          <CheckCircle2 className="w-6 h-6 text-success" />
         </div>
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Check your email</h3>
@@ -111,7 +111,7 @@ export function SignUpForm({ onModeChange, onSuccess }: SignUpFormProps) {
             disabled={loading}
           />
           {errors.email && (
-            <p className="text-sm text-red-600">{errors.email.message}</p>
+            <p className="text-sm text-destructive">{errors.email.message}</p>
           )}
         </div>
 
@@ -141,20 +141,20 @@ export function SignUpForm({ onModeChange, onSuccess }: SignUpFormProps) {
             </Button>
           </div>
           {errors.password && (
-            <p className="text-sm text-red-600">{errors.password.message}</p>
+            <p className="text-sm text-destructive">{errors.password.message}</p>
           )}
           {password && password.length > 0 && (
             <div className="text-xs text-muted-foreground space-y-1">
-              <p className={password.length >= 6 ? 'text-green-600' : ''}>
+              <p className={password.length >= 6 ? 'text-success' : ''}>
                 ✓ At least 6 characters
               </p>
-              <p className={/[a-z]/.test(password) ? 'text-green-600' : ''}>
+              <p className={/[a-z]/.test(password) ? 'text-success' : ''}>
                 ✓ One lowercase letter
               </p>
-              <p className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>
+              <p className={/[A-Z]/.test(password) ? 'text-success' : ''}>
                 ✓ One uppercase letter
               </p>
-              <p className={/\d/.test(password) ? 'text-green-600' : ''}>
+              <p className={/\d/.test(password) ? 'text-success' : ''}>
                 ✓ One number
               </p>
             </div>
@@ -187,7 +187,7 @@ export function SignUpForm({ onModeChange, onSuccess }: SignUpFormProps) {
             </Button>
           </div>
           {errors.confirmPassword && (
-            <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
+            <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
           )}
         </div>
 

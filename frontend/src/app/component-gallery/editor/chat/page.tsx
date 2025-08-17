@@ -1,6 +1,6 @@
 "use client";
 
-import { TiptapEditor } from "@/components/editor/tiptap-editor";
+import { DocumentEditor } from "@/components/editor/DocumentEditor";
 
 export default function ChatEditorPage() {
   return (
@@ -14,23 +14,14 @@ export default function ChatEditorPage() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <TiptapEditor
+          <DocumentEditor
             placeholder="Type a message..."
             onUpdate={(newContent) => {
               console.log("Chat content:", newContent);
             }}
+            editable={false}
             toolbar={{
-              sections: ["history", "formatting", "lists", "alignment"],
-              commands: [
-                "undo",
-                "redo",
-                "toggleBold",
-                "toggleItalic",
-                "toggleHighlight",
-                "toggleBulletList",
-                "toggleOrderedList",
-                "setTextAlign",
-              ],
+              show: false,
             }}
             footer={{ show: false }}
             className="w-full"

@@ -1,37 +1,92 @@
-## ShuScribe Frontend MVP Plan
+## ShuScribe Frontend MVP - Current Implementation
 
-Focused scope: Implement the three-panel writing workspace and AI panel UI using existing shadcn/ui + Tiptap foundations. Frontend components only. No data fetching, no auth, no backend integration.
+**Status**: Core workspace architecture implemented with route-based navigation and complete state persistence.
 
-### Workspace Overview
+**Architecture**: Universal ActivityContainer with left-rail navigation, serving fiction writers with consistent workspace experience across all project tools.
+
+### Current Architecture (Implemented)
 
 ```text
-┌───────────────────────────────────────────────────────────────────────────────┐
-│ Header: Project Selector • Save Status • Word Count • User                   │
-├───────────────────────────────────────────────────────────────────────────────┤
-│ 📁 File Explorer           │                      Editor                      │ AI Panel │
-│ [↔] [▼]                    │ ┌── Tabs ────────────────────────────────────┐   │ [↔] [▼] │
-│ • characters/              │ │ elara.md │ ch-01.md │ world.md │   [+]   │   │         │
-│   ├─ protagonists/         │ └────────────────────────────────────────────┘   │ Mode:   │
-│   │  • elara.md 🔥💔       │ [Toolbar: History | Text | Lists | Align | …]  │  • Write │
-│ • locations/               │                                                  │  • Edit  │
-│ • timeline/                │ Elara walked into the @                         │  • Plan  │
-│                            │                    ▲                            │  • Wiki  │
-│                            │     Instant suggestions (local/mocked)          │---------│
-│                            │     📄 @characters/protagonists/elara 🔥💔      │ Context │
-│                            │     🏷️ @fire-magic (3 docs)                     │  chips: │
-│                            │     📄 @locations/settlements/hometown          │  [elara]│
-│                            │                                                  │  [fire] │
-│                            │ [Footer: 847 words • Auto-saved • v1.1]         │  [ch-01]│
-│                            ├──────────────────────────────────────────────────┤---------│
-│                            │ AI                                             ▶│ Prompt  │
-│                            │ • Use selection [x]  • Spoilers: 0———▮———10    │ > …     │
-│                            │ • Include: [elara] [fire-magic] [ch-01]         │ [Ask AI]│
-│                            │ ────────────────────────────────────────────     │---------│
-│                            │ ▸ Suggestion (mock/streaming placeholder)       │ Actions │
-│                            │   “Elara’s aura…”                                │ Apply:  │
-│                            │   [Insert] [Replace] [Append] [Open as Note]     │ • Insert│
-│                            │   Variants: [Tone] [Expand] [Shorten]            │ • Replace
-└───────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Universal ActivityContainer (Route-Based Navigation)                         │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Rail │                    Dynamic Content Area                              │
+│ ──── │ ──────────────────────────────────────────────────────────────────── │
+│ 📁   │ Route: /projects/[id] (Explorer)                                    │
+│ 📚   │ ┌─ Editor Tabs ─────────────────────────────────────────────┐        │
+│ 📄   │ │ chapter-01.md │ characters.md │           [+]          │        │
+│ ──── │ └───────────────────────────────────────────────────────────┘        │
+│ 🎨   │ [Toolbar: History | Text | Lists | Align | Insert | Table]         │
+│ 🧰   │                                                                      │
+│ ──── │ Writing content with @-references...                                │
+│ ⚙️   │ @characters/elara appears in the moonlight...                       │
+│      │                                                                      │
+│      │ [Footer: 847 words • Auto-saved • v1.1]                            │
+│      │                                                                      │
+│      │ Route: /projects/[id]/series (Series Management)                    │
+│      │ ┌─ Series: "The Fire Chronicles" ─────────────────────────┐        │
+│      │ │ Status: Draft    Visibility: Public                    │        │
+│      │ │ Chapters:                                              │        │
+│      │ │  1. chapter-01.md  ✓ published    2,143 words          │        │
+│      │ │  2. chapter-02.md  draft          1,876 words          │        │
+│      │ │ [Preview] [Publish] [Unpublish]                        │        │
+│      │ └────────────────────────────────────────────────────────┘        │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Rail Navigation**:
+- 📁 Explorer: File browsing and editing workspace
+- 📚 Series: Book/series organization and publishing
+- 📄 Articles: Individual story publishing and sharing
+- 🎨 Component Gallery: UI component testing (dev)
+- 🧰 DevTools: Development and debugging tools (dev)
+- ⚙️ Settings: Project and account configuration
+
+### Key Features Implemented
+
+**✅ Universal Navigation System**:
+- Left-rail navigation consistent across all project tools
+- Route-based content switching (`/projects/[id]/[tool]`)
+- Active state management based on current route
+- Familiar navigation patterns for fiction writers
+
+**✅ Complete State Persistence**:
+- Editor tabs persist across route navigation
+- Panel arrangements saved per project
+- Multi-project caching for instant switching
+- localStorage integration for session persistence
+
+**✅ Dynamic Content Rendering**:
+- Single ActivityContainer handles all project routes
+- Route-specific content with consistent chrome
+- Panel configuration per activity type
+- Integrated sidebar controls throughout
+
+**✅ Editor Integration**:
+- DocumentEditor with full toolbar and formatting
+- Tab system with state persistence
+- ContentAreaContainer layout pattern
+- @-reference system foundation
+
+### Technical Architecture
+
+**Core Components**:
+- `ActivityContainer` - Universal route wrapper with dynamic content
+- `ProjectStateProvider` - Complete workspace state management 
+- `ContentAreaContainer` - Reusable layout with sidebar integration
+- `LeftRail` - Consistent navigation across all routes
+
+**State Management**:
+- React Context for project state persistence
+- Smart caching with automatic eviction
+- localStorage synchronization
+- Route-based state restoration
+
+**Navigation Pattern**:
+- Next.js App Router with dynamic routes
+- Route-based content switching vs complex mode management
+- Type-safe rail mode definitions
+- Consistent URL structure for bookmarking
 ```
 
 ### Components to Build (UI-only)
@@ -44,9 +99,9 @@ Focused scope: Implement the three-panel writing workspace and AI panel UI using
   - Context menu (rename/delete/new folder/file) as non-functional UI.
 - Tabs and editor container
   - `EditorTabs`: open/close/reorder tabs, unsaved indicator (UI-only).
-  - `EditorSurface`: hosts `TiptapEditor` and footer.
+  - `EditorSurface`: hosts `DocumentEditor` and footer.
 - Editor
-  - `TiptapEditor` (existing): toolbar sections (history, textStyle, formatting, lists, alignment, blocks, table); footer stats.
+  - `DocumentEditor` (existing): toolbar sections (history, textStyle, formatting, lists, alignment, blocks, table); footer stats.
   - Selection context menu: quick actions (Ask AI, Rewrite, Fix grammar) as UI triggers.
 - @-reference UI (mock)
   - `ReferenceAutocomplete`: trigger on `@`, dropdown suggestions from static list; keyboard nav; click to insert.
@@ -165,7 +220,7 @@ Focused scope: Implement the three-panel writing workspace and AI panel UI using
 - FileExplorer (tree, icons, context menu UI)
 
 4) **Tabs & Editor Surface**
-- EditorTabs, EditorSurface integration with TiptapEditor
+- EditorTabs, EditorSurface integration with DocumentEditor
 
 5) **@-Reference UI (mock)**
 - ReferenceAutocomplete, ReferenceBadge, ReferenceDisambiguationDialog, minimal Tiptap plugin glue

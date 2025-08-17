@@ -1,71 +1,37 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { useUser } from '@/hooks/useUser'
+import { useToastContext } from '@/components/providers/ToastProvider'
 import { StorageStats } from './StorageStats'
 import { DataManagement } from './DataManagement'
 import { ImportExport } from './ImportExport'
 import { ReferenceIndexDebug } from './ReferenceIndexDebug'
-import { ChevronLeft, Database } from 'lucide-react'
+// ComponentGallery now accessed via dedicated route from the rail
 
 interface DevToolsPageProps {
   onBackToProjects: () => void
 }
 
-export function DevToolsPage({ onBackToProjects }: DevToolsPageProps) {
+export function DevToolsPage({ }: DevToolsPageProps) {
   const { user } = useUser()
-  const [message, setMessage] = useState('')
+  const { success, error } = useToastContext()
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0)
 
   const handleDebugSuccess = (successMessage: string) => {
-    setMessage(successMessage)
+    success(successMessage)
     // Trigger stats refresh
     setStatsRefreshTrigger(prev => prev + 1)
-    // Clear message after 3 seconds
-    setTimeout(() => setMessage(''), 3000)
   }
 
   const handleDebugError = (errorMessage: string) => {
-    setMessage(`Error: ${errorMessage}`)
-    // Clear message after 5 seconds
-    setTimeout(() => setMessage(''), 5000)
+    error('Operation Failed', errorMessage)
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-full bg-background">
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
-        {/* Header with breadcrumb */}
-        <div className="flex items-center justify-start mb-8">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBackToProjects}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Projects
-            </Button>
-            <span className="text-muted-foreground">/</span>
-            <div className="flex items-center gap-3">
-              <Database className="h-5 w-5 text-muted-foreground" />
-              <h1 className="text-2xl font-bold">Developer Tools</h1>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Message */}
-        {message && (
-          <div className={`mb-6 p-3 rounded border text-sm ${
-            message.startsWith('Error') 
-              ? 'bg-destructive/10 text-destructive border-destructive/20' 
-              : 'bg-muted border-border'
-          }`}>
-            {message}
-          </div>
-        )}
 
         {/* Content Grid */}
         <div className="max-w-6xl space-y-8">
@@ -102,6 +68,7 @@ export function DevToolsPage({ onBackToProjects }: DevToolsPageProps) {
               />
             </div>
           </div>
+
         </div>
       </main>
     </div>

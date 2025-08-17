@@ -1,4 +1,4 @@
-export { EditorToolbar } from './editor-toolbar'
+export { EditorToolbar } from './EditorToolbar'
 
 // Re-export primitives
 export * from './primitives'

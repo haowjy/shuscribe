@@ -7,7 +7,8 @@ import {
   Sparkles, 
   HelpCircle, 
   Settings,
-  Database
+  Database,
+  Palette
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { 
@@ -21,8 +22,9 @@ interface GlobalActivityRailProps {
   onSettingsOpen: () => void
   onSearchFocus?: () => void
   onDevToolsClick?: () => void
+  onComponentGalleryClick?: () => void
   onHomeClick?: () => void
-  currentView?: 'projects' | 'devtools'
+  currentView?: 'projects' | 'devtools' | 'component-gallery'
   className?: string
 }
 
@@ -30,6 +32,7 @@ export function GlobalActivityRail({
   onSettingsOpen, 
   onSearchFocus,
   onDevToolsClick,
+  onComponentGalleryClick,
   onHomeClick,
   currentView = 'projects',
   className = '' 
@@ -68,11 +71,18 @@ export function GlobalActivityRail({
     }
   }
 
+  const handleComponentGalleryClick = () => {
+    if (onComponentGalleryClick) {
+      onComponentGalleryClick()
+    }
+  }
+
+
   return (
     <TooltipProvider delayDuration={300}>
       {/* Desktop Rail */}
       <nav 
-        className={`hidden md:flex fixed left-0 top-0 h-full w-14 bg-background border-r border-border flex-col items-center py-4 z-50 ${className}`}
+        className={`hidden md:flex fixed left-0 top-0 h-full w-14 bg-background border-r border-border flex-col items-center py-4 z-40 ${className}`}
         aria-label="Global navigation"
       >
         {/* Desktop rail content */}
@@ -128,26 +138,49 @@ export function GlobalActivityRail({
               <p>AI Assistant</p>
             </TooltipContent>
           </Tooltip>
-
-          {showDevTools && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={currentView === 'devtools' ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={handleDevToolsClick}
-                  aria-label="Developer Tools"
-                >
-                  <Database className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Developer Tools</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
         </div>
+
+        {/* Developer Section - separated visually */}
+        {showDevTools && (
+          <div className="flex flex-col items-center mt-2">
+            <div className="w-8 h-px bg-border my-2" />
+            <div className="flex flex-col items-center space-y-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={currentView === 'component-gallery' ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={handleComponentGalleryClick}
+                    aria-label="Component Gallery"
+                  >
+                    <Palette className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Component Gallery</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={currentView === 'devtools' ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={handleDevToolsClick}
+                    aria-label="Developer Tools"
+                  >
+                    <Database className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Developer Tools</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -192,7 +225,7 @@ export function GlobalActivityRail({
 
       {/* Mobile Floating Dock */}
       <nav 
-        className={`md:hidden fixed bottom-6 right-6 bg-background border border-border rounded-2xl shadow-lg flex items-center gap-1 p-2 z-50 ${className}`}
+        className={`md:hidden fixed bottom-6 right-6 bg-background border border-border rounded-2xl shadow-lg flex items-center gap-1 p-2 z-40 pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)] ${className}`}
         aria-label="Global navigation"
       >
         <Tooltip>
@@ -247,22 +280,43 @@ export function GlobalActivityRail({
         </Tooltip>
 
         {showDevTools && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={currentView === 'devtools' ? "secondary" : "ghost"}
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleDevToolsClick}
-                aria-label="Developer Tools"
-              >
-                <Database className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>Developer Tools</p>
-            </TooltipContent>
-          </Tooltip>
+          <>
+            <div className="w-px h-6 bg-border mx-1" />
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={currentView === 'component-gallery' ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleComponentGalleryClick}
+                  aria-label="Component Gallery"
+                >
+                  <Palette className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Component Gallery</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={currentView === 'devtools' ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleDevToolsClick}
+                  aria-label="Developer Tools"
+                >
+                  <Database className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Developer Tools</p>
+              </TooltipContent>
+            </Tooltip>
+          </>
         )}
 
         <div className="w-px h-6 bg-border mx-1" />

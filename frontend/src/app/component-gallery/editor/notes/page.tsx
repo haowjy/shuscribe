@@ -1,6 +1,6 @@
 "use client";
 
-import { TiptapEditor } from "@/components/editor/tiptap-editor";
+import { DocumentEditor } from "@/components/editor/DocumentEditor";
 
 export default function NotesEditorPage() {
   return (
@@ -14,7 +14,7 @@ export default function NotesEditorPage() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <TiptapEditor
+          <DocumentEditor
             placeholder="Add a quick note..."
             toolbar={{
               sections: ["formatting"],

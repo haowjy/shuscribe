@@ -13,16 +13,35 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { TableKit } from "@tiptap/extension-table";
 import FileHandler from "@tiptap/extension-file-handler";
+import { TextStyle } from "@tiptap/extension-text-style";
+// Removed custom font size / line height controls per UX decision
 
 import { EDITOR_DEFAULTS, EXTENSION_CONFIGS, EDITOR_PROPS, IMAGE_UPLOAD_CONFIG } from "../utils/editor-constants";
 import { handleImageUpload } from "../utils/editor-helpers";
 import type { UseEditorConfigReturn, EditorState, ExtensionConfig } from "../types/editor.types";
+
+// Import pagination extension with try-catch for version compatibility
+let Pagination: any = null;
+try {
+  // @ts-ignore - Handle potential version mismatch
+  const paginationModule = require('tiptap-pagination-breaks');
+  Pagination = paginationModule.Pagination;
+  console.log('Pagination extension loaded successfully:', {
+    hasExtension: !!Pagination,
+    moduleName: Pagination?.name,
+    moduleKeys: Object.keys(paginationModule)
+  });
+} catch (error) {
+  console.warn('tiptap-pagination-breaks not available:', error);
+}
 
 interface UseEditorConfigOptions {
   content?: string;
   placeholder?: string;
   onUpdate?: (content: string) => void;
   extensions?: ExtensionConfig;
+  paperMode?: boolean | 'A4' | 'letter' | 'legal';
+  autoPagination?: boolean;
 }
 
 export const useEditorConfig = ({
@@ -30,6 +49,8 @@ export const useEditorConfig = ({
   placeholder = EDITOR_DEFAULTS.placeholder,
   onUpdate,
   extensions = {},
+  paperMode = false,
+  autoPagination = false,
 }: UseEditorConfigOptions = {}): UseEditorConfigReturn => {
   // Merge extension configurations with overrides
   const mergedConfigs = {
@@ -42,14 +63,33 @@ export const useEditorConfig = ({
     table: { ...EXTENSION_CONFIGS.table, ...extensions.overrides?.table },
   };
 
-  const editor = useEditor({
-    extensions: [
+  // Calculate page dimensions for pagination
+  const getPageDimensions = () => {
+    if (!paperMode || !autoPagination) return null;
+    
+    // Convert CSS dimensions to pixels (approximate)
+    // These values match our CSS page sizes
+    if (paperMode === 'letter') {
+      return { pageHeight: 1056, pageWidth: 816, pageMargin: 96 }; // 11in x 8.5in at 96dpi
+    } else if (paperMode === 'legal') {
+      return { pageHeight: 1344, pageWidth: 816, pageMargin: 96 }; // 14in x 8.5in at 96dpi
+    } else {
+      // A4 or default
+      return { pageHeight: 1123, pageWidth: 794, pageMargin: 96 }; // 29.7cm x 21cm at 96dpi
+    }
+  };
+
+  const pageDimensions = getPageDimensions();
+
+  // Build extensions array
+  const editorExtensions = [
       StarterKit.configure(mergedConfigs.starterKit),
       Placeholder.configure({
         placeholder,
       }),
       CharacterCount,
       Underline,
+      TextStyle,
       TextAlign.configure(mergedConfigs.textAlign),
       Highlight.configure(mergedConfigs.highlight),
       Subscript,
@@ -90,7 +130,36 @@ export const useEditorConfig = ({
       }),
       // TODO: Add support for extra extensions
       // ...(extensions.extraExtensions || []),
-    ],
+    ];
+
+  // Add pagination extension if available and requested
+  if (Pagination && pageDimensions) {
+    try {
+      console.log('Configuring pagination with:', pageDimensions);
+      editorExtensions.push(
+        Pagination.configure({
+          pageHeight: pageDimensions.pageHeight,
+          pageWidth: pageDimensions.pageWidth,
+          pageMargin: pageDimensions.pageMargin,
+          label: 'Page',
+          showPageNumber: true,
+        })
+      );
+      console.log('Pagination extension added successfully');
+    } catch (error) {
+      console.warn('Failed to configure pagination extension:', error);
+    }
+  } else {
+    console.log('Pagination not added:', { 
+      hasPagination: !!Pagination, 
+      hasPageDimensions: !!pageDimensions,
+      paperMode,
+      autoPagination 
+    });
+  }
+
+  const editor = useEditor({
+    extensions: editorExtensions,
     content,
     immediatelyRender: false,
     onUpdate: onUpdate

@@ -80,7 +80,7 @@ export function SignInForm({ onModeChange, onSuccess }: SignInFormProps) {
             disabled={loading}
           />
           {errors.email && (
-            <p className="text-sm text-red-600">{errors.email.message}</p>
+            <p className="text-sm text-destructive">{errors.email.message}</p>
           )}
         </div>
 
@@ -110,7 +110,7 @@ export function SignInForm({ onModeChange, onSuccess }: SignInFormProps) {
             </Button>
           </div>
           {errors.password && (
-            <p className="text-sm text-red-600">{errors.password.message}</p>
+            <p className="text-sm text-destructive">{errors.password.message}</p>
           )}
         </div>
 

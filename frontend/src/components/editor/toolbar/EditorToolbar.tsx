@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Button } from '@/components/tiptap-ui-primitive/button'
+import { Button } from '@/components/editor-primitives/button'
 import { DynamicFormatButton } from './primitives/dynamic-format-button'
 import { ToolbarGroups } from './primitives/toolbar-groups'
 import { ToolbarButtonGroup } from './primitives/toolbar-button-group'
@@ -19,6 +19,7 @@ export const EditorToolbar = React.memo<EditorToolbarProps>(({
   editorState,
   toolbarState,
   config = {},
+  railMode = 'workspace',
 }) => {
   const {
     textStyleOpen,
@@ -33,19 +34,50 @@ export const EditorToolbar = React.memo<EditorToolbarProps>(({
     currentTextAlignment,
   } = toolbarState
 
+  // Get contextual toolbar configuration based on rail mode
+  const getContextualConfig = React.useCallback(() => {
+    switch (railMode) {
+      case 'workspace':
+        // Standard writing toolbar: Undo Redo | Text | B I U | Lists | Align
+        return {
+          sections: ['history', 'textStyle', 'formatting', 'lists', 'alignment'] as ToolbarSection[]
+        }
+      case 'component-gallery':
+      case 'devtools':
+      case 'settings':
+        // These modes don't show the editor, but if somehow the editor is rendered,
+        // show the standard toolbar
+        return {
+          sections: ['history', 'textStyle', 'formatting', 'lists', 'alignment'] as ToolbarSection[]
+        }
+      default:
+        // Default: show all sections
+        return config
+    }
+  }, [railMode, config])
+
+  // Merge contextual config with user config
+  const effectiveConfig = React.useMemo(() => {
+    const contextualConfig = getContextualConfig()
+    return {
+      ...contextualConfig,
+      ...config, // User config takes precedence
+    }
+  }, [getContextualConfig, config])
+
   // Helper to check if a section should be shown
   const isSectionShown = React.useCallback((sectionName: string) => {
     // If no sections specified, show all sections
-    if (!config.sections) return true
-    return config.sections.includes(sectionName as ToolbarSection)
-  }, [config.sections])
+    if (!effectiveConfig.sections) return true
+    return effectiveConfig.sections.includes(sectionName as ToolbarSection)
+  }, [effectiveConfig.sections])
 
   // Helper to check if a command should be shown
   const isCommandShown = React.useCallback((command: string) => {
     // If no commands specified, show all commands
-    if (!config.commands) return true
-    return config.commands.includes(command as EditorCommand)
-  }, [config.commands])
+    if (!effectiveConfig.commands) return true
+    return effectiveConfig.commands.includes(command as EditorCommand)
+  }, [effectiveConfig.commands])
 
   // Memoized event handlers for performance
   const handleImageUploadClick = React.useCallback(() => {
@@ -66,8 +98,8 @@ export const EditorToolbar = React.memo<EditorToolbarProps>(({
   if (!editor) return null
 
   return (
-    <div className="border-b border-border bg-background p-2">
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 toolbar-scroll">
+    <div className="border-b border-border h-10 min-h-10 px-2 flex items-center">
+      <div className="flex items-center gap-1 overflow-x-auto toolbar-scroll">
         <ToolbarGroups>
           {/* History Section */}
           {isSectionShown('history') && (
@@ -89,6 +121,7 @@ export const EditorToolbar = React.memo<EditorToolbarProps>(({
               setTextStyleOpen={setTextStyleOpen}
             />
           )}
+
 
           {/* Basic Formatting Section */}
           {isSectionShown('formatting') && (
