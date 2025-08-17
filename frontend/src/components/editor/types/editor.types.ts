@@ -89,7 +89,6 @@ export interface DocumentEditorProps {
   minHeight?: string | number; // minimum height override (e.g., "200px", 200)
   // Paper mode props
   paperMode?: boolean | 'A4' | 'letter' | 'legal'; // enables page-like appearance with predefined or default page size
-  autoPagination?: boolean; // enables automatic page breaks when content overflows (requires paperMode)
   // TODO: Add more customization props for lightweight editor variants:
   // - autofocus?: boolean | 'start' | 'end' | number
   // - editorProps?: Record<string, any>

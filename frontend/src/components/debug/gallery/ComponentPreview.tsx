@@ -306,7 +306,7 @@ function ComponentDemoDisplay({ component, variant }: ComponentDemoDisplayProps)
     // Full-width rendering for editor components
     if (component.id === 'document-editor') {
       return (
-        <div className="bg-background border rounded-lg min-h-[400px]">
+        <div className="bg-background border rounded-lg min-h-[400px] max-h-[600px] overflow-auto">
           {createElement(component.component, variant.props)}
         </div>
       )

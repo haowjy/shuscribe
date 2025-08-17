@@ -52,20 +52,25 @@ export function ComponentGalleryHeader({
       <div className="flex items-center gap-3 shrink-0">
         {/* Variant Selector */}
         {component.variants.length > 1 && onVariantChange && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Variant:</span>
-            <div className="flex gap-1">
-              {component.variants.map((v) => (
-                <Button
-                  key={v.id}
-                  variant={variantId === v.id ? 'default' : 'outline'}
-                  size="sm"
-                  className="h-6 text-xs px-2"
-                  onClick={() => onVariantChange(v.id)}
-                >
-                  {v.name}
-                </Button>
-              ))}
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs text-muted-foreground shrink-0">Variant:</span>
+            <div className="relative min-w-0">
+              <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none pb-1">
+                {component.variants.map((v) => (
+                  <Button
+                    key={v.id}
+                    variant={variantId === v.id ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-6 text-xs px-2 shrink-0"
+                    onClick={() => onVariantChange(v.id)}
+                  >
+                    {v.name}
+                  </Button>
+                ))}
+              </div>
+              {/* Subtle scroll fade indicators */}
+              <div className="pointer-events-none absolute top-0 left-0 w-3 h-full bg-gradient-to-r from-background to-transparent" />
+              <div className="pointer-events-none absolute top-0 right-0 w-3 h-full bg-gradient-to-l from-background to-transparent" />
             </div>
           </div>
         )}

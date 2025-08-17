@@ -129,68 +129,6 @@
   margin-right: 0;
 }
 
-/* Page break styling for long content */
-.tiptap-paper-mode .page-break {
-  page-break-after: always;
-  break-after: page;
-  height: 1px;
-  background: transparent;
-  border: none;
-  margin: 2rem 0;
-}
-
-/* Pagination extension styling - Required by tiptap-pagination-breaks */
-.page-break {
-  height: 20px;
-  width: 100%;
-  border-top: 1px dashed #ccc;
-  margin: 10px 0;
-  position: relative;
-}
-
-.page-number {
-  position: absolute;
-  right: 0;
-  top: -10px;
-  font-size: 12px;
-  color: #666;
-  background: white;
-  padding: 0 4px;
-}
-
-/* Enhanced styling for paper mode */
-.tiptap-paper-mode .page-break {
-  border-top: 1px dashed hsl(var(--border));
-  margin: 2rem 0;
-  background: linear-gradient(to bottom, 
-    transparent 0%, 
-    transparent 45%, 
-    hsl(var(--border)) 45%, 
-    hsl(var(--border)) 55%, 
-    transparent 55%, 
-    transparent 100%
-  );
-}
-
-.tiptap-paper-mode .page-number {
-  color: hsl(var(--muted-foreground));
-  background: hsl(var(--background));
-  border: 1px solid hsl(var(--border));
-  border-radius: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-}
-
-/* Hide page breaks in print mode */
-@media print {
-  .page-break {
-    display: none;
-  }
-  
-  .page-number {
-    display: none;
-  }
-}
 
 /* Paper mode responsive design */
 @media (max-width: 768px) {
@@ -769,5 +707,15 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-xs: calc(var(--radius) - 6px);
+}
+
+/* Scrollbar utilities */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer and Edge */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, and Opera */
 }
 

@@ -23,7 +23,6 @@ export function DocumentEditor({
   height,
   minHeight,
   paperMode = false,
-  autoPagination = false,
   railMode = 'workspace',
 }: DocumentEditorProps) {
   // Initialize editor with configuration hook
@@ -33,7 +32,6 @@ export function DocumentEditor({
     onUpdate,
     extensions,
     paperMode,
-    autoPagination,
   })
 
   // Initialize toolbar state hook

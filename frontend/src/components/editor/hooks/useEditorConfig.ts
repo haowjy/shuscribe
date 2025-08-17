@@ -20,20 +20,6 @@ import { EDITOR_DEFAULTS, EXTENSION_CONFIGS, EDITOR_PROPS, IMAGE_UPLOAD_CONFIG }
 import { handleImageUpload } from "../utils/editor-helpers";
 import type { UseEditorConfigReturn, EditorState, ExtensionConfig } from "../types/editor.types";
 
-// Import pagination extension with try-catch for version compatibility
-let Pagination: any = null;
-try {
-  // @ts-ignore - Handle potential version mismatch
-  const paginationModule = require('tiptap-pagination-breaks');
-  Pagination = paginationModule.Pagination;
-  console.log('Pagination extension loaded successfully:', {
-    hasExtension: !!Pagination,
-    moduleName: Pagination?.name,
-    moduleKeys: Object.keys(paginationModule)
-  });
-} catch (error) {
-  console.warn('tiptap-pagination-breaks not available:', error);
-}
 
 interface UseEditorConfigOptions {
   content?: string;
@@ -41,7 +27,6 @@ interface UseEditorConfigOptions {
   onUpdate?: (content: string) => void;
   extensions?: ExtensionConfig;
   paperMode?: boolean | 'A4' | 'letter' | 'legal';
-  autoPagination?: boolean;
 }
 
 export const useEditorConfig = ({
@@ -50,7 +35,6 @@ export const useEditorConfig = ({
   onUpdate,
   extensions = {},
   paperMode = false,
-  autoPagination = false,
 }: UseEditorConfigOptions = {}): UseEditorConfigReturn => {
   // Merge extension configurations with overrides
   const mergedConfigs = {
@@ -63,23 +47,6 @@ export const useEditorConfig = ({
     table: { ...EXTENSION_CONFIGS.table, ...extensions.overrides?.table },
   };
 
-  // Calculate page dimensions for pagination
-  const getPageDimensions = () => {
-    if (!paperMode || !autoPagination) return null;
-    
-    // Convert CSS dimensions to pixels (approximate)
-    // These values match our CSS page sizes
-    if (paperMode === 'letter') {
-      return { pageHeight: 1056, pageWidth: 816, pageMargin: 96 }; // 11in x 8.5in at 96dpi
-    } else if (paperMode === 'legal') {
-      return { pageHeight: 1344, pageWidth: 816, pageMargin: 96 }; // 14in x 8.5in at 96dpi
-    } else {
-      // A4 or default
-      return { pageHeight: 1123, pageWidth: 794, pageMargin: 96 }; // 29.7cm x 21cm at 96dpi
-    }
-  };
-
-  const pageDimensions = getPageDimensions();
 
   // Build extensions array
   const editorExtensions = [
@@ -132,31 +99,6 @@ export const useEditorConfig = ({
       // ...(extensions.extraExtensions || []),
     ];
 
-  // Add pagination extension if available and requested
-  if (Pagination && pageDimensions) {
-    try {
-      console.log('Configuring pagination with:', pageDimensions);
-      editorExtensions.push(
-        Pagination.configure({
-          pageHeight: pageDimensions.pageHeight,
-          pageWidth: pageDimensions.pageWidth,
-          pageMargin: pageDimensions.pageMargin,
-          label: 'Page',
-          showPageNumber: true,
-        })
-      );
-      console.log('Pagination extension added successfully');
-    } catch (error) {
-      console.warn('Failed to configure pagination extension:', error);
-    }
-  } else {
-    console.log('Pagination not added:', { 
-      hasPagination: !!Pagination, 
-      hasPageDimensions: !!pageDimensions,
-      paperMode,
-      autoPagination 
-    });
-  }
 
   const editor = useEditor({
     extensions: editorExtensions,
