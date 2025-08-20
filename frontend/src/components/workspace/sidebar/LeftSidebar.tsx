@@ -4,7 +4,12 @@ import { FolderOpen } from 'lucide-react'
 import { SidebarContainer } from '@/components/workspace/shared/SidebarContainer'
 import { Explorer } from '@/components/workspace/explorer/Explorer'
 
-export function LeftSidebar({ onHide }: { onHide?: () => void }) {
+interface LeftSidebarProps {
+  projectId: string
+  onHide?: () => void
+}
+
+export function LeftSidebar({ projectId, onHide }: LeftSidebarProps) {
   return (
     <SidebarContainer
       mode="simple"
@@ -13,7 +18,7 @@ export function LeftSidebar({ onHide }: { onHide?: () => void }) {
       side="left"
       onToggle={onHide}
     >
-      <Explorer />
+      <Explorer projectId={projectId} />
     </SidebarContainer>
   )
 }

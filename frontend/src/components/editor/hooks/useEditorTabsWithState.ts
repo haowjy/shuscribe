@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react'
 import { useProjectState } from '@/components/providers/ProjectStateProvider'
 import type { Tab } from '../tabs/types'
 
@@ -22,10 +22,56 @@ export function useEditorTabsWithState({
   
   const [openTabs, setOpenTabs] = useState<Tab[]>(savedTabs)
   const [activeTabId, setActiveTabId] = useState(savedActiveTabId)
+  
+  // Track if we're updating from project state to prevent infinite loops
+  const isUpdatingFromProjectState = useRef(false)
+  const lastProjectState = useRef(projectState)
 
-  // Update project state whenever tabs change
+  // Memoize current project state to track changes
+  const currentProjectState = useMemo(() => getProjectState(projectId), [getProjectState, projectId])
+
+  // Listen for project state changes and sync to local state
   useEffect(() => {
-    updateEditorTabs(projectId, openTabs, activeTabId)
+    if (!currentProjectState) return
+    
+    // Only sync if project state actually changed (not on every render)
+    const stateChanged = lastProjectState.current !== currentProjectState
+    if (!stateChanged) return
+    
+    lastProjectState.current = currentProjectState
+    
+    const { openTabs: projectTabs, activeTabId: projectActiveTabId } = currentProjectState
+    
+    // Compare project state with local state
+    const tabsChanged = JSON.stringify(projectTabs) !== JSON.stringify(openTabs)
+    const activeTabChanged = projectActiveTabId !== activeTabId
+    
+    if (tabsChanged || activeTabChanged) {
+      // Set flag to prevent write-back loop
+      isUpdatingFromProjectState.current = true
+      
+      if (tabsChanged) {
+        setOpenTabs(projectTabs)
+      }
+      if (activeTabChanged) {
+        setActiveTabId(projectActiveTabId)
+      }
+    }
+  }, [currentProjectState, openTabs, activeTabId])
+
+  // Reset sync flag immediately after state updates
+  useLayoutEffect(() => {
+    if (isUpdatingFromProjectState.current) {
+      isUpdatingFromProjectState.current = false
+    }
+  })
+
+  // Update project state whenever tabs change (but not when updating from project state)
+  useEffect(() => {
+    if (!isUpdatingFromProjectState.current) {
+      console.log('📝 useEditorTabsWithState: Writing to project state', { openTabs: openTabs.length, activeTabId })
+      updateEditorTabs(projectId, openTabs, activeTabId)
+    }
   }, [projectId, openTabs, activeTabId, updateEditorTabs])
 
   const handleTabClose = (tabId: string) => {

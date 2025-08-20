@@ -71,7 +71,7 @@ export interface ExtensionConfig {
 
 // Main editor component props
 export interface DocumentEditorProps {
-  content?: string;
+  content?: string | Record<string, any>; // Support both HTML/Markdown strings and ProseMirror JSON objects
   placeholder?: string;
   onUpdate?: (content: string) => void;
   className?: string;

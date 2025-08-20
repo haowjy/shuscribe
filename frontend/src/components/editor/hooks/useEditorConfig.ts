@@ -1,4 +1,5 @@
 import { useEditor, useEditorState } from "@tiptap/react";
+import { useEffect } from "react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
@@ -22,7 +23,7 @@ import type { UseEditorConfigReturn, EditorState, ExtensionConfig } from "../typ
 
 
 interface UseEditorConfigOptions {
-  content?: string;
+  content?: string | Record<string, any>; // Support both HTML/Markdown strings and ProseMirror JSON objects
   placeholder?: string;
   onUpdate?: (content: string) => void;
   extensions?: ExtensionConfig;
@@ -112,6 +113,22 @@ export const useEditorConfig = ({
       : undefined,
     editorProps: EDITOR_PROPS,
   });
+
+  // Update editor content when content prop changes (for tab switching)
+  useEffect(() => {
+    if (editor && content !== undefined) {
+      // For ProseMirror JSON objects, compare with getJSON(), for strings compare with getHTML()
+      const currentContent = typeof content === 'object' ? editor.getJSON() : editor.getHTML();
+      const contentChanged = typeof content === 'object' 
+        ? JSON.stringify(currentContent) !== JSON.stringify(content)
+        : currentContent !== content;
+      
+      // Only update if content actually changed to avoid unnecessary operations
+      if (contentChanged) {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [editor, content]);
 
   const editorState = useEditorState({
     editor,

@@ -3,6 +3,7 @@ export interface Tab {
   name: string
   hasUnsavedChanges: boolean
   path?: string
+  documentId?: string // ID of associated document for content loading
 }
 
 export interface EditorTabsProps {

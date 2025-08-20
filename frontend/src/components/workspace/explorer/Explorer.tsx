@@ -5,14 +5,19 @@ import { ExplorerHeader } from './components/ExplorerHeader'
 import { FileTreeView } from './components/FileTreeView'
 import { useFileTree } from './hooks/useFileTree'
 import { filterFileTree, countFilesInTree } from './utils/fileTreeFilter'
+import { useProjectState } from '@/components/providers/ProjectStateProvider'
 
-export function Explorer() {
+interface ExplorerProps {
+  projectId: string
+}
+
+export function Explorer({ projectId }: ExplorerProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const fileTree = useFileTree()
-  
-  const handleFileSelect = (fileId: string, fileName: string) => {
-    // TODO: Open file in editor tab
-    console.log('Opening file:', fileId, fileName)
+  const { data: fileTree } = useFileTree(projectId)
+  const { openFileInEditor } = useProjectState()
+
+  const handleFileSelect = (fileId: string, fileName: string, documentId?: string) => {
+    openFileInEditor(projectId, fileId, fileName, documentId)
   }
 
   const handleNewFile = () => {
@@ -30,9 +35,9 @@ export function Explorer() {
     return filterFileTree(fileTree, searchQuery)
   }, [fileTree, searchQuery])
 
-  const resultsCount = useMemo(() => {
-    return countFilesInTree(filteredFileTree)
-  }, [filteredFileTree])
+  // const resultsCount = useMemo(() => {
+  //   return countFilesInTree(filteredFileTree)
+  // }, [filteredFileTree])
 
   return (
     <div className="h-full flex flex-col">

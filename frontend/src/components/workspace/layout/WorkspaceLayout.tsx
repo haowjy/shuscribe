@@ -42,7 +42,7 @@ export function WorkspaceLayout({
               className="min-w-0"
             >
               <div className="relative h-full min-w-0">
-                <ContextualDrawer mode={railMode} onClose={leftPanel.toggle} />
+                <ContextualDrawer mode={railMode} projectId={projectId} onClose={leftPanel.toggle} />
               </div>
             </ResizablePanel>
 

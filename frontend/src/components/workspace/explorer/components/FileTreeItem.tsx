@@ -23,7 +23,7 @@ export function FileTreeItem({ node, level, onFileSelect, searchQuery = '' }: Fi
 
   const handleFileClick = () => {
     if (node.type === 'file') {
-      onFileSelect(node.id, node.name)
+      onFileSelect(node.id, node.name, node.documentId)
     }
   }
 

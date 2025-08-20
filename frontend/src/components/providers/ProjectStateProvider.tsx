@@ -36,6 +36,7 @@ interface ProjectStateContextType {
   
   // Editor state helpers
   updateEditorTabs: (projectId: string, tabs: Tab[], activeTabId: string) => void
+  openFileInEditor: (projectId: string, fileId: string, fileName: string, documentId?: string) => void
   
   // Navigation helpers
   updateActiveRoute: (projectId: string, route: string, railMode: RailMode) => void
@@ -48,11 +49,8 @@ interface ProjectStateContextType {
 
 // Default project state
 const createDefaultProjectState = (): ProjectState => ({
-  openTabs: [
-    { id: 'doc1', name: 'chapter-01.md', hasUnsavedChanges: true },
-    { id: 'doc2', name: 'characters.md', hasUnsavedChanges: false }
-  ],
-  activeTabId: 'doc1',
+  openTabs: [], // Start with no tabs - will be opened by file selection
+  activeTabId: '',
   lastVisitedRoute: '',
   activeRailMode: 'workspace',
   lastUpdated: Date.now(),
@@ -149,6 +147,38 @@ export function ProjectStateProvider({ children }: ProjectStateProviderProps) {
     updateProjectState(projectId, { openTabs: tabs, activeTabId })
   }, [updateProjectState])
 
+  const getProjectState = useCallback((projectId: string): ProjectState | null => {
+    return projectCache[projectId] || null
+  }, [projectCache])
+
+  const openFileInEditor = useCallback((projectId: string, fileId: string, fileName: string, documentId?: string) => {
+    const currentState = getProjectState(projectId) || createDefaultProjectState()
+    const existingTabs = currentState.openTabs
+
+    // Check if tab already exists
+    const existingTab = existingTabs.find(tab => tab.id === fileId)
+    if (existingTab) {
+      // Just activate the existing tab
+      updateProjectState(projectId, { activeTabId: fileId })
+      return
+    }
+
+    // Create new tab for the file
+    const newTab: Tab = {
+      id: fileId,
+      name: fileName,
+      hasUnsavedChanges: false,
+      documentId: documentId // Store document ID for content loading
+    }
+
+    // Add new tab and make it active
+    const updatedTabs = [...existingTabs, newTab]
+    updateProjectState(projectId, {
+      openTabs: updatedTabs,
+      activeTabId: fileId
+    })
+  }, [getProjectState, updateProjectState])
+
   const updateActiveRoute = useCallback((projectId: string, route: string, railMode: RailMode) => {
     updateProjectState(projectId, {
       lastVisitedRoute: route,
@@ -163,10 +193,6 @@ export function ProjectStateProvider({ children }: ProjectStateProviderProps) {
       return newCache
     })
   }, [])
-
-  const getProjectState = useCallback((projectId: string): ProjectState | null => {
-    return projectCache[projectId] || null
-  }, [projectCache])
 
   const getMostRecentProjectId = useCallback((): string | null => {
     const projects = Object.entries(projectCache)
@@ -185,6 +211,7 @@ export function ProjectStateProvider({ children }: ProjectStateProviderProps) {
     updateProjectState,
     switchToProject,
     updateEditorTabs,
+    openFileInEditor,
     updateActiveRoute,
     clearProjectCache,
     getProjectState,

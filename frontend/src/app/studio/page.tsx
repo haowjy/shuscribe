@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useUser } from '@/hooks/useUser'
-import { createLocalDataProvider } from '@/lib/data/local-provider'
+import { useProjects } from '@/hooks/data'
 import { seedSampleProject } from '@/lib/localdb/seeds'
 import { ProjectList } from '@/components/projects/ProjectList'
 import { ProjectListItem } from '@/components/projects/ProjectListItem'
-import type { Project } from '@/lib/localdb/types'
 import { 
   Plus, 
   Search, 
@@ -17,36 +16,22 @@ import {
 
 export default function ProjectsPage() {
   const { userId, loading } = useUser()
-  const [projects, setProjects] = useState<Project[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [loadingProjects, setLoadingProjects] = useState(true)
-
-  const loadProjects = useCallback(async () => {
-    if (!userId) return
-    
-    try {
-      const provider = createLocalDataProvider(userId)
-      const userProjects = await provider.getProjects()
-      setProjects(userProjects)
-    } catch (error) {
-      console.error('Failed to load projects:', error)
-    } finally {
-      setLoadingProjects(false)
-    }
-  }, [userId])
-
-  useEffect(() => {
-    if (!loading && userId) {
-      loadProjects()
-    }
-  }, [loading, userId, loadProjects])
+  
+  // Use TanStack Query hook for instant data from localStorage
+  const { 
+    data: projects = [], 
+    isLoading: loadingProjects,
+    refetch: refetchProjects 
+  } = useProjects()
 
   const handleCreateSampleProject = async () => {
     if (!userId) return
     
     try {
       await seedSampleProject(userId)
-      await loadProjects()
+      // Refetch projects using TanStack Query
+      await refetchProjects()
     } catch (error) {
       console.error('Failed to create sample project:', error)
     }

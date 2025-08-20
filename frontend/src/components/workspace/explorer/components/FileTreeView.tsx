@@ -6,7 +6,7 @@ import type { FileNode } from '../types'
 interface FileTreeViewProps {
   nodes: FileNode[]
   searchQuery: string
-  onFileSelect: (fileId: string, fileName: string) => void
+  onFileSelect: (fileId: string, fileName: string, documentId?: string) => void
 }
 
 export function FileTreeView({ nodes, searchQuery, onFileSelect }: FileTreeViewProps) {
