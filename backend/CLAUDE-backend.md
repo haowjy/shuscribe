@@ -68,7 +68,8 @@ async def get_project(
 ### Database Models
 Core entities with proper relationships:
 - **Project**: Universe container with hierarchical file tree
-- **Document**: Rich content with ProseMirror JSON
+- **Document**: Rich content with Markdown body; taggable via many-to-many
+- **FileTreeItem**: Represents files/folders; taggable (many-to-many) for both
 - **Tag**: Many-to-many with categories and metadata
 - **User**: Authentication and project ownership
 
@@ -106,10 +107,11 @@ POST                 /projects/{id}/llm/generate
 - **Memory Backend**: Use for fast, isolated testing
 - **Coverage**: Aim for >80% test coverage
 
-### Database Migrations
-- **SQLAlchemy Models**: Define schema in `src/database/models/`
-- **Alembic Migrations**: Auto-generate migrations from model changes
-- **Environment Sync**: Keep dev, test, and prod schemas consistent
+### Database Schema (Prototyping - No Migrations)
+- **Source of Truth**: SQLAlchemy models in `src/database/sqlalchemy/models/`
+- **No Migrations During Prototyping**: We do not use Alembic while we have no live data
+- **Apply Changes**: Drop/recreate tables via `src/database/connection.py:create_tables(drop_existing=True)` or restart the server
+- **When to Introduce Migrations**: Only after schemas stabilize and we have persistent data
 
 ### Error Handling
 - **Consistent Format**: All endpoints return `ApiResponse<T>` wrapper
@@ -165,11 +167,10 @@ POST                 /projects/{id}/llm/generate
 4. Add comprehensive tests
 5. Update API documentation
 
-### Database Schema Changes
-1. Modify SQLAlchemy models
-2. Generate Alembic migration: `alembic revision --autogenerate -m "description"`
-3. Test migration: `alembic upgrade head`
-4. Update repository interfaces if needed
+### Database Schema Changes (Prototyping Workflow)
+1. Modify SQLAlchemy models (`src/database/sqlalchemy/models/`)
+2. Recreate tables locally (no migrations): call `create_tables(drop_existing=True)`
+3. Update repositories/interfaces as needed
 
 ### LLM Agent Development
 1. Inherit from `BaseAgent` class

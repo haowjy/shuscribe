@@ -89,15 +89,7 @@ class TestDocumentSchemaValidation:
             project_id=project.id,
             title="Schema Test Document",
             path="/schema_test.md",
-            content={
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": "Schema validation content"}]
-                    }
-                ]
-            },
+            content="Schema validation content",
             tags=[tag1, tag2],
             word_count=3,
             version="1.0.0",
@@ -203,20 +195,15 @@ class TestDocumentSchemaValidation:
         assert intro_tag["color"] == "#10b981"
     
     async def test_create_document_request_tags_schema(self, client: TestClient, test_data):
-        """Test that create document accepts tag names as strings"""
+        """Test that create document accepts tag_ids (enforced)"""
         project = test_data["project"]
-        
+        tags = test_data["tags"]
         create_request = {
             "project_id": project.id,
             "title": "Schema Create Test",
             "path": "/schema_create.md",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {"type": "paragraph", "content": [{"type": "text", "text": "Create test"}]}
-                ]
-            },
-            "tags": ["chapter", "intro"]  # Should accept strings
+            "content": {"content": "Create test", "format": "md"},
+            "tag_ids": [tags[0].id, tags[1].id]
         }
         
         response = client.post("/api/v1/documents", json=create_request)
@@ -244,8 +231,8 @@ class TestDocumentSchemaValidation:
         response = client.get(f"/api/v1/documents/{document.id}")
         data = response.json()
         
-        # This test documents the expected frontend-backend contract:
-        # 1. Requests send tag names as strings
+        # Contract now:
+        # 1. Requests send tag_ids only (tags must pre-exist)
         # 2. Responses return TagInfo objects with metadata
         
         # Verify response structure matches frontend DocumentResponse interface

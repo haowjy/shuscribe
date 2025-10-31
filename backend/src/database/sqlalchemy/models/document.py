@@ -3,10 +3,10 @@
 SQLAlchemy model for Document
 """
 from datetime import datetime, UTC
-from typing import Optional, Any, Dict, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 import uuid
 
-from sqlalchemy import String, Integer, Boolean, DateTime, JSON, ForeignKey, Index
+from sqlalchemy import String, Integer, Boolean, DateTime, Text, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.sqlalchemy.models import Base, TABLE_PREFIX, document_tags
@@ -35,8 +35,11 @@ class Document(Base):
     created_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # Document creator
     updated_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # Last modifier
     
-    # ProseMirror content as JSON
-    content: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    # Document content stored as plaintext Markdown (no JSX)
+    content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Index cache for search/preview (optional)
+    index_markdown: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_indexed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     # Metadata
     word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

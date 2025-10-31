@@ -60,21 +60,7 @@ class TestPathBasedDocumentCreation:
             "project_id": test_project.id,
             "title": "Character Profile: Aria Stormwind",
             "path": "/characters/protagonists/aria-stormwind",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 1},
-                        "content": [{"type": "text", "text": "Aria Stormwind"}]
-                    },
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": "A dragon rider from the mountain village of Windmere."}]
-                    }
-                ]
-            },
-            "tags": ["character", "protagonist"]
+            "content": {"content": "# Aria Stormwind\n\nA dragon rider from the mountain village of Windmere.", "format": "md"}
         }
         
         # Create document - should auto-create folders
@@ -121,15 +107,7 @@ class TestPathBasedDocumentCreation:
             "project_id": test_project.id,
             "title": "Project Overview",
             "path": "/overview",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "paragraph", 
-                        "content": [{"type": "text", "text": "This is a root level document."}]
-                    }
-                ]
-            }
+            "content": {"content": "This is a root level document.", "format": "md"}
         }
         
         response = client.post("/api/v1/documents", json=create_request)
@@ -146,7 +124,7 @@ class TestPathBasedDocumentCreation:
             "project_id": test_project.id,
             "title": "First Character",
             "path": "/characters/protagonists/first-char",
-            "content": {"type": "doc", "content": []}
+            "content": {"content": "", "format": "md"}
         }
         
         response1 = client.post("/api/v1/documents", json=first_doc_request)
@@ -157,7 +135,7 @@ class TestPathBasedDocumentCreation:
             "project_id": test_project.id,
             "title": "Second Character", 
             "path": "/characters/protagonists/second-char",
-            "content": {"type": "doc", "content": []}
+            "content": {"content": "", "format": "md"}
         }
         
         response2 = client.post("/api/v1/documents", json=second_doc_request)
@@ -174,7 +152,7 @@ class TestPathBasedDocumentCreation:
             "project_id": test_project.id,
             "title": "Invalid Path Document",
             "path": "/characters/../invalid",  # Contains ..
-            "content": {"type": "doc", "content": []}
+            "content": {"content": "", "format": "md"}
         }
         
         response = client.post("/api/v1/documents", json=create_request)
@@ -186,15 +164,7 @@ class TestPathBasedDocumentCreation:
             "project_id": test_project.id,
             "title": "Deeply Nested Document",
             "path": "/world/regions/kingdoms/stormlands/cities/windmere/locations/tavern",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": "The local tavern in Windmere."}]
-                    }
-                ]
-            }
+            "content": {"content": "The local tavern in Windmere.", "format": "md"}
         }
         
         response = client.post("/api/v1/documents", json=create_request)
@@ -255,7 +225,7 @@ class TestPathBasedDocumentCreation:
                 "project_id": test_project.id,
                 "title": "Test Document",
                 "path": invalid_path,
-                "content": {"type": "doc", "content": []}
+                "content": {"content": "", "format": "md"}
             }
             
             response = client.post("/api/v1/documents", json=create_request)

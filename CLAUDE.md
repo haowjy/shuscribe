@@ -280,6 +280,8 @@ Props interface: See `ComponentProps` in `components/Component.tsx`
 3. **Keep Cross-References Current**: Maintain links between documentation files
 
 ---
+### Database Schema During Prototyping (No Migrations)
+We do not run migrations during prototyping. SQLAlchemy models are the source of truth and tables are auto-created. For breaking schema changes, drop and recreate tables using `backend/src/database/connection.py:create_tables(drop_existing=True)` or restart the backend after model edits.
 
 **Need specific guidance?** Check the specialized guides:
 - 🎨 **Frontend**: [`/frontend/CLAUDE-frontend.md`](frontend/CLAUDE-frontend.md)

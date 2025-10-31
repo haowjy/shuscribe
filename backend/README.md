@@ -9,7 +9,7 @@ This directory contains the FastAPI backend application for ShuScribe, a **Unive
 The ShuScribe Backend provides the API endpoints and server-side logic for a comprehensive content management platform, including:
 
 -   **Project Management**: Create and manage writing projects with hierarchical organization
--   **Document System**: Full-featured document management with ProseMirror content
+-   **Document System**: Full-featured document management with Markdown content
 -   **File Tree Management**: VS Code-like file explorer with folder/file organization
 -   **Tag System**: Advanced tagging with many-to-many relationships and categorization
 -   **Authentication**: Secure user authentication via Supabase Auth
@@ -20,7 +20,7 @@ Built with a **frontend-first philosophy** where the backend implements APIs to 
 ## ✨ Key Features
 
 -   **Project Management**: Create, update, and organize writing projects with metadata and settings
--   **Document Management**: Full CRUD operations for documents with ProseMirror content support
+-   **Document Management**: Full CRUD operations for documents with Markdown content support
 -   **File Tree System**: Hierarchical file/folder organization with drag-and-drop support
 -   **Advanced Tag System**: Many-to-many tagging with categories, colors, icons, and usage analytics
 -   **Supabase Authentication**: Secure JWT-based authentication with user session management
@@ -80,13 +80,16 @@ Use `uv` to install all required packages:
 uv sync
 ```
 
-### 4. Database Setup
+### 4. Database Setup (No Migrations During Prototyping)
 
-The backend uses a **no-migrations approach** with automatic table creation. Ensure your PostgreSQL container is running (via `docker-compose up -d` from the monorepo root).
+The backend uses a **no-migrations workflow** while prototyping (no live data). Tables are auto-created from SQLAlchemy models. To apply schema changes, drop and recreate tables.
 
 **Automatic Setup on First Run:**
 - Tables are created automatically when the server starts
 - Database seeding runs automatically if configured in `.env`
+
+**Apply Schema Changes Locally:**
+- Use `src/database/connection.py:create_tables(drop_existing=True)` or restart the dev server after model edits
 
 **Manual Database Seeding:**
 ```bash
@@ -191,7 +194,7 @@ Assuming you are in the `backend/` directory:
 -   **Type checking**: `uv run mypy src/` (when configured)
 -   **Lint code**: Check with your preferred linter
 
-**Note**: This project uses a **no-migrations approach** with automatic table creation and seeding.
+**Note**: This project currently uses a **no-migrations approach** during prototyping.
 
 ## 📡 API Endpoints
 

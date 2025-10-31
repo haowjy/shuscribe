@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 
 from src.config import settings
-from src.database.models import Base
+from src.database.sqlalchemy.models import Base
 
 logger = logging.getLogger(__name__)
 

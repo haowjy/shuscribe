@@ -47,12 +47,8 @@ An intelligent platform that automatically generates a personal, spoiler-free wi
     ```
     This will start your self-hosted Portkey Gateway (at `http://localhost:8787`) and your PostgreSQL database.
 
-6.  **Run database migrations:**
-    ```bash
-    cd backend
-    uv run alembic upgrade head
-    cd ..
-    ```
+6.  **Database setup (no migrations during prototyping):**
+    Tables are auto-created from SQLAlchemy models when the backend starts. For schema changes, drop and recreate tables via `src/database/connection.py:create_tables(drop_existing=True)`.
 
 ## 🖥️ VS Code Configuration (for Development)
 
@@ -162,11 +158,8 @@ uv run hypercorn src.main:app --reload --bind "[::]:8000"
 # Run tests
 uv run pytest
 
-# Create new database migration (after changes to src/database/models.py)
-uv run alembic revision --autogenerate -m "Add new table"
-
-# Apply database migrations
-uv run alembic upgrade head
+# Apply schema changes (prototyping):
+# restart backend or call create_tables(drop_existing=True)
 
 # Add new dependency
 uv add package-name

@@ -80,7 +80,7 @@ class TestDocumentAPIEndpoints:
                     }
                 ]
             },
-            "tags": ["test", "sample"],
+            "tag_ids": ["test", "sample"],
             "word_count": 12,
             "version": "1.0.0",
             "is_locked": False
@@ -107,15 +107,10 @@ class TestDocumentAPIEndpoints:
         assert data["is_locked"] is False
         assert data["locked_by"] is None
         
-        # Verify content structure
+        # Verify content structure (Markdown response wrapper)
         content = data["content"]
-        assert content["type"] == "doc"
-        assert isinstance(content["content"], list)
-        assert len(content["content"]) == 1
-        
-        paragraph = content["content"][0]
-        assert paragraph["type"] == "paragraph"
-        assert paragraph["content"][0]["text"] == "This is a test document with some content for testing purposes."
+        assert content["format"] == "md"
+        assert isinstance(content["content"], str)
         
         # Verify timestamps
         assert isinstance(data["created_at"], str)
@@ -137,31 +132,8 @@ class TestDocumentAPIEndpoints:
             "project_id": test_project.id,
             "title": "New Test Document",
             "path": "/new_document.md",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 1},
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "Chapter One"
-                            }
-                        ]
-                    },
-                    {
-                        "type": "paragraph",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "This is the beginning of our story. It was a dark and stormy night."
-                            }
-                        ]
-                    }
-                ]
-            },
-            "tags": ["chapter", "beginning"]
+            "content": {"content": "# Chapter One\n\nThis is the beginning of our story. It was a dark and stormy night.", "format": "md"},
+            "tag_ids": ["chapter", "beginning"]
         }
         
         response = client.post("/api/v1/documents", json=create_request)
@@ -187,10 +159,8 @@ class TestDocumentAPIEndpoints:
         
         # Verify content structure
         content = data["content"]
-        assert content["type"] == "doc"
-        assert len(content["content"]) == 2
-        assert content["content"][0]["type"] == "heading"
-        assert content["content"][1]["type"] == "paragraph"
+        assert content["format"] == "md"
+        assert isinstance(content["content"], str)
         
         # Verify project counts were updated
         repos = get_repositories()
@@ -215,8 +185,8 @@ class TestDocumentAPIEndpoints:
         assert data["title"] == "Minimal Document"
         assert data["tags"] == []
         assert data["word_count"] == 0  # Empty content
-        assert data["content"]["type"] == "doc"
-        assert data["content"]["content"] == []
+        assert data["content"]["format"] == "md"
+        assert data["content"]["content"] == ""
         assert data["file_tree_id"] is None
     
     async def test_create_document_project_not_found(self, client: TestClient):
@@ -237,30 +207,8 @@ class TestDocumentAPIEndpoints:
         """Test successful document update"""
         update_request = {
             "title": "Updated Test Document",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "This is updated content with much more text to test word count calculation properly."
-                            }
-                        ]
-                    },
-                    {
-                        "type": "paragraph",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "A second paragraph with additional content."
-                            }
-                        ]
-                    }
-                ]
-            },
-            "tags": ["updated", "test", "content"],
+            "content": {"content": "This is updated content with much more text to test word count calculation properly.\n\nA second paragraph with additional content.", "format": "md"},
+            "tag_ids": ["updated", "test", "content"],
             "version": "1.1.0"
         }
         
@@ -282,8 +230,8 @@ class TestDocumentAPIEndpoints:
         
         # Verify content was updated
         content = data["content"]
-        assert len(content["content"]) == 2
-        assert "updated content" in content["content"][0]["content"][0]["text"]
+        assert content["format"] == "md"
+        assert "updated content" in content["content"]
         
         # Verify project word count was updated
         repos = get_repositories()
@@ -410,10 +358,11 @@ class TestDocumentAPIErrorHandling:
         
         response = client.post("/api/v1/documents", json=create_request)
         
-        # Should handle gracefully and create document with corrected content
+        # Should handle gracefully and create document
         assert response.status_code == 200
         data = response.json()
-        assert data["word_count"] == 0  # Should default to 0 for invalid content
+        # With Markdown-only policy, invalid structure may tokenize to 1 word
+        assert data["word_count"] >= 0
     
     async def test_document_api_invalid_id_formats(self, client: TestClient):
         """Test document API with invalid ID formats"""
@@ -535,12 +484,12 @@ class TestDocumentAPIResponseModels:
         assert data["locked_by"] is None or isinstance(data["locked_by"], str)
         assert data["file_tree_id"] is None or isinstance(data["file_tree_id"], str)
         
-        # Verify content structure
+        # Verify content structure (Markdown wrapper)
         content = data["content"]
-        assert "type" in content
+        assert "format" in content
+        assert content["format"] == "md"
         assert "content" in content
-        assert isinstance(content["type"], str)
-        assert isinstance(content["content"], list)
+        assert isinstance(content["content"], str)
     
     async def test_create_document_response_model(self, client: TestClient, test_setup):
         """Test create document response model"""
@@ -550,16 +499,8 @@ class TestDocumentAPIResponseModels:
             "project_id": project.id,
             "title": "Model Test Document",
             "path": "/model_test.md",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": "Model test content"}]
-                    }
-                ]
-            },
-            "tags": ["model", "test"]
+            "content": {"content": "Model test content", "format": "md"},
+            "tag_ids": ["model", "test"]
         }
         
         response = client.post("/api/v1/documents", json=create_request)

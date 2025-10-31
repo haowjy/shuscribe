@@ -14,7 +14,6 @@ from src.database.interfaces import DocumentRepository
 from src.database.interfaces.models import Document as DomainDocument
 from src.database.connection import get_session_context
 from src.database.sqlalchemy.models import Document as SQLAlchemyDocument
-from src.database.sqlalchemy.mappers import DocumentMapper
 from src.database.utils import TagResolver
 
 logger = logging.getLogger(__name__)
@@ -32,7 +31,10 @@ class DatabaseDocumentRepository(DocumentRepository):
             sqlalchemy_document = result.scalar_one_or_none()
             
             if sqlalchemy_document:
-                return DocumentMapper.to_domain(sqlalchemy_document)
+                domain = DomainDocument.model_validate(sqlalchemy_document, from_attributes=True)
+                # Ensure tag_ids reflect ORM relationship
+                tag_ids = [t.id for t in getattr(sqlalchemy_document, "tags", [])] if sqlalchemy_document.tags else []
+                return domain.model_copy(update={"tag_ids": tag_ids})
             return None
     
     async def get_by_project_id(self, project_id: str) -> List[DomainDocument]:
@@ -43,41 +45,62 @@ class DatabaseDocumentRepository(DocumentRepository):
             )
             sqlalchemy_documents = result.scalars().all()
             
-            return [DocumentMapper.to_domain(document) for document in sqlalchemy_documents]
+            documents: List[DomainDocument] = []
+            for doc in sqlalchemy_documents:
+                domain = DomainDocument.model_validate(doc, from_attributes=True)
+                tag_ids = [t.id for t in getattr(doc, "tags", [])] if doc.tags else []
+                documents.append(domain.model_copy(update={"tag_ids": tag_ids}))
+            return documents
     
     async def create(self, document_data: Dict[str, Any]) -> DomainDocument:
         async with get_session_context() as session:
             # Create domain document first to validate data
-            domain_document = DocumentMapper.from_dict({
+            domain_document = DomainDocument(**{
                 "id": document_data.get("id", str(uuid.uuid4())),
                 "project_id": document_data["project_id"],
                 "title": document_data["title"],
                 "path": document_data["path"],
-                "content": document_data.get("content", {"type": "doc", "content": []}),
+                "content": document_data.get("content", ""),
                 "word_count": document_data.get("word_count", 0),
+                "index_markdown": document_data.get("index_markdown"),
+                "last_indexed_at": document_data.get("last_indexed_at"),
                 "version": document_data.get("version", "1.0.0"),
                 "is_locked": document_data.get("is_locked", False),
                 "locked_by": document_data.get("locked_by"),
                 "file_tree_id": document_data.get("file_tree_id"),
                 "created_by": document_data.get("created_by"),
                 "updated_by": document_data.get("updated_by"),
-                "tags": document_data.get("tags", []),
+                # tag_ids will be set after ORM relationship is resolved
+                "tag_ids": [],
             })
             
             # Convert to SQLAlchemy model (without tags first)
-            sqlalchemy_document = DocumentMapper.to_sqlalchemy(domain_document)
+            sqlalchemy_document = SQLAlchemyDocument(
+                id=domain_document.id,
+                project_id=domain_document.project_id,
+                title=domain_document.title,
+                path=domain_document.path,
+                content=domain_document.content or "",
+                word_count=domain_document.word_count,
+                index_markdown=domain_document.index_markdown,
+                last_indexed_at=domain_document.last_indexed_at,
+                version=domain_document.version,
+                is_locked=domain_document.is_locked,
+                locked_by=domain_document.locked_by,
+                file_tree_id=domain_document.file_tree_id,
+                created_by=domain_document.created_by,
+                updated_by=domain_document.updated_by,
+                created_at=domain_document.created_at,
+                updated_at=domain_document.updated_at,
+            )
             
-            # Handle tag relationships if provided
-            if document_data.get("tags"):
-                # Resolve tag names to SQLAlchemy Tag objects
-                resolved_tags = await TagResolver.resolve_tags(
-                    session,
-                    document_data["tags"],
-                    project_id=document_data["project_id"],
-                    user_id=document_data.get("created_by")
+            # Handle tag relationships if provided (IDs only)
+            if document_data.get("tag_ids"):
+                from src.database.sqlalchemy.models import Tag as SQLAlchemyTag
+                tag_result = await session.execute(
+                    select(SQLAlchemyTag).where(SQLAlchemyTag.id.in_(document_data["tag_ids"]))
                 )
-                # Assign the resolved tags to the document
-                sqlalchemy_document.tags = resolved_tags
+                sqlalchemy_document.tags = list(tag_result.scalars().all())
             
             # Add to session and flush to get the document saved
             session.add(sqlalchemy_document)
@@ -92,16 +115,20 @@ class DatabaseDocumentRepository(DocumentRepository):
             refreshed_document = result.scalar_one()
             
             # Return domain document with proper tag relationships
-            return DocumentMapper.to_domain(refreshed_document)
+            domain = DomainDocument.model_validate(refreshed_document, from_attributes=True)
+            tag_ids = [t.id for t in getattr(refreshed_document, "tags", [])] if refreshed_document.tags else []
+            return domain.model_copy(update={"tag_ids": tag_ids})
     
     async def update(self, document_id: str, updates: Dict[str, Any]) -> Optional[DomainDocument]:
         async with get_session_context() as session:
-            # Separate tag updates from column updates
-            tag_updates = updates.pop("tags", None)
+            # Separate tag updates from column updates (IDs only)
+            tag_ids_update = updates.pop("tag_ids", None)
             
             # Add updated_at timestamp
             updates["updated_at"] = datetime.now(UTC).replace(tzinfo=None)
             
+            # No legacy MDX translation; format is Markdown-only
+
             # Update columns (excluding tags)
             if updates:
                 result = await session.execute(
@@ -112,7 +139,7 @@ class DatabaseDocumentRepository(DocumentRepository):
                     return None
             
             # Handle tag updates separately if provided
-            if tag_updates is not None:
+            if tag_ids_update is not None:
                 # Get the document to update its tags
                 doc_result = await session.execute(
                     select(SQLAlchemyDocument)
@@ -124,16 +151,12 @@ class DatabaseDocumentRepository(DocumentRepository):
                 if not document:
                     return None
                 
-                # Resolve new tags
-                resolved_tags = await TagResolver.resolve_tags(
-                    session,
-                    tag_updates,
-                    project_id=document.project_id,
-                    user_id=document.updated_by or document.created_by
+                # Load tags by IDs and update the relationship
+                from src.database.sqlalchemy.models import Tag as SQLAlchemyTag
+                tag_result = await session.execute(
+                    select(SQLAlchemyTag).where(SQLAlchemyTag.id.in_(tag_ids_update))
                 )
-                
-                # Update the tags relationship
-                document.tags = resolved_tags
+                document.tags = list(tag_result.scalars().all())
                 await session.flush()
             
             return await self.get_by_id(document_id)

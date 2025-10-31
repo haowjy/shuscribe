@@ -3,9 +3,9 @@
 Mock data factory for generating realistic test data using Faker
 """
 import uuid
-from datetime import datetime, UTC
+from datetime import datetime  # noqa: F401
 from typing import Dict, Any, List
-from faker import Faker
+from faker import Faker  # type: ignore
 
 fake = Faker('en_US')
 
@@ -107,7 +107,7 @@ class MockDataFactory:
     
     @staticmethod
     def generate_document(project_id: str, document_type: str = "chapter", chapter_num: int | None = None) -> Dict[str, Any]:
-        """Generate a realistic document with ProseMirror content"""
+        """Generate a realistic document with Markdown content"""
         document_id = str(uuid.uuid4())
         
         if document_type == "chapter":
@@ -117,84 +117,23 @@ class MockDataFactory:
             title = f"Chapter {chapter_num}: {fake.catch_phrase()}"
             path = f"/Chapters/chapter_{chapter_num:02d}.md"
             
-            # Generate realistic chapter content
-            paragraphs = []
-            for _ in range(fake.random_int(min=3, max=8)):
-                paragraph_text = fake.paragraph(nb_sentences=fake.random_int(min=4, max=8))
-                paragraphs.append({
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": paragraph_text}]
-                })
-            
-            content = {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 1},
-                        "content": [{"type": "text", "text": f"Chapter {chapter_num}"}]
-                    }
-                ] + paragraphs
-            }
-            
-            word_count = sum(len(p["content"][0]["text"].split()) for p in paragraphs)
-            tags = []  # Will be populated by seeder with relevant tag names
+            # Generate realistic chapter content (Markdown)
+            paragraphs = [fake.paragraph(nb_sentences=fake.random_int(min=4, max=8)) for _ in range(fake.random_int(min=3, max=8))]
+            md = f"# Chapter {chapter_num}\n\n" + "\n\n".join(paragraphs)
+            word_count = len(" ".join(paragraphs).split())
             
         elif document_type == "character":
             character_name = fake.name()
             title = f"{character_name} - Character Profile"
             path = f"/Characters/{character_name.lower().replace(' ', '_')}.md"
             
-            # Character profile content
+            # Character profile content in Markdown
             age = fake.random_int(min=16, max=65)
             profession = fake.job()
             personality = fake.text(max_nb_chars=200)
             backstory = fake.text(max_nb_chars=300)
-            
-            content = {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 1},
-                        "content": [{"type": "text", "text": character_name}]
-                    },
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 2},
-                        "content": [{"type": "text", "text": "Basic Information"}]
-                    },
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": f"Age: {age}"}]
-                    },
-                    {
-                        "type": "paragraph", 
-                        "content": [{"type": "text", "text": f"Profession: {profession}"}]
-                    },
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 2},
-                        "content": [{"type": "text", "text": "Personality"}]
-                    },
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": personality}]
-                    },
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 2},
-                        "content": [{"type": "text", "text": "Backstory"}]
-                    },
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": backstory}]
-                    }
-                ]
-            }
-            
+            md = f"# {character_name}\n\n## Basic Information\n\nAge: {age}\n\nProfession: {profession}\n\n## Personality\n\n{personality}\n\n## Backstory\n\n{backstory}"
             word_count = len((personality + backstory).split())
-            tags = []  # Will be populated by seeder with relevant tag names
             
         elif document_type == "location":
             location_name = f"{fake.city()} {fake.random_element(['Castle', 'Forest', 'Temple', 'Academy', 'Market'])}"
@@ -202,77 +141,28 @@ class MockDataFactory:
             path = f"/Locations/{location_name.lower().replace(' ', '_')}.md"
             
             description = fake.text(max_nb_chars=400)
-            
-            content = {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 1},
-                        "content": [{"type": "text", "text": location_name}]
-                    },
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": description}]
-                    },
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 2},
-                        "content": [{"type": "text", "text": "Key Features"}]
-                    },
-                    {
-                        "type": "bullet_list",
-                        "content": [
-                            {
-                                "type": "list_item",
-                                "content": [
-                                    {
-                                        "type": "paragraph",
-                                        "content": [{"type": "text", "text": fake.sentence()}]
-                                    }
-                                ]
-                            }
-                            for _ in range(fake.random_int(min=2, max=5))
-                        ]
-                    }
-                ]
-            }
-            
-            word_count = len(description.split()) + fake.random_int(min=20, max=60)
-            tags = []  # Will be populated by seeder with relevant tag names
+            bullets = "\n".join([f"- {fake.sentence()}" for _ in range(fake.random_int(min=2, max=5))])
+            md = f"# {location_name}\n\n{description}\n\n## Key Features\n\n{bullets}"
+            word_count = len((description + " " + bullets).split())
             
         else:  # notes or general document
             title = fake.catch_phrase()
             path = f"/Notes/{title.lower().replace(' ', '_')}.md"
             
             note_content = fake.text(max_nb_chars=500)
-            
-            content = {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "heading",
-                        "attrs": {"level": 1},
-                        "content": [{"type": "text", "text": title}]
-                    },
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": note_content}]
-                    }
-                ]
-            }
-            
+            md = f"# {title}\n\n{note_content}"
             word_count = len(note_content.split())
-            tags = []  # Will be populated by seeder with relevant tag names
         
         return {
             "id": document_id,
             "project_id": project_id,
             "title": title,
             "path": path,
-            "content": content,
+            "content": md,
             "tags": [],  # Will be populated by seeder with relevant tag names
             "word_count": word_count,
+            "index_markdown": md,
+            "last_indexed_at": None,
             "version": "1.0.0",
             "is_locked": False,
             "locked_by": None,
@@ -329,23 +219,7 @@ class MockDataFactory:
             return "sticky-note"
         else:
             return "file"
-    
-    @staticmethod
-    def _get_file_tags(filepath: str) -> List[str]:
-        """Get appropriate tags based on file path"""
-        path_lower = filepath.lower()
-        tag_ids = []
         
-        # This method is deprecated - tags are now handled differently
-        # keeping for backwards compatibility but returning empty list
-        return tag_ids
-    
-    @staticmethod
-    def _get_folder_tags(folder_name: str) -> List[str]:
-        """Get appropriate tags for folders - deprecated, returns empty list"""
-        # This method is deprecated - tags are now handled differently
-        return []
-    
     @staticmethod
     def generate_global_tags() -> List[Dict[str, Any]]:
         """Generate global system tags available to all users"""

@@ -137,22 +137,9 @@ Your backend directory contains:
 - `pyproject.toml` - Python dependencies
 - `.env.railway` - Environment variables template
 
-## Database Migration
+## Database Schema (No Migrations During Prototyping)
 
-### First Deploy
-```bash
-# SSH into Railway container (after deploy)
-railway shell
-
-# Run migrations
-uv run alembic upgrade head
-```
-
-### Ongoing Deployments
-Add to your deployment script or Railway build command:
-```bash
-uv run alembic upgrade head && uv run uvicorn src.main:app --host 0.0.0.0 --port $PORT
-```
+While prototyping, we do not run migrations. Schema derives from SQLAlchemy models and tables are auto-created. For breaking schema changes in ephemeral environments, redeploy or run a one-off job that drops and recreates tables.
 
 ## Frontend Integration
 

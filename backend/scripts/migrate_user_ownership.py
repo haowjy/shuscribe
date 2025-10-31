@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.config import settings
 from src.database.connection import get_session_context
-from src.database.models import Project
+from src.database.sqlalchemy.models import Project
 from sqlalchemy import text, update, select
 
 logger = logging.getLogger(__name__)

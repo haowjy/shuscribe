@@ -262,7 +262,7 @@ ENABLE_DATABASE_SEEDING=false
 
 #### Table not found errors
 - **Cause**: Mismatched `TABLE_PREFIX` between environments
-- **Solution**: Ensure consistent table prefix or run database migrations
+- **Solution**: Ensure consistent table prefix or recreate tables (no migrations during prototyping)
 
 ### Debug Mode Verification
 

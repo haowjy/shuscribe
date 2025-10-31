@@ -1,19 +1,11 @@
 """
 Response schemas for document-related API endpoints
 """
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 
 from src.schemas.base import BaseSchema
 from src.schemas.responses.tags import TagInfo
-
-
-class DocumentContent(BaseModel):
-    """ProseMirror document content structure"""
-    type: str = "doc"
-    content: List[Dict[str, Any]] = Field(default_factory=list)
-    
-    model_config = {"populate_by_name": True}
 
 
 class DocumentMeta(BaseSchema):
@@ -32,6 +24,35 @@ class DocumentMeta(BaseSchema):
     is_locked: bool
     locked_by: Optional[str] = None
     file_tree_id: Optional[str] = None
+
+
+class DocumentContent(BaseModel):
+    """Document content wrapper returned by API with computed fields.
+
+    TODO(content policy)
+    - content is canonical plain Markdown (no JSX). Other formats must be
+      converted to Markdown before persistence.
+    - index_markdown_present indicates whether an indexable Markdown variant is
+      available/persisted. For now it's derived; later should reflect persisted
+      index state. last_indexed_at conveys freshness when persisted.
+
+    TODO(file uploads and large content)
+    - For uploaded originals, do not overload `content`.
+      Provide one of:
+        - original_download_url: Short-lived signed URL to object storage
+        - or a proxy endpoint: GET /documents/{id}/original (preferred)
+    - For very large Markdown bodies, consider:
+        - content_download_url: Fetch full Markdown via URL/proxy
+        - content may be truncated; preview communicates a short excerpt
+    """
+    model_config = {"populate_by_name": True}
+    content: str
+    format: Literal["md"] = "md"
+    word_count: int
+    preview: Optional[str] = None
+    summary: Optional[str] = None
+    index_markdown_present: bool = False
+    last_indexed_at: Optional[str] = None
 
 
 class DocumentResponse(DocumentMeta):

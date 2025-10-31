@@ -8,8 +8,8 @@ from typing import Dict, Any, List
 
 from src.config import settings, Environment
 from src.database.factory import get_repositories, RepositoryContainer
-from src.database.connection import get_session_context
-from src.database.sqlalchemy.models import Base
+ 
+ 
 from src.database.seed import MockDataFactory, ProjectTemplates
 
 logger = logging.getLogger(__name__)
@@ -191,6 +191,9 @@ class DatabaseSeeder:
             if project_tag_names:
                 await self.repositories.project.update(project.id, {"tags": project_tag_names})
         
+        # Build a local mapping for tag name -> id to support document tag assignment
+        name_to_id = {t.name: t.id for t in (global_tags or [])}
+        
         result = {
             "project_title": project.title,
             "project_id": project.id,
@@ -243,13 +246,14 @@ class DatabaseSeeder:
                         document_type=doc_config["type"]
                     )
                 
-                document = await self.repositories.document.create(document_data)
-                
-                # Assign relevant global tags to documents via domain model update
+                # Attach document tag_ids at create-time if we have globals
                 if global_tags:
                     doc_tag_names = self._select_relevant_tag_names(global_tags, doc_config["type"], "document")
-                    if doc_tag_names:
-                        await self.repositories.document.update(document.id, {"tags": doc_tag_names})
+                    doc_tag_ids = [name_to_id[name] for name in doc_tag_names if name in name_to_id]
+                    if doc_tag_ids:
+                        document_data["tag_ids"] = doc_tag_ids
+
+                document = await self.repositories.document.create(document_data)
                 result["documents_created"] += 1
                 
                 # Create corresponding file tree item

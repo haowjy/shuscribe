@@ -65,21 +65,8 @@ class TestDocumentRepositoryInterface:
             "project_id": test_project.id,
             "title": "Test Document Creation",
             "path": "/test_create.md",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "This is a test document for creation testing."
-                            }
-                        ]
-                    }
-                ]
-            },
-            "tags": ["test", "creation"],
+            "content": "This is a test document for creation testing.",
+            "tag_ids": ["test", "creation"],
             "word_count": 10,
             "version": "1.0.0",
             "is_locked": False,
@@ -93,9 +80,8 @@ class TestDocumentRepositoryInterface:
         assert document.project_id == test_project.id
         assert document.title == "Test Document Creation"
         assert document.path == "/test_create.md"
-        assert document.content["type"] == "doc"
-        assert len(document.content["content"]) == 1
-        assert document.tags == ["test", "creation"]
+        assert isinstance(document.content, str)
+        assert set(getattr(document, "tag_ids", [])) == {"test", "creation"}
         assert document.word_count == 10
         assert document.version == "1.0.0"
         assert document.is_locked is False
@@ -112,7 +98,7 @@ class TestDocumentRepositoryInterface:
             "project_id": test_project.id,
             "title": "Test Document Get",
             "path": "/test_get.md",
-            "content": {"type": "doc", "content": []}
+            "content": ""
         }
         created_document = await document_repo.create(document_data)
         
@@ -140,7 +126,7 @@ class TestDocumentRepositoryInterface:
                 "project_id": test_project.id,
                 "title": "Document 1",
                 "path": "/doc1.md",
-                "content": {"type": "doc", "content": []},
+                "content": "",
                 "word_count": 100
             },
             {
@@ -148,7 +134,7 @@ class TestDocumentRepositoryInterface:
                 "project_id": test_project.id,
                 "title": "Document 2",
                 "path": "/doc2.md",
-                "content": {"type": "doc", "content": []},
+                "content": "",
                 "word_count": 200
             },
             {
@@ -156,7 +142,7 @@ class TestDocumentRepositoryInterface:
                 "project_id": test_project.id,
                 "title": "Document 3",
                 "path": "/doc3.md",
-                "content": {"type": "doc", "content": []},
+                "content": "",
                 "word_count": 300
             }
         ]
@@ -188,8 +174,8 @@ class TestDocumentRepositoryInterface:
             "project_id": test_project.id,
             "title": "Original Title",
             "path": "/original.md",
-            "content": {"type": "doc", "content": []},
-            "tags": ["original"],
+            "content": "",
+            "tag_ids": ["original"],
             "word_count": 50,
             "version": "1.0.0"
         }
@@ -199,21 +185,8 @@ class TestDocumentRepositoryInterface:
         # Update the document
         updates = {
             "title": "Updated Title",
-            "content": {
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "Updated content with more text for word count testing."
-                            }
-                        ]
-                    }
-                ]
-            },
-            "tags": ["updated", "modified"],
+            "content": "Updated content with more text for word count testing.",
+            "tag_ids": ["updated", "modified"],
             "word_count": 100,
             "version": "1.1.0"
         }
@@ -222,8 +195,8 @@ class TestDocumentRepositoryInterface:
         assert updated_document is not None
         assert updated_document.id == "test-doc-update"
         assert updated_document.title == "Updated Title"
-        assert updated_document.content["content"][0]["content"][0]["text"] == "Updated content with more text for word count testing."
-        assert set(updated_document.tags) == {"updated", "modified"}
+        assert updated_document.content == "Updated content with more text for word count testing."
+        assert set(getattr(updated_document, "tag_ids", [])) == {"updated", "modified"}
         assert updated_document.word_count == 100
         assert updated_document.version == "1.1.0"
         assert updated_document.created_at == original_created_at  # Should not change
@@ -245,7 +218,7 @@ class TestDocumentRepositoryInterface:
             "project_id": test_project.id,
             "title": "To Be Deleted",
             "path": "/delete_me.md",
-            "content": {"type": "doc", "content": []}
+            "content": ""
         }
         await document_repo.create(document_data)
         
@@ -268,7 +241,7 @@ class TestDocumentRepositoryInterface:
 
 
 class TestDocumentRepositoryContent:
-    """Test document content handling and ProseMirror structures"""
+    """Test document content handling with Markdown strings"""
     
     @pytest.fixture
     def memory_repos(self):
@@ -284,132 +257,24 @@ class TestDocumentRepositoryContent:
         }
         return await memory_repos.project.create(project_data)
     
-    async def test_create_document_with_complex_prosemirror_content(self, memory_repos, test_project):
-        """Test creating a document with complex ProseMirror content"""
-        complex_content = {
-            "type": "doc",
-            "content": [
-                {
-                    "type": "heading",
-                    "attrs": {"level": 1},
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "Chapter 1: The Beginning"
-                        }
-                    ]
-                },
-                {
-                    "type": "paragraph",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "This is the first paragraph with "
-                        },
-                        {
-                            "type": "text",
-                            "marks": [{"type": "strong"}],
-                            "text": "bold text"
-                        },
-                        {
-                            "type": "text",
-                            "text": " and "
-                        },
-                        {
-                            "type": "text",
-                            "marks": [{"type": "em"}],
-                            "text": "italic text"
-                        },
-                        {
-                            "type": "text",
-                            "text": "."
-                        }
-                    ]
-                },
-                {
-                    "type": "blockquote",
-                    "content": [
-                        {
-                            "type": "paragraph",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": "This is a quote block with important information."
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "bullet_list",
-                    "content": [
-                        {
-                            "type": "list_item",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": "First bullet point"
-                                        }
-                                    ]
-                                }
-                            ]
-                        },
-                        {
-                            "type": "list_item",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": "Second bullet point"
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        }
-        
+    async def test_create_document_with_markdown_content(self, memory_repos, test_project):
+        """Test creating a document with Markdown content"""
+        md_content = "# Chapter 1: The Beginning\n\nThis is the first paragraph with **bold** and _italic_ text.\n\n> This is a quote block.\n\n- First bullet point\n- Second bullet point"
+
         document_data = {
             "id": "complex-content-doc",
             "project_id": test_project.id,
             "title": "Complex Content Document",
             "path": "/complex.md",
-            "content": complex_content,
+            "content": md_content,
             "word_count": 25  # Approximate word count
         }
-        
+
         document = await memory_repos.document.create(document_data)
-        
+
         assert document is not None
-        assert document.content["type"] == "doc"
-        assert len(document.content["content"]) == 4  # heading, paragraph, blockquote, bullet_list
-        
-        # Verify heading
-        heading = document.content["content"][0]
-        assert heading["type"] == "heading"
-        assert heading["attrs"]["level"] == 1
-        assert heading["content"][0]["text"] == "Chapter 1: The Beginning"
-        
-        # Verify paragraph with formatting
-        paragraph = document.content["content"][1]
-        assert paragraph["type"] == "paragraph"
-        assert len(paragraph["content"]) == 5  # 5 text nodes with different formatting
-        
-        # Verify blockquote
-        blockquote = document.content["content"][2]
-        assert blockquote["type"] == "blockquote"
-        
-        # Verify bullet list
-        bullet_list = document.content["content"][3]
-        assert bullet_list["type"] == "bullet_list"
-        assert len(bullet_list["content"]) == 2  # 2 list items
+        assert isinstance(document.content, str)
+        assert document.content.startswith("# Chapter 1")
     
     async def test_create_document_with_minimal_content(self, memory_repos, test_project):
         """Test creating a document with minimal content"""
@@ -436,20 +301,7 @@ class TestDocumentRepositoryContent:
     async def test_update_document_content(self, memory_repos, test_project):
         """Test updating document content"""
         # Create document with initial content
-        initial_content = {
-            "type": "doc",
-            "content": [
-                {
-                    "type": "paragraph",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "Initial content"
-                        }
-                    ]
-                }
-            ]
-        }
+        initial_content = "Initial content"
         
         document_data = {
             "id": "update-content-doc",
@@ -463,30 +315,7 @@ class TestDocumentRepositoryContent:
         created_doc = await memory_repos.document.create(document_data)
         
         # Update content
-        updated_content = {
-            "type": "doc",
-            "content": [
-                {
-                    "type": "heading",
-                    "attrs": {"level": 2},
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "Updated Heading"
-                        }
-                    ]
-                },
-                {
-                    "type": "paragraph",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "This is the updated content with much more text to test."
-                        }
-                    ]
-                }
-            ]
-        }
+        updated_content = "## Updated Heading\n\nThis is the updated content with much more text to test."
         
         updates = {
             "content": updated_content,
@@ -496,9 +325,9 @@ class TestDocumentRepositoryContent:
         updated_doc = await memory_repos.document.update("update-content-doc", updates)
         
         assert updated_doc is not None
-        assert updated_doc.content["content"][0]["type"] == "heading"
-        assert updated_doc.content["content"][0]["content"][0]["text"] == "Updated Heading"
-        assert updated_doc.content["content"][1]["content"][0]["text"] == "This is the updated content with much more text to test."
+        assert isinstance(updated_doc.content, str)
+        assert "Updated Heading" in updated_doc.content
+        assert "This is the updated content with much more text to test." in updated_doc.content
         assert updated_doc.word_count == 12
 
 
@@ -526,7 +355,7 @@ class TestDocumentRepositoryLocking:
             "project_id": test_project.id,
             "title": "Locked Document",
             "path": "/locked.md",
-            "content": {"type": "doc", "content": []},
+            "content": "",
             "is_locked": True,
             "locked_by": "user_123"
         }
@@ -545,7 +374,7 @@ class TestDocumentRepositoryLocking:
             "project_id": test_project.id,
             "title": "To Be Locked",
             "path": "/to_lock.md",
-            "content": {"type": "doc", "content": []},
+            "content": "",
             "is_locked": False
         }
         
@@ -573,7 +402,7 @@ class TestDocumentRepositoryLocking:
             "project_id": test_project.id,
             "title": "To Be Unlocked",
             "path": "/to_unlock.md",
-            "content": {"type": "doc", "content": []},
+            "content": "",
             "is_locked": True,
             "locked_by": "user_789"
         }
@@ -620,7 +449,7 @@ class TestDocumentRepositoryVersioning:
             "project_id": test_project.id,
             "title": "Versioned Document",
             "path": "/versioned.md",
-            "content": {"type": "doc", "content": []},
+            "content": "",
             "version": "1.0.0"
         }
         
